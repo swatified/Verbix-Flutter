@@ -24,32 +24,27 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Get screen dimensions
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    // Define customizable dimensions
+    final double horizontalPadding = 60.0;
+    final double imageWidth = screenWidth - (horizontalPadding * 2);
+
     return Scaffold(
-      backgroundColor: Colors.deepPurple,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Replace with your app logo
-            Image.asset(
-              'assets/images/splash_icon.png',
-              width: 150,
-              height: 150,
-            ),
-            const SizedBox(height: 30),
-            const Text(
-              'Your App Name',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 20),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          ],
+      backgroundColor: const Color(0xFFB9DBE4),
+      body: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding, 
+          vertical: 40.0, // Top and bottom padding
+        ),
+        child: Center(
+          child: Image.asset(
+            'assets/images/lexi_splash.png',
+            width: imageWidth,
+            fit: BoxFit.contain,
+          ),
         ),
       ),
     );
