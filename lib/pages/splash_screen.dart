@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'auth_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,12 +13,16 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Set a timer to navigate to the auth screen after 3 seconds
+    // Set a timer to navigate to the appropriate screen after 3 seconds
     Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AuthScreen()),
-      );
+      // Check if user is already signed in
+      if (FirebaseAuth.instance.currentUser != null) {
+        // User is signed in, go to home
+        Navigator.of(context).pushReplacementNamed('/home');
+      } else {
+        // No user signed in, go to auth screen
+        Navigator.of(context).pushReplacementNamed('/auth');
+      }
     });
   }
 
@@ -26,7 +30,6 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     // Get screen dimensions
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
     
     // Define customizable dimensions
     final double horizontalPadding = 60.0;
@@ -37,7 +40,7 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: horizontalPadding, 
-          vertical: 40.0, // Top and bottom padding
+          vertical: 40.0,
         ),
         child: Center(
           child: Image.asset(

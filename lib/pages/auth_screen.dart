@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
-// Import these packages after adding them to pubspec.yaml
-// import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -25,96 +23,91 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _submitForm() {
-    // When Firebase is implemented, this would be:
-    // _signInWithEmailPassword();
-    
-    // For demo purposes, we'll just navigate to the home page
-    Navigator.pushReplacement(
-      context, 
-      MaterialPageRoute(builder: (context) => const MyHomePage(title: 'Home Page')),
-    );
+    _signInWithEmailPassword();
   }
 
   // Firebase Email/Password Authentication
-  // Future<void> _signInWithEmailPassword() async {
-  //   setState(() {
-  //     _isLoading = true;
-  //   });
-  //   try {
-  //     if (_isLogin) {
-  //       // Sign In
-  //       await FirebaseAuth.instance.signInWithEmailAndPassword(
-  //         email: _emailController.text.trim(),
-  //         password: _passwordController.text.trim(),
-  //       );
-  //     } else {
-  //       // Sign Up
-  //       await FirebaseAuth.instance.createUserWithEmailAndPassword(
-  //         email: _emailController.text.trim(),
-  //         password: _passwordController.text.trim(),
-  //       );
-  //     }
-  //     
-  //     // Navigate to home
-  //     if (!mounted) return;
-  //     Navigator.pushReplacement(
-  //       context, 
-  //       MaterialPageRoute(builder: (context) => const MyHomePage(title: 'Home Page')),
-  //     );
-  //   } catch (e) {
-  //     // Show error
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text(e.toString())),
-  //     );
-  //   } finally {
-  //     if (mounted) {
-  //       setState(() {
-  //         _isLoading = false;
-  //       });
-  //     }
-  //   }
-  // }
+  Future<void> _signInWithEmailPassword() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      if (_isLogin) {
+        // Sign In
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+      } else {
+        // Sign Up
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+      }
+      
+      // Navigate to home using named route
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed('/home');
+    } catch (e) {
+      // Show error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   // Google Sign In
-  // Future<void> _signInWithGoogle() async {
-  //   setState(() {
-  //     _isLoading = true;
-  //   });
-  //   try {
-  //     // Begin interactive sign in process
-  //     final GoogleSignInAccount? gUser = await GoogleSignIn().signIn();
-  //     
-  //     // Get auth details from request
-  //     final GoogleSignInAuthentication gAuth = await gUser!.authentication;
-  //     
-  //     // Create new credential for user
-  //     final credential = GoogleAuthProvider.credential(
-  //       accessToken: gAuth.accessToken,
-  //       idToken: gAuth.idToken,
-  //     );
-  //     
-  //     // Sign in with credential
-  //     await FirebaseAuth.instance.signInWithCredential(credential);
-  //     
-  //     // Navigate to home
-  //     if (!mounted) return;
-  //     Navigator.pushReplacement(
-  //       context, 
-  //       MaterialPageRoute(builder: (context) => const MyHomePage(title: 'Home Page')),
-  //     );
-  //   } catch (e) {
-  //     // Show error
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('Failed to sign in with Google: ${e.toString()}')),
-  //     );
-  //   } finally {
-  //     if (mounted) {
-  //       setState(() {
-  //         _isLoading = false;
-  //       });
-  //     }
-  //   }
-  // }
+  Future<void> _signInWithGoogle() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      // Begin interactive sign in process
+      final GoogleSignInAccount? gUser = await GoogleSignIn().signIn();
+      
+      if (gUser == null) {
+        // User canceled the sign-in flow
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      // Get auth details from request
+      final GoogleSignInAuthentication gAuth = await gUser.authentication;
+      
+      // Create new credential for user
+      final credential = GoogleAuthProvider.credential(
+        accessToken: gAuth.accessToken,
+        idToken: gAuth.idToken,
+      );
+      
+      // Sign in with credential
+      await FirebaseAuth.instance.signInWithCredential(credential);
+      
+      // Navigate to home using named route
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed('/home');
+    } catch (e) {
+      // Show error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to sign in with Google: ${e.toString()}')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -191,16 +184,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
-                  onPressed: _isLoading ? null : () {
-                    // When Firebase is implemented:
-                    // _signInWithGoogle();
-                    
-                    // For demo:
-                    Navigator.pushReplacement(
-                      context, 
-                      MaterialPageRoute(builder: (context) => const MyHomePage(title: 'Home Page')),
-                    );
-                  },
+                  onPressed: _isLoading ? null : _signInWithGoogle,
                   icon: Image.asset(
                     'assets/images/google_logo.png', 
                     height: 24,
