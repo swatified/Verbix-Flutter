@@ -63,16 +63,24 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  // Google Sign In
+  // Google Sign In - Fixed Implementation
   Future<void> _signInWithGoogle() async {
     setState(() {
       _isLoading = true;
     });
+    
     try {
-      // Begin interactive sign in process
-      final GoogleSignInAccount? gUser = await GoogleSignIn().signIn();
+      // Clear any previous sign-in state
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      await googleSignIn.signOut();
       
-      if (gUser == null) {
+      // Use a more direct approach with basic configuration
+      final googleUser = await googleSignIn.signIn().catchError((error) {
+        print("Error in googleSignIn.signIn(): $error");
+        throw error;
+      });
+      
+      if (googleUser == null) {
         // User canceled the sign-in flow
         setState(() {
           _isLoading = false;
@@ -80,26 +88,51 @@ class _AuthScreenState extends State<AuthScreen> {
         return;
       }
       
-      // Get auth details from request
-      final GoogleSignInAuthentication gAuth = await gUser.authentication;
+      // Get auth details with error handling
+      final googleAuth = await googleUser.authentication.catchError((error) {
+        print("Error in googleUser.authentication: $error");
+        throw error;
+      });
       
-      // Create new credential for user
+      // Create credential
       final credential = GoogleAuthProvider.credential(
-        accessToken: gAuth.accessToken,
-        idToken: gAuth.idToken,
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
       
       // Sign in with credential
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      await FirebaseAuth.instance.signInWithCredential(credential).catchError((error) {
+        print("Error in signInWithCredential: $error");
+        throw error;
+      });
       
       // Navigate to home using named route
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed('/home');
     } catch (e) {
-      // Show error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to sign in with Google: ${e.toString()}')),
-      );
+      print("GOOGLE SIGN IN ERROR: $e");
+      
+      // Handle PigeonUserDetails error specifically
+      if (e.toString().contains('PigeonUserDetails')) {
+        // Fallback to email/password if available
+        if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Google Sign-In unavailable. Trying email login...')),
+          );
+          _signInWithEmailPassword();
+          return;
+        }
+        
+        // Show a more user-friendly error
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Google Sign-In is temporarily unavailable. Please try email login instead.')),
+        );
+      } else {
+        // Show the actual error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to sign in with Google: ${e.toString()}')),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {

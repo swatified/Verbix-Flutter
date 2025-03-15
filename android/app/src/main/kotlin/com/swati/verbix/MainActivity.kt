@@ -1,4 +1,4 @@
-package com.example.verbix
+package com.swati.verbix
 
 import io.flutter.embedding.android.FlutterActivity
 
