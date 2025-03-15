@@ -4,19 +4,13 @@ import 'firebase_options.dart';
 import 'pages/splash_screen.dart';
 import 'pages/auth_screen.dart';
 import 'pages/home_page.dart';
+import 'pages/user_details.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    print("Firebase initialized successfully");
-  } catch (e) {
-    print("Firebase initialization error: $e");
-  }
-  
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
@@ -37,6 +31,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => const SplashScreen(),
         '/auth': (context) => const AuthScreen(),
         '/home': (context) => const MyHomePage(title: 'Verbix Home'),
+        '/user_details': (context) => const UserDetailsScreen(),
       },
     );
   }

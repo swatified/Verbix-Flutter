@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -26,6 +27,28 @@ class _AuthScreenState extends State<AuthScreen> {
     _signInWithEmailPassword();
   }
 
+  // Check if user profile exists and redirect accordingly
+  Future<void> _checkUserProfileAndRedirect() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    
+    // Check if user document exists in Firestore
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+    
+    if (!mounted) return;
+    
+    if (userDoc.exists) {
+      // User profile exists, go to home
+      Navigator.of(context).pushReplacementNamed('/home');
+    } else {
+      // New user, go to profile setup
+      Navigator.of(context).pushReplacementNamed('/user_details');
+    }
+  }
+
   // Firebase Email/Password Authentication
   Future<void> _signInWithEmailPassword() async {
     setState(() {
@@ -38,17 +61,20 @@ class _AuthScreenState extends State<AuthScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+        
+        // Check if profile exists and redirect
+        await _checkUserProfileAndRedirect();
       } else {
         // Sign Up
         await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+        
+        // New user, go to profile setup
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed('/user_details');
       }
-      
-      // Navigate to home using named route
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/home');
     } catch (e) {
       // Show error
       ScaffoldMessenger.of(context).showSnackBar(
@@ -63,24 +89,16 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  // Google Sign In - Fixed Implementation
+  // Google Sign In
   Future<void> _signInWithGoogle() async {
     setState(() {
       _isLoading = true;
     });
-    
     try {
-      // Clear any previous sign-in state
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      await googleSignIn.signOut();
+      // Begin interactive sign in process
+      final GoogleSignInAccount? gUser = await GoogleSignIn().signIn();
       
-      // Use a more direct approach with basic configuration
-      final googleUser = await googleSignIn.signIn().catchError((error) {
-        print("Error in googleSignIn.signIn(): $error");
-        throw error;
-      });
-      
-      if (googleUser == null) {
+      if (gUser == null) {
         // User canceled the sign-in flow
         setState(() {
           _isLoading = false;
@@ -88,51 +106,25 @@ class _AuthScreenState extends State<AuthScreen> {
         return;
       }
       
-      // Get auth details with error handling
-      final googleAuth = await googleUser.authentication.catchError((error) {
-        print("Error in googleUser.authentication: $error");
-        throw error;
-      });
+      // Get auth details from request
+      final GoogleSignInAuthentication gAuth = await gUser.authentication;
       
-      // Create credential
+      // Create new credential for user
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
+        accessToken: gAuth.accessToken,
+        idToken: gAuth.idToken,
       );
       
       // Sign in with credential
-      await FirebaseAuth.instance.signInWithCredential(credential).catchError((error) {
-        print("Error in signInWithCredential: $error");
-        throw error;
-      });
+      await FirebaseAuth.instance.signInWithCredential(credential);
       
-      // Navigate to home using named route
-      if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/home');
+      // Check if profile exists and redirect
+      await _checkUserProfileAndRedirect();
     } catch (e) {
-      print("GOOGLE SIGN IN ERROR: $e");
-      
-      // Handle PigeonUserDetails error specifically
-      if (e.toString().contains('PigeonUserDetails')) {
-        // Fallback to email/password if available
-        if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Google Sign-In unavailable. Trying email login...')),
-          );
-          _signInWithEmailPassword();
-          return;
-        }
-        
-        // Show a more user-friendly error
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Google Sign-In is temporarily unavailable. Please try email login instead.')),
-        );
-      } else {
-        // Show the actual error
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to sign in with Google: ${e.toString()}')),
-        );
-      }
+      // Show error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to sign in with Google: ${e.toString()}')),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -156,9 +148,9 @@ class _AuthScreenState extends State<AuthScreen> {
                 const SizedBox(height: 40),
                 Image.asset(
                   'assets/images/lexi_rain_temp.jpeg',
-                  height: 100,
+                  height: 150,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
                 Text(
                   _isLogin ? 'Welcome Back' : 'Create Account',
                   style: const TextStyle(
@@ -167,7 +159,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
                 TextField(
                   controller: _emailController,
                   decoration: const InputDecoration(
