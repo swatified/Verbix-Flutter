@@ -5,6 +5,10 @@ import 'pages/splash_screen.dart';
 import 'pages/auth_screen.dart';
 import 'pages/home_page.dart';
 import 'pages/user_details.dart';
+import 'pages/tests.dart';
+import 'pages/practice_modules.dart';
+import 'pages/dashboard.dart';
+import 'pages/user_settings.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,8 +34,9 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const SplashScreen(),
         '/auth': (context) => const AuthScreen(),
-        '/home': (context) => const MyHomePage(title: 'Verbix Home'),
+        '/home': (context) => const HomePage(),
         '/user_details': (context) => const UserDetailsScreen(),
+        
       },
     );
   }
