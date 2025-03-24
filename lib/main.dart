@@ -9,8 +9,11 @@ import 'pages/tests.dart';
 import 'pages/practice_modules.dart';
 import 'pages/dashboard.dart';
 import 'pages/user_settings.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'pages/main_scaffold.dart'; // New import for our MainScaffold
 
 void main() async {
+  await dotenv.load();
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -34,9 +37,8 @@ class MyApp extends StatelessWidget {
       routes: {
         '/': (context) => const SplashScreen(),
         '/auth': (context) => const AuthScreen(),
-        '/home': (context) => const HomePage(),
+        '/main': (context) => const MainScaffold(),
         '/user_details': (context) => const UserDetailsScreen(),
-        
       },
     );
   }

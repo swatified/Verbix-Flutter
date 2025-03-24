@@ -114,6 +114,18 @@ class _HomePageState extends State<HomePage> {
     final bool hasPracticed = _practicesDoneToday > 0;
     final String firstName = _userData?['firstName'] ?? 'there';
     
+    // Get the current hour to determine greeting
+    final int currentHour = DateTime.now().hour;
+    String greeting;
+    
+    if (currentHour < 12) {
+      greeting = 'Good morning';
+    } else if (currentHour < 17) {
+      greeting = 'Good afternoon';
+    } else {
+      greeting = 'Good evening';
+    }
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -154,7 +166,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Text(
                   hasPracticed 
-                      ? 'Good morning, $firstName!'
+                      ? '$greeting, $firstName!'
                       : 'Uh oh...',
                   style: const TextStyle(
                     fontSize: 18,
@@ -176,12 +188,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           
-          // Emotion indicator or action button
-          Icon(
-            hasPracticed ? Icons.sentiment_very_satisfied : Icons.sentiment_dissatisfied,
-            color: hasPracticed ? Colors.green[400] : Colors.orange[400],
-            size: 24,
-          ),
+          // No icon or arrow here - clean design
         ],
       ),
     );
@@ -411,13 +418,16 @@ class _HomePageState extends State<HomePage> {
                                   child: TextField(
                                     controller: _searchController,
                                     decoration: const InputDecoration(
-                                      hintText: 'Search app features...',
+                                      hintText: 'Search',
                                       border: InputBorder.none,
                                       hintStyle: TextStyle(
                                         fontSize: 14,
                                         color: Colors.grey,
                                       ),
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(vertical: 8.0),
                                     ),
+                                    style: const TextStyle(fontSize: 14),
                                   ),
                                 ),
                               ],
