@@ -7,6 +7,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'dart:io';
 
 // Enhanced Gemini API Service
@@ -47,7 +48,7 @@ class GeminiService {
 
   static Future<Map<String, String>> analyzeTest(String original, String written, String spoken) async {
     try {
-      // Enhanced prompt with more specific instructions for detailed pattern analysis
+      // Enhanced prompt with more specific instructions for detailed pattern analysis and improved formatting
       final prompt = '''
       # Dyslexia Assessment Analysis
 
@@ -80,29 +81,51 @@ class GeminiService {
       8. Challenges with multisyllabic words
       
       ## Output Format Requirements
-      Format your response exactly as follows:
+      Format your response EXACTLY as follows with careful attention to the formatting:
       
-      HEADING: [Brief 5-8 word heading summarizing key patterns observed]
+      HEADING: [Brief 3-4 word descriptive heading that captures the core pattern]
       
-      WRITTEN_ANALYSIS: [Provide 2-3 detailed paragraphs analyzing the written response. Be specific about any patterns you observe. If you detect consistent problems with particular letters or letter combinations, highlight these explicitly. Mention if certain types of words (long/short, common/uncommon) seem to pose more challenges. Provide at least 3 specific examples from the text.]
+      WRITTEN_ANALYSIS: 
+      ## Key Observations
+      - [First key observation with specific example]
+      - [Second key observation with specific example]
+      - [Third key observation with specific example]
       
-      SPEECH_ANALYSIS: [Provide 2-3 detailed paragraphs analyzing the spoken response. Focus on pronunciation patterns, sound substitutions, and any consistent phonological issues. Be specific about any particular sounds or phonemes that appear challenging. Provide at least 3 specific examples from the text.]
+      ### Pattern Details
+      [One concise paragraph explaining the overall pattern seen in writing]
       
-      RECOMMENDATIONS: [Provide 3-5 specific, targeted practice recommendations based on the patterns observed in both written and spoken responses. Each recommendation should directly address an observed pattern.]
+      SPEECH_ANALYSIS: 
+      ## Key Observations
+      - [First key observation with specific example]
+      - [Second key observation with specific example]
+      - [Third key observation with specific example]
+      
+      ### Pattern Details
+      [One concise paragraph explaining the overall pattern seen in speech]
+      
+      RECOMMENDATIONS: 
+      ## Practice Activities
+      1. [First specific practice recommendation that addresses a key pattern]
+      2. [Second specific practice recommendation]
+      3. [Third specific practice recommendation]
+      
+      ### Focus Areas
+      - [Primary area to focus practice efforts]
+      - [Secondary area to focus practice efforts]
       ''';
       
       final content = [Content.text(prompt)];
       final response = await _model.generateContent(content);
       final responseText = response.text ?? '';
       
-      // Parse the formatted response with the new RECOMMENDATIONS section
+      // Parse the formatted response with the new format
       final headingMatch = RegExp(r'HEADING:(.*?)(?=WRITTEN_ANALYSIS:|$)', dotAll: true).firstMatch(responseText);
       final writtenMatch = RegExp(r'WRITTEN_ANALYSIS:(.*?)(?=SPEECH_ANALYSIS:|$)', dotAll: true).firstMatch(responseText);
       final speechMatch = RegExp(r'SPEECH_ANALYSIS:(.*?)(?=RECOMMENDATIONS:|$)', dotAll: true).firstMatch(responseText);
       final recommendationsMatch = RegExp(r'RECOMMENDATIONS:(.*?)(?=$)', dotAll: true).firstMatch(responseText);
       
       return {
-        'heading': headingMatch?.group(1)?.trim() ?? 'Dyslexia Assessment Results',
+        'heading': headingMatch?.group(1)?.trim() ?? 'Letter-Sound Patterns',
         'writtenAnalysis': writtenMatch?.group(1)?.trim() ?? 'The written sample shows some potential indicators of dyslexia that would benefit from further assessment.',
         'speechAnalysis': speechMatch?.group(1)?.trim() ?? 'The speech sample indicates phonological processing patterns that may be consistent with dyslexic tendencies.',
         'recommendations': recommendationsMatch?.group(1)?.trim() ?? 'Practice with letter reversals, work on phonological awareness, and continue regular reading practice.',
@@ -110,10 +133,32 @@ class GeminiService {
     } catch (e) {
       // Improved fallback analysis in case API call fails
       return {
-        'heading': 'Potential Reading-Writing Pattern Analysis',
-        'writtenAnalysis': 'The written response shows patterns that may indicate specific challenges. There appear to be letter reversals (like b/d) and letter omissions in certain words. Words with similar-looking letters seem to cause more difficulty, and there\'s a pattern of writing words phonetically rather than with correct spelling. These patterns are consistent with dyslexic processing tendencies, particularly with visual discrimination of similar letters and phonological processing.',
-        'speechAnalysis': 'The spoken response reveals consistent patterns in phonological processing. There are specific challenges with certain sounds, particularly consonant blends and longer multisyllabic words. Words with similar sounds are sometimes confused, and there\'s a pattern of sound substitutions that follows a consistent pattern. These phonological challenges are typical in individuals with dyslexia and related language processing differences.',
-        'recommendations': '1. Practice with targeted letter discrimination exercises focusing on commonly confused letters.\n2. Work with phonological awareness activities that break down sounds in multisyllabic words.\n3. Use multisensory techniques (visual, auditory, and kinesthetic) when learning new words.\n4. Regular practice with high-frequency words that contain challenging letter patterns.',
+        'heading': 'Letter Pattern Analysis',
+        'writtenAnalysis': '''
+## Key Observations
+- Letter reversals in words with b/d confusion
+- Phonetic spelling patterns for longer words
+- Consistent omission of certain vowel sounds
+
+### Pattern Details
+The written response shows challenges with visual discrimination of similar letters and phonological processing. These patterns are consistent with dyslexic processing tendencies.''',
+        'speechAnalysis': '''
+## Key Observations
+- Difficulty with consonant blends
+- Word substitutions that preserve meaning
+- Challenges with multisyllabic words
+
+### Pattern Details
+The spoken response reveals consistent patterns in phonological processing. These phonological challenges are typical in individuals with dyslexia and related language processing differences.''',
+        'recommendations': '''
+## Practice Activities
+1. Letter discrimination exercises focusing on b/d, p/q, and similar pairs
+2. Phonological awareness activities breaking down sounds in words
+3. Multisensory reading techniques combining visual, auditory, and kinesthetic approaches
+
+### Focus Areas
+- Letter-sound relationship reinforcement
+- Syllable segmentation practice''',
       };
     }
   }
@@ -162,7 +207,7 @@ class _TestsPageState extends State<TestsPage> {
           'date': (data['timestamp'] as Timestamp).toDate(),
           'writtenAnalysis': data['writtenAnalysis'] ?? '',
           'speechAnalysis': data['speechAnalysis'] ?? '',
-          'recommendations': data['recommendations'] ?? '', // Add recommendations to the loaded data
+          'recommendations': data['recommendations'] ?? '',
         };
       }).toList();
 
@@ -254,6 +299,12 @@ class _TestsPageState extends State<TestsPage> {
       itemCount: _tests.length,
       itemBuilder: (context, index) {
         final test = _tests[index];
+        
+        // Create plain text previews from markdown content
+        final String writtenPreview = _stripMarkdown(test['writtenAnalysis']).trim();
+        final String speechPreview = _stripMarkdown(test['speechAnalysis']).trim();
+        final String recommendationsPreview = _stripMarkdown(test['recommendations']).trim();
+        
         return GestureDetector(
           onTap: () {
             Navigator.push(
@@ -328,7 +379,7 @@ class _TestsPageState extends State<TestsPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        test['writtenAnalysis'],
+                        writtenPreview,
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -347,7 +398,7 @@ class _TestsPageState extends State<TestsPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        test['speechAnalysis'],
+                        speechPreview,
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -382,7 +433,7 @@ class _TestsPageState extends State<TestsPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              test['recommendations'],
+                              recommendationsPreview,
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Color(0xFF1F5377),
@@ -438,6 +489,26 @@ class _TestsPageState extends State<TestsPage> {
         );
       },
     );
+  }
+  
+  // Helper method to strip markdown for previews
+  String _stripMarkdown(String markdown) {
+    if (markdown == null || markdown.isEmpty) {
+      return '';
+    }
+    
+    // Remove headers
+    String plainText = markdown.replaceAll(RegExp(r'#{1,6}\s'), '');
+    
+    // Remove bullet points and numbered lists
+    plainText = plainText.replaceAll(RegExp(r'^\s*[-*+]\s', multiLine: true), '');
+    plainText = plainText.replaceAll(RegExp(r'^\s*\d+\.\s', multiLine: true), '');
+    
+    // Remove emphasis marks
+    plainText = plainText.replaceAll(RegExp(r'\*\*|__'), '');
+    plainText = plainText.replaceAll(RegExp(r'\*|_'), '');
+    
+    return plainText;
   }
 }
 
@@ -604,7 +675,7 @@ class _NewTestPageState extends State<NewTestPage> {
         'heading': analysis['heading'],
         'writtenAnalysis': analysis['writtenAnalysis'],
         'speechAnalysis': analysis['speechAnalysis'],
-        'recommendations': analysis['recommendations'], // New field
+        'recommendations': analysis['recommendations'], 
         'originalSentence': _testSentence,
         'writtenResponse': _writtenTextController.text,
         'speechResponse': _speechText,
@@ -858,28 +929,28 @@ class _NewTestPageState extends State<NewTestPage> {
                   const SizedBox(height: 32),
                   
                   // Submit button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: (_speechText.isNotEmpty &&
-                              _writtenTextController.text.isNotEmpty &&
-                              !_hasSubmitted)
-                          ? _submitTest
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1F5377),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: _hasSubmitted
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              'Submit Test',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.white,
+SizedBox(
+  width: double.infinity,
+  child: ElevatedButton(
+    onPressed: (_speechText.isNotEmpty &&
+            _writtenTextController.text.isNotEmpty &&
+            !_hasSubmitted)
+        ? _submitTest
+        : null,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF1F5377),
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+    ),
+    child: _hasSubmitted
+        ? const CircularProgressIndicator(color: Colors.white)
+        : const Text(
+            'Submit Test',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.white,
                               ),
                             ),
                     ),
@@ -1112,7 +1183,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                   ),
                   const SizedBox(height: 24),
                   
-                  // Written analysis
+                  // Written analysis with Markdown
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -1138,12 +1209,33 @@ class _TestDetailPageState extends State<TestDetailPage> {
                             color: Color(0xFF324259),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _testData['writtenAnalysis'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF324259),
+                        const SizedBox(height: 12),
+                        MarkdownBody(
+                          data: _testData['writtenAnalysis'] ?? '',
+                          styleSheet: MarkdownStyleSheet(
+                            h1: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF324259),
+                            ),
+                            h2: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1F5377),
+                            ),
+                            h3: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF324259),
+                            ),
+                            p: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF324259),
+                            ),
+                            listBullet: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF1F5377),
+                            ),
                           ),
                         ),
                       ],
@@ -1151,7 +1243,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                   ),
                   const SizedBox(height: 24),
                   
-                  // Speech analysis
+                  // Speech analysis with Markdown
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -1177,12 +1269,33 @@ class _TestDetailPageState extends State<TestDetailPage> {
                             color: Color(0xFF324259),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _testData['speechAnalysis'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF324259),
+                        const SizedBox(height: 12),
+                        MarkdownBody(
+                          data: _testData['speechAnalysis'] ?? '',
+                          styleSheet: MarkdownStyleSheet(
+                            h1: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF324259),
+                            ),
+                            h2: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1F5377),
+                            ),
+                            h3: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF324259),
+                            ),
+                            p: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF324259),
+                            ),
+                            listBullet: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF1F5377),
+                            ),
                           ),
                         ),
                       ],
@@ -1190,21 +1303,17 @@ class _TestDetailPageState extends State<TestDetailPage> {
                   ),
                   const SizedBox(height: 24),
                   
-                  // Recommendations section (new)
+                  // Recommendations section with Markdown
                   if (_testData['recommendations'] != null)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1F5377),
+                        color: const Color(0xFF1F5377).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
-                            spreadRadius: 1,
-                            blurRadius: 3,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        border: Border.all(
+                          color: const Color(0xFF1F5377).withOpacity(0.3),
+                          width: 1,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1213,7 +1322,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                             children: [
                               Icon(
                                 Icons.lightbulb_outline,
-                                color: Colors.white,
+                                color: Color(0xFF1F5377),
                                 size: 20,
                               ),
                               SizedBox(width: 8),
@@ -1222,17 +1331,43 @@ class _TestDetailPageState extends State<TestDetailPage> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  color: Color(0xFF1F5377),
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Text(
-                            _testData['recommendations'] ?? '',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.white,
+                          MarkdownBody(
+                            data: _testData['recommendations'] ?? '',
+                            styleSheet: MarkdownStyleSheet(
+                              h1: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1F5377),
+                              ),
+                              h2: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1F5377),
+                              ),
+                              h3: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1F5377),
+                              ),
+                              p: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF324259),
+                              ),
+                              listBullet: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF1F5377),
+                              ),
+                              strong: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1F5377),
+                              ),
                             ),
                           ),
                         ],
