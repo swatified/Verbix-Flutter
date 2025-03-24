@@ -12,7 +12,7 @@ import 'dart:io';
 // Enhanced Gemini API Service
 class GeminiService {
   static final _apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
-  static final _model = GenerativeModel(model: 'gemini-pro', apiKey: _apiKey);
+  static final _model = GenerativeModel(model: 'gemini-1.5-pro', apiKey: _apiKey);
 
   static Future<String> generateSentence() async {
     try {
