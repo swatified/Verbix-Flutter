@@ -342,32 +342,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildNavItem(IconData icon, String label, int index, String route) {
-    // Define if this is the selected item
-    final bool isSelected = index == 0; // Home is always selected on this page
-    
-    return GestureDetector(
-      onTap: () {
-        if (index != 0) { // Don't navigate if already on home
-          Navigator.pushNamed(context, route);
-        }
-      },
-      child: Container(
-        height: 40,
-        width: 80,
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF1F5377) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Icon(
-          icon,
-          color: isSelected ? Colors.white : Colors.grey,
-          size: 24,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -553,29 +527,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              spreadRadius: 0,
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        height: 60,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(Icons.home, 'Home', 0, '/home'),
-            _buildNavItem(Icons.article, 'Tests', 1, '/tests'),
-            _buildNavItem(Icons.school, 'Practice', 2, '/practice'),
-            _buildNavItem(Icons.dashboard, 'Dashboard', 3, '/dashboard'),
-          ],
-        ),
       ),
     );
   }

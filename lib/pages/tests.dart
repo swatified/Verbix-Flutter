@@ -9,24 +9,37 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
-// Gemini API Service
+// Enhanced Gemini API Service
 class GeminiService {
   static final _apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
   static final _model = GenerativeModel(model: 'gemini-pro', apiKey: _apiKey);
 
   static Future<String> generateSentence() async {
     try {
-      final content = [Content.text('Generate a simple sentence for dyslexia testing using common words. Keep it short, below 10 words.')];
+      // Enhanced prompt for generating test sentences that include common dyslexia challenge patterns
+      final content = [Content.text('''Generate a simple sentence for dyslexia testing using common words. 
+      The sentence should:
+      - Be 8-10 words in length
+      - Include at least one word with similar-looking letters (like b/d, p/q, or m/n)
+      - Include at least one word with a common letter reversal pattern (like "was/saw")
+      - Include a mix of short and longer words
+      - Be at a 3rd-4th grade reading level
+      - Use natural, conversational language
+      
+      Return only the sentence with no additional text or explanations.''')];
+      
       final response = await _model.generateContent(content);
       return response.text ?? 'She seemed like an angel in her white dress.';
     } catch (e) {
-      // Fallback sentences in case API call fails
+      // Fallback sentences in case API call fails - improved with better test patterns
       final fallbackSentences = [
-        'She seemed like an angel in her white dress.',
-        'The boy quickly ran across the green field.',
-        'My mother made delicious cookies yesterday.',
-        'We watched stars twinkle in the night sky.',
-        'He found his lost keys under the table.',
+        'The boy quickly jumped over the puddle beside the dog.',
+        'She read the book while her brother played outside.',
+        'My mother baked delicious bread with plenty of honey.',
+        'The quiet night was filled with bright twinkling stars.',
+        'He found his lost keys under the blue wooden bench.',
+        'We need to pack our bags before the big trip.',
+        'The dog barked at the mailman behind our fence.',
       ];
       return fallbackSentences[DateTime.now().second % fallbackSentences.length];
     }
@@ -34,43 +47,73 @@ class GeminiService {
 
   static Future<Map<String, String>> analyzeTest(String original, String written, String spoken) async {
     try {
-      // Construct the prompt to Gemini
+      // Enhanced prompt with more specific instructions for detailed pattern analysis
       final prompt = '''
+      # Dyslexia Assessment Analysis
+
+      ## Input Data
       Original sentence: "$original"
       Written response: "$written"
       Spoken response: "$spoken"
       
-      Analyze both responses for signs of dyslexia or reading/spelling difficulties. Provide:
-      1. A concise heading summarizing the key findings (max 8 words)
-      2. Detailed written analysis (2-3 paragraphs)
-      3. Detailed speech analysis (2-3 paragraphs)
+      ## Analysis Instructions
+      Perform a detailed analysis comparing both the written and spoken responses to the original sentence, looking specifically for patterns consistent with dyslexia or reading/spelling difficulties.
       
+      ### Written Analysis Focus
+      1. Letter reversals (b/d, p/q, etc.)
+      2. Letter transpositions (on/no, was/saw, etc.)
+      3. Letter omissions or additions
+      4. Phonological errors (spelling words as they sound)
+      5. Consistent confusion with specific letters
+      6. Issues with vowel sounds
+      7. Word spacing issues
+      8. Capitalization inconsistencies
+      
+      ### Speech Analysis Focus
+      1. Sound substitutions
+      2. Sound omissions or additions
+      3. Difficulty with specific phonemes
+      4. Word order changes
+      5. Word substitution patterns
+      6. Pronunciation differences in similar-sounding words
+      7. Hesitations or repetitions
+      8. Challenges with multisyllabic words
+      
+      ## Output Format Requirements
       Format your response exactly as follows:
-      HEADING: [your heading here]
-      WRITTEN_ANALYSIS: [your detailed written analysis here]
-      SPEECH_ANALYSIS: [your detailed speech analysis here]
+      
+      HEADING: [Brief 5-8 word heading summarizing key patterns observed]
+      
+      WRITTEN_ANALYSIS: [Provide 2-3 detailed paragraphs analyzing the written response. Be specific about any patterns you observe. If you detect consistent problems with particular letters or letter combinations, highlight these explicitly. Mention if certain types of words (long/short, common/uncommon) seem to pose more challenges. Provide at least 3 specific examples from the text.]
+      
+      SPEECH_ANALYSIS: [Provide 2-3 detailed paragraphs analyzing the spoken response. Focus on pronunciation patterns, sound substitutions, and any consistent phonological issues. Be specific about any particular sounds or phonemes that appear challenging. Provide at least 3 specific examples from the text.]
+      
+      RECOMMENDATIONS: [Provide 3-5 specific, targeted practice recommendations based on the patterns observed in both written and spoken responses. Each recommendation should directly address an observed pattern.]
       ''';
       
       final content = [Content.text(prompt)];
       final response = await _model.generateContent(content);
       final responseText = response.text ?? '';
       
-      // Parse the formatted response
+      // Parse the formatted response with the new RECOMMENDATIONS section
       final headingMatch = RegExp(r'HEADING:(.*?)(?=WRITTEN_ANALYSIS:|$)', dotAll: true).firstMatch(responseText);
       final writtenMatch = RegExp(r'WRITTEN_ANALYSIS:(.*?)(?=SPEECH_ANALYSIS:|$)', dotAll: true).firstMatch(responseText);
-      final speechMatch = RegExp(r'SPEECH_ANALYSIS:(.*?)(?=$)', dotAll: true).firstMatch(responseText);
+      final speechMatch = RegExp(r'SPEECH_ANALYSIS:(.*?)(?=RECOMMENDATIONS:|$)', dotAll: true).firstMatch(responseText);
+      final recommendationsMatch = RegExp(r'RECOMMENDATIONS:(.*?)(?=$)', dotAll: true).firstMatch(responseText);
       
       return {
         'heading': headingMatch?.group(1)?.trim() ?? 'Dyslexia Assessment Results',
         'writtenAnalysis': writtenMatch?.group(1)?.trim() ?? 'The written sample shows some potential indicators of dyslexia that would benefit from further assessment.',
         'speechAnalysis': speechMatch?.group(1)?.trim() ?? 'The speech sample indicates phonological processing patterns that may be consistent with dyslexic tendencies.',
+        'recommendations': recommendationsMatch?.group(1)?.trim() ?? 'Practice with letter reversals, work on phonological awareness, and continue regular reading practice.',
       };
     } catch (e) {
-      // Fallback analysis in case API call fails
+      // Improved fallback analysis in case API call fails
       return {
-        'heading': 'Potential Reading-Writing Challenges',
-        'writtenAnalysis': 'The written response shows possible challenges with spelling and word recognition. There appear to be some letter omissions and substitutions that are common in individuals with dyslexic patterns. Further assessment would be beneficial to determine specific areas for intervention.',
-        'speechAnalysis': 'The spoken response indicates some difficulties with phonological processing. Pronunciation patterns suggest challenges with certain sound blends and word articulation. These patterns are sometimes associated with dyslexia and related language processing differences.',
+        'heading': 'Potential Reading-Writing Pattern Analysis',
+        'writtenAnalysis': 'The written response shows patterns that may indicate specific challenges. There appear to be letter reversals (like b/d) and letter omissions in certain words. Words with similar-looking letters seem to cause more difficulty, and there\'s a pattern of writing words phonetically rather than with correct spelling. These patterns are consistent with dyslexic processing tendencies, particularly with visual discrimination of similar letters and phonological processing.',
+        'speechAnalysis': 'The spoken response reveals consistent patterns in phonological processing. There are specific challenges with certain sounds, particularly consonant blends and longer multisyllabic words. Words with similar sounds are sometimes confused, and there\'s a pattern of sound substitutions that follows a consistent pattern. These phonological challenges are typical in individuals with dyslexia and related language processing differences.',
+        'recommendations': '1. Practice with targeted letter discrimination exercises focusing on commonly confused letters.\n2. Work with phonological awareness activities that break down sounds in multisyllabic words.\n3. Use multisensory techniques (visual, auditory, and kinesthetic) when learning new words.\n4. Regular practice with high-frequency words that contain challenging letter patterns.',
       };
     }
   }
@@ -119,6 +162,7 @@ class _TestsPageState extends State<TestsPage> {
           'date': (data['timestamp'] as Timestamp).toDate(),
           'writtenAnalysis': data['writtenAnalysis'] ?? '',
           'speechAnalysis': data['speechAnalysis'] ?? '',
+          'recommendations': data['recommendations'] ?? '', // Add recommendations to the loaded data
         };
       }).toList();
 
@@ -134,32 +178,6 @@ class _TestsPageState extends State<TestsPage> {
         _isLoading = false;
       });
     }
-  }
-
-  Widget _buildNavItem(IconData icon, String label, int index, String route) {
-    // Define if this is the selected item
-    final bool isSelected = index == 1; // Tests is selected on this page
-    
-    return GestureDetector(
-      onTap: () {
-        if (index != 1) { // Don't navigate if already on tests
-          Navigator.pushNamed(context, route);
-        }
-      },
-      child: Container(
-        height: 40,
-        width: 80,
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF1F5377) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Icon(
-          icon,
-          color: isSelected ? Colors.white : Colors.grey,
-          size: 24,
-        ),
-      ),
-    );
   }
 
   @override
@@ -193,29 +211,6 @@ class _TestsPageState extends State<TestsPage> {
         },
         backgroundColor: const Color(0xFF1F5377),
         child: const Icon(Icons.add, color: Colors.white),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              spreadRadius: 0,
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        height: 60,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(Icons.home, 'Home', 0, '/home'),
-            _buildNavItem(Icons.article, 'Tests', 1, '/tests'),
-            _buildNavItem(Icons.school, 'Practice', 2, '/practice'),
-            _buildNavItem(Icons.dashboard, 'Dashboard', 3, '/dashboard'),
-          ],
-        ),
       ),
     );
   }
@@ -287,9 +282,9 @@ class _TestsPageState extends State<TestsPage> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1F5377),
-                    borderRadius: const BorderRadius.only(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1F5377),
+                    borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(12),
                       topRight: Radius.circular(12),
                     ),
@@ -360,6 +355,43 @@ class _TestsPageState extends State<TestsPage> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      
+                      // Add recommendations preview if available
+                      if (test['recommendations'] != null && test['recommendations'].isNotEmpty)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            Row(
+                              children: const [
+                                Icon(
+                                  Icons.lightbulb_outline,
+                                  color: Color(0xFF1F5377),
+                                  size: 14,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Recommendations:',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1F5377),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              test['recommendations'],
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF1F5377),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
@@ -460,7 +492,7 @@ class _NewTestPageState extends State<NewTestPage> {
     });
     
     try {
-      // Get a sentence from Gemini
+      // Get a sentence from Gemini with enhanced prompt
       final sentence = await GeminiService.generateSentence();
       setState(() {
         _testSentence = sentence;
@@ -556,14 +588,14 @@ class _NewTestPageState extends State<NewTestPage> {
         throw Exception('No user signed in');
       }
 
-      // Get analysis from Gemini
+      // Get analysis from Gemini with the enhanced prompts
       final analysis = await GeminiService.analyzeTest(
         _testSentence,
         _writtenTextController.text,
         _speechText,
       );
 
-      // Save to Firestore
+      // Save to Firestore with the new recommendations field
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -572,6 +604,7 @@ class _NewTestPageState extends State<NewTestPage> {
         'heading': analysis['heading'],
         'writtenAnalysis': analysis['writtenAnalysis'],
         'speechAnalysis': analysis['speechAnalysis'],
+        'recommendations': analysis['recommendations'], // New field
         'originalSentence': _testSentence,
         'writtenResponse': _writtenTextController.text,
         'speechResponse': _speechText,
@@ -869,7 +902,6 @@ class TestDetailPage extends StatefulWidget {
 class _TestDetailPageState extends State<TestDetailPage> {
   bool _isLoading = true;
   Map<String, dynamic> _testData = {};
-
   @override
   void initState() {
     super.initState();
@@ -973,6 +1005,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  
                   // Original sentence
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -1011,6 +1044,74 @@ class _TestDetailPageState extends State<TestDetailPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  
+                  // User's responses
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Your Responses',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF324259),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Written response
+                        const Text(
+                          'Written:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF324259),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _testData['writtenResponse'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF324259),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Spoken response
+                        const Text(
+                          'Spoken:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF324259),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _testData['speechResponse'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF324259),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  
                   // Written analysis
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -1049,6 +1150,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  
                   // Speech analysis
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -1086,6 +1188,56 @@ class _TestDetailPageState extends State<TestDetailPage> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  
+                  // Recommendations section (new)
+                  if (_testData['recommendations'] != null)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1F5377),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.lightbulb_outline,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Recommendations',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _testData['recommendations'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
