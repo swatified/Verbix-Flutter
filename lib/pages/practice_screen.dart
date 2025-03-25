@@ -436,7 +436,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
     if (_isCompleted) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(widget.practice.title),
+          title: Text(widget.practice.title,
+          style: const TextStyle(
+            color: Color(0xFF324259),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
           backgroundColor: Colors.white,
           foregroundColor: const Color(0xFF324259),
           elevation: 0,
@@ -476,6 +481,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
+                  foregroundColor: Colors.white,
                 ),
                 child: const Text('Return to Home'),
               ),
@@ -489,7 +495,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
     
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.practice.title),
+        title: Text(widget.practice.title,
+        style: const TextStyle(
+            color: Color(0xFF324259),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF324259),
         elevation: 0,
@@ -522,17 +533,16 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 Text(
                   _getInstructionText(),
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
                     color: Color(0xFF324259),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 4),
                 
                 // Target content display
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -548,14 +558,14 @@ class _PracticeScreenState extends State<PracticeScreen> {
                   child: Text(
                     currentItem,
                     style: const TextStyle(
-                      fontSize: 20,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF324259),
                     ),
                     textAlign: TextAlign.center,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 
                 // Input method based on practice type
                 if (widget.practice.type == PracticeType.phonetic)
@@ -571,7 +581,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 // Input feedback
                 if (_itemStatus[_currentIndex])
                   Container(
-                    margin: const EdgeInsets.only(top: 16),
+                    margin: const EdgeInsets.only(top: 0),
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.green.withOpacity(0.1),
@@ -610,7 +620,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                         child: const Text('Previous'),
                       )
                     else
-                      const SizedBox(width: 80), // Placeholder for alignment
+                      const SizedBox(width: 40), // Placeholder for alignment
                     
                     // Next/Finish button
                     ElevatedButton(
@@ -666,6 +676,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
           label: Text(_isListening ? 'Stop' : 'Start Speaking'),
           style: ElevatedButton.styleFrom(
             backgroundColor: _isListening ? Colors.red : const Color(0xFF1F5377),
+            foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
         ),
@@ -707,168 +718,163 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
   
   Widget _buildDrawingInput() {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Text(
-            'Draw with your finger in the box below',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
+  return Expanded(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          height: MediaQuery.of(context).size.height * 0.15, // Reduced from 0.18
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8), // Reduced from 12
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.2), // Lighter shadow
+                spreadRadius: 1,
+                blurRadius: 2,
+                offset: const Offset(0, 1),
+              ),
+            ],
           ),
-          const SizedBox(height: 4), // Reduced spacing from 8 to 4
-          
-          // Drawing canvas - adjusted height
-          Container(
-            height: MediaQuery.of(context).size.height * 0.18, // Reduced from 0.2 to 0.18
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.3),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: RepaintBoundary(
-              child: GestureDetector(
-                onPanDown: (details) {
-                  setState(() {
-                    points.add(
-                      DrawingArea(
-                        point: details.localPosition,
-                        areaPaint: Paint()
-                          ..color = selectedColor
-                          ..strokeWidth = strokeWidth
-                          ..strokeCap = StrokeCap.round
-                          ..isAntiAlias = true,
-                      ),
-                    );
-                  });
-                },
-                onPanUpdate: (details) {
-                  setState(() {
-                    points.add(
-                      DrawingArea(
-                        point: details.localPosition,
-                        areaPaint: Paint()
-                          ..color = selectedColor
-                          ..strokeWidth = strokeWidth
-                          ..strokeCap = StrokeCap.round
-                          ..isAntiAlias = true,
-                      ),
-                    );
-                  });
-                },
-                onPanEnd: (details) {
-                  setState(() {
-                    points.add(null);
-                  });
-                },
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: CustomPaint(
-                    painter: MyCustomPainter(points: points),
-                    size: Size.infinite,
-                  ),
+          child: RepaintBoundary(
+            child: GestureDetector(
+              onPanDown: (details) {
+                setState(() {
+                  points.add(
+                    DrawingArea(
+                      point: details.localPosition,
+                      areaPaint: Paint()
+                        ..color = selectedColor
+                        ..strokeWidth = strokeWidth
+                        ..strokeCap = StrokeCap.round
+                        ..isAntiAlias = true,
+                    ),
+                  );
+                });
+              },
+              onPanUpdate: (details) {
+                setState(() {
+                  points.add(
+                    DrawingArea(
+                      point: details.localPosition,
+                      areaPaint: Paint()
+                        ..color = selectedColor
+                        ..strokeWidth = strokeWidth
+                        ..strokeCap = StrokeCap.round
+                        ..isAntiAlias = true,
+                    ),
+                  );
+                });
+              },
+              onPanEnd: (details) {
+                setState(() {
+                  points.add(null);
+                });
+              },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8), // Reduced from 12
+                child: CustomPaint(
+                  painter: MyCustomPainter(points: points),
+                  size: Size.infinite,
                 ),
               ),
             ),
           ),
-          
-          const SizedBox(height: 8), // Reduced spacing from 12 to 8
-          
-          // Drawing controls - Made more compact
-          Row(
-  mainAxisAlignment: MainAxisAlignment.center,
-  children: [
-    ElevatedButton.icon(
-      onPressed: _clearDrawing,
-      icon: const Icon(Icons.clear, size: 18, color: Colors.white),
-      label: const Text(
-        'Clear', 
-        style: TextStyle(fontSize: 16, color: Colors.white),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.red,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // Reduced vertical padding
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4), // Less rounded corners
+        ),
+        
+        const SizedBox(height: 4), // Reduced from 8
+        
+        // Drawing controls - More compact buttons
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton.icon(
+              onPressed: _clearDrawing,
+              icon: const Icon(Icons.clear, size: 14, color: Colors.white), // Smaller icon
+              label: const Text(
+                'Clear', 
+                style: TextStyle(fontSize: 12, color: Colors.white), // Smaller text
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Even smaller padding
+                minimumSize: const Size(70, 28), // Fixed smaller size
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12), // Reduced from 16
+            ElevatedButton.icon(
+              onPressed: _processDrawing,
+              icon: const Icon(Icons.check, size: 14, color: Colors.white), // Smaller icon
+              label: const Text(
+                'Analyze', 
+                style: TextStyle(fontSize: 12, color: Colors.white), // Smaller text
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1F5377),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Even smaller padding
+                minimumSize: const Size(80, 28), // Fixed smaller size
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 4), // Reduced from 8
+        
+        // Display recognized text with a smaller fixed height
+        Container(
+  height: MediaQuery.of(context).size.height * 0.06,
+  width: double.infinity,
+  padding: const EdgeInsets.all(6),
+  decoration: BoxDecoration(
+    color: _recognizedText.isEmpty
+        ? Colors.grey.withOpacity(0.1)
+        : (_itemStatus[_currentIndex] ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1)),
+    borderRadius: BorderRadius.circular(8),
+    border: Border.all(
+      color: _recognizedText.isEmpty
+          ? Colors.grey
+          : (_itemStatus[_currentIndex] ? Colors.green : Colors.red),
+    ),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Recognized:',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
         ),
       ),
-    ),
-    const SizedBox(width: 16),
-    ElevatedButton.icon(
-      onPressed: _processDrawing,
-      icon: const Icon(Icons.check, size: 18, color: Colors.white),
-      label: const Text(
-        'Analyze', 
-        style: TextStyle(fontSize: 16, color: Colors.white),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF1F5377),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // Reduced vertical padding
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4), // Less rounded corners
+      const SizedBox(height: 1),
+      Text(
+        // Here's the fix - show the recognized text even if empty
+        _recognizedText.isEmpty 
+            ? 'Draw and click "Analyze"' 
+            : _recognizedText,
+        style: TextStyle(
+          fontSize: 12,
+          color: _recognizedText.isEmpty
+              ? Colors.grey
+              : (_itemStatus[_currentIndex] ? Colors.green : Colors.red),
         ),
+        maxLines: 1, // Reduced to 1 line since it's just a letter
+        overflow: TextOverflow.ellipsis,
       ),
-    ),
-  ],
+    ],
+  ),
 ),
-          
-          const SizedBox(height: 8), // Reduced spacing from 12 to 8
-          
-          // Display recognized text with a smaller fixed height
-          Container(
-            height: MediaQuery.of(context).size.height * 0.10, // Reduced from 0.15 to 0.10
-            width: double.infinity,
-            padding: const EdgeInsets.all(8), // Reduced padding from 12 to 8
-            decoration: BoxDecoration(
-              color: _recognizedText.isEmpty
-                  ? Colors.grey.withOpacity(0.1)
-                  : (_itemStatus[_currentIndex] ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1)),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: _recognizedText.isEmpty
-                    ? Colors.grey
-                    : (_itemStatus[_currentIndex] ? Colors.green : Colors.red),
-              ),
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Recognized:',
-                    style: TextStyle(
-                      fontSize: 12, // Reduced from 14 to 12
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 2), // Reduced spacing from 4 to 2
-                  Text(
-                    _recognizedText.isEmpty ? 'Draw and click "Analyze" to see the recognized text' : _recognizedText,
-                    style: TextStyle(
-                      fontSize: 14, // Reduced from 18 to 14
-                      color: _recognizedText.isEmpty
-                          ? Colors.grey
-                          : (_itemStatus[_currentIndex] ? Colors.green : Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
   
   Widget _buildWrittenInput() {
     return Column(
