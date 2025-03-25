@@ -175,7 +175,7 @@ class _HomePageState extends State<HomePage> {
               fit: BoxFit.contain,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           
           // Mascot message
           Expanded(
@@ -229,136 +229,140 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDailyPractices() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Your daily practices',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF324259),
-              ),
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Your daily practices',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF324259),
             ),
-            TextButton(
-              onPressed: () async {
+          ),
+          TextButton(
+            onPressed: () async {
+              setState(() {
+                _isLoading = true;
+              });
+              try {
+                final newPractices = await CustomPracticeService.generateCustomPractices();
+                await CustomPracticeService.savePractices(newPractices);
                 setState(() {
-                  _isLoading = true;
+                  _dailyPractices = newPractices;
+                  _practicesDoneToday = _countCompletedPractices(newPractices);
                 });
-                try {
-                  final newPractices = await CustomPracticeService.generateCustomPractices();
-                  await CustomPracticeService.savePractices(newPractices);
-                  setState(() {
-                    _dailyPractices = newPractices;
-                    _practicesDoneToday = _countCompletedPractices(newPractices);
-                  });
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error refreshing practices: ${e.toString()}')),
-                  );
-                } finally {
-                  setState(() {
-                    _isLoading = false;
-                  });
-                }
-              },
-              child: Text(
-                'Refresh',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Theme.of(context).primaryColor,
-                ),
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error refreshing practices: ${e.toString()}')),
+                );
+              } finally {
+                setState(() {
+                  _isLoading = false;
+                });
+              }
+            },
+            child: Text(
+              'Refresh',
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).primaryColor,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        
-        // Practice items row
-        SizedBox(
-          height: 110,
-          child: _dailyPractices.isEmpty
-              ? const Center(child: Text('No practices available'))
-              : ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _dailyPractices.length,
-                  itemBuilder: (context, index) {
-                    final practice = _dailyPractices[index];
-                    return GestureDetector(
-                      onTap: () {
-                        // Navigate to practice screen
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PracticeScreen(practice: practice),
-                          ),
-                        ).then((_) => _loadPracticeData()); // Refresh when returning
-                      },
-                      child: Container(
-                        width: 90,
-                        margin: const EdgeInsets.only(right: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFFE0E0E0),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.grey.withOpacity(0.1),
-                              spreadRadius: 1,
-                              blurRadius: 2,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
+          ),
+        ],
+      ),
+      const SizedBox(height: 4),
+      
+      // Practice items row - increased height and width
+      SizedBox(
+        height: 150, // Increased from 110
+        child: _dailyPractices.isEmpty
+            ? const Center(child: Text('No practices available'))
+            : ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _dailyPractices.length,
+                itemBuilder: (context, index) {
+                  final practice = _dailyPractices[index];
+                  return GestureDetector(
+                    onTap: () {
+                      // Navigate to practice screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PracticeScreen(practice: practice),
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEEF2F6),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                _getPracticeIcon(practice.type),
-                                color: practice.completed 
-                                    ? Colors.green 
-                                    : const Color(0xFF324259),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                              child: Text(
-                                practice.title,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (practice.completed)
-                              const Icon(
-                                Icons.check_circle,
-                                color: Colors.green,
-                                size: 16,
-                              ),
-                          ],
+                      ).then((_) => _loadPracticeData()); // Refresh when returning
+                    },
+                    child: Container(
+                      width: 120, // Increased from 90
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: practice.completed
+                              ? Colors.green.withOpacity(0.5)
+                              : const Color(0xFFE0E0E0),
+                          width: 1,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            spreadRadius: 1,
+                            blurRadius: 2,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 50, // Increased from 40
+                            height: 50, // Increased from 40
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEEF2F6),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              _getPracticeIcon(practice.type),
+                              color: practice.completed 
+                                  ? Colors.green 
+                                  : const Color(0xFF324259),
+                              size: 26, // Slightly larger icon
+                            ),
+                          ),
+                          const SizedBox(height: 8), // Increased from 8
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8), // Increased from 4
+                            child: Text(
+                              practice.title,
+                              style: const TextStyle(
+                                fontSize: 13, // Increased from 12
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(height: 8), // Added spacing
+                          if (practice.completed)
+                            const Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                              size: 18, // Increased from 16
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
         ),
       ],
     );
