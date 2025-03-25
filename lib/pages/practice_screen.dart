@@ -223,19 +223,34 @@ class _PracticeScreenState extends State<PracticeScreen> {
         debugPrint('Raw recognized text: $extracted');
         
         setState(() {
-          _recognizedText = extracted;
-          debugPrint('Set recognizedText to: $_recognizedText');
+          // Always set the recognized text, even if empty
+          if (extracted.isEmpty) {
+            _recognizedText = "No text detected";
+          } else {
+            _recognizedText = extracted;
+          }
+          debugPrint('Recognized text set to: "$_recognizedText"');
           
-          // Only set to true if it's actually correct
+          // Default to incorrect
           _itemStatus[_currentIndex] = false;
           
           // Check if the recognized text matches the target
           final target = widget.practice.content[_currentIndex].toLowerCase();
           
           if (widget.practice.type == PracticeType.letterWriting) {
-            // For letters, be more lenient as OCR might struggle with single letters
-            if (extracted.contains(target) || target.contains(extracted)) {
+            // For letters, be more specific in matching
+            debugPrint('Letter writing check: extracted="$extracted", target="$target"');
+            // Convert both to single characters if possible
+            final firstCharExtracted = extracted.isNotEmpty ? extracted[0] : '';
+            final firstCharTarget = target.isNotEmpty ? target[0] : '';
+            
+            // Check exact match or first character match
+            if (extracted == target || 
+                firstCharExtracted == firstCharTarget ||
+                extracted.contains(target) || 
+                target.contains(extracted)) {
               _itemStatus[_currentIndex] = true;
+              debugPrint('Letter match found: ${_itemStatus[_currentIndex]}');
             }
           } else if (widget.practice.type == PracticeType.sentenceWriting) {
             // For sentences, use more lenient comparison
@@ -297,6 +312,14 @@ class _PracticeScreenState extends State<PracticeScreen> {
     } finally {
       setState(() {
         _isProcessingDrawing = false;
+        // If text is still empty after processing, set a message but don't change status
+        if (_recognizedText.isEmpty) {
+          _recognizedText = "No text detected";
+          // Only set to false if we don't already have a status for this item
+          if (!_itemStatus[_currentIndex]) {
+            _itemStatus[_currentIndex] = false;
+          }
+        }
       });
     }
   }
@@ -317,6 +340,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
     setState(() {
       points.clear();
       _recognizedText = '';
+      // Don't reset status - only the drawing
     });
   }
   
@@ -579,9 +603,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
                   _buildWrittenInput(),
                 
                 // Input feedback
-                if (_itemStatus[_currentIndex])
+                if (_itemStatus[_currentIndex] && (_recognizedText.isNotEmpty || widget.practice.type != PracticeType.letterWriting))
                   Container(
-                    margin: const EdgeInsets.only(top: 0),
+                    margin: const EdgeInsets.only(top: 10),
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.green.withOpacity(0.1),
