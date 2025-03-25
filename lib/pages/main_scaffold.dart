@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'tests.dart';
-// Uncomment these when you have the files ready
-// import 'practice_modules.dart';
+import 'practice_modules.dart';
 // import 'dashboard.dart';
 
 class MainScaffold extends StatefulWidget {
@@ -25,8 +24,8 @@ class _MainScaffoldState extends State<MainScaffold> {
     _pages = [
       const HomePage(),
       const TestsPage(),
-      // Replace these with actual screens when they're ready
-      const Placeholder(color: Colors.green),  // Practice placeholder
+      // Replace placeholder with actual PracticeModulesScreen
+      const PracticeModulesScreen(),
       const Placeholder(color: Colors.orange), // Dashboard placeholder
     ];
   }
