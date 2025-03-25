@@ -10,7 +10,7 @@ import 'pages/practice_modules.dart';
 import 'pages/dashboard.dart';
 import 'pages/user_settings.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'pages/main_scaffold.dart'; // New import for our MainScaffold
+import 'pages/main_scaffold.dart'; 
 
 void main() async {
   await dotenv.load();
