@@ -6,6 +6,49 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'dart:io';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:speech_to_text/speech_recognition_result.dart';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:path_provider/path_provider.dart';
+
+// Drawing area for handwriting input
+class DrawingArea {
+  Offset point;
+  Paint areaPaint;
+
+  DrawingArea({required this.point, required this.areaPaint});
+}
+
+// Custom painter for drawing
+class MyCustomPainter extends CustomPainter {
+  final List<DrawingArea?> points;
+
+  MyCustomPainter({required this.points});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Paint background white
+    Paint background = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    Rect rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    canvas.drawRect(rect, background);
+
+    // Draw points
+    for (int i = 0; i < points.length - 1; i++) {
+      if (points[i] != null && points[i + 1] != null) {
+        canvas.drawLine(points[i]!.point, points[i + 1]!.point, points[i]!.areaPaint);
+      } else if (points[i] != null && points[i + 1] == null) {
+        // For single points, draw a small circle for better visibility
+        canvas.drawCircle(points[i]!.point, points[i]!.areaPaint.strokeWidth / 2, points[i]!.areaPaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(MyCustomPainter oldDelegate) {
+    return true;
+  }
+}
 
 class PracticeModulesScreen extends StatefulWidget {
   const PracticeModulesScreen({Key? key}) : super(key: key);
@@ -364,6 +407,12 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
   bool _isListening = false;
   String _speechText = '';
   
+  // Drawing capabilities
+  List<DrawingArea?> points = [];
+  Color selectedColor = Colors.black;
+  double strokeWidth = 5.0;
+  bool _isProcessingDrawing = false;
+  
   // Exercise content for each module
   final Map<String, List<String>> moduleExercises = {
     'sentence_writing': [
@@ -605,6 +654,174 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
       ),
     );
   }
+  
+  // Clear drawing canvas
+  void _clearDrawing() {
+    setState(() {
+      points.clear();
+      recognizedText = '';
+      hasChecked = false;
+      isCorrect = false;
+    });
+  }
+  
+  // Process drawing for OCR
+  Future<void> _processDrawing() async {
+    if (points.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please draw something first')),
+      );
+      return;
+    }
+    
+    setState(() {
+      _isProcessingDrawing = true;
+      recognizedText = '';
+      isCorrect = false;
+      hasChecked = false;
+    });
+    
+    try {
+      // Convert drawing to image
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      
+      // White background
+      final backgroundPaint = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.fill;
+      
+      // Use the actual size of the drawing area
+      final size = MediaQuery.of(context).size;
+      final width = size.width - 32; // Account for padding
+      final height = 300.0; // Increased height for better recognition
+      
+      canvas.drawRect(Rect.fromLTWH(0, 0, width, height), backgroundPaint);
+      
+      // Draw the points
+      for (int i = 0; i < points.length - 1; i++) {
+        if (points[i] != null && points[i + 1] != null) {
+          canvas.drawLine(points[i]!.point, points[i + 1]!.point, points[i]!.areaPaint);
+        } else if (points[i] != null && points[i + 1] == null) {
+          canvas.drawPoints(ui.PointMode.points, [points[i]!.point], points[i]!.areaPaint);
+        }
+      }
+      
+      // Convert to image
+      final picture = recorder.endRecording();
+      final img = await picture.toImage(width.toInt(), height.toInt());
+      final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
+      
+      if (pngBytes != null) {
+        final buffer = pngBytes.buffer;
+        final tempDir = await getTemporaryDirectory();
+        final file = await File('${tempDir.path}/drawing.png').writeAsBytes(
+          buffer.asUint8List(pngBytes.offsetInBytes, pngBytes.lengthInBytes)
+        );
+        
+        // Use ML Kit for text recognition
+        final inputImage = InputImage.fromFile(file);
+        final recognizedText = await textRecognizer.processImage(inputImage);
+        
+        // Process the recognized text
+        final extracted = recognizedText.text.toLowerCase().trim();
+        
+        setState(() {
+          this.recognizedText = extracted.isEmpty ? "No text detected" : extracted;
+          
+          // Compare with current exercise
+          final currentContent = getCurrentExercise().toLowerCase();
+          
+          // Different comparison logic based on module type
+          if (widget.module.id == 'word_formation') {
+            // For word formation, check if the recognized text contains the target word
+            isCorrect = extracted.contains(currentContent) || 
+                        currentContent.contains(extracted);
+          } 
+          else if (widget.module.id == 'visual_tracking') {
+            // For visual tracking, check if key patterns are present
+            final cleanTarget = currentContent.replaceAll(RegExp(r'[^\w\s]'), '').trim();
+            final cleanExtracted = extracted.replaceAll(RegExp(r'[^\w\s]'), '').trim();
+            
+            // Check for pattern matches - more lenient
+            final targetWords = cleanTarget.split(' ');
+            int matchedWords = 0;
+            
+            for (final targetWord in targetWords) {
+              if (cleanExtracted.contains(targetWord)) {
+                matchedWords++;
+              }
+            }
+            
+            // Consider correct if at least 50% of pattern elements are found
+            isCorrect = targetWords.isNotEmpty && 
+                      (matchedWords / targetWords.length) >= 0.5;
+          }
+          else if (widget.module.id == 'memory_exercises') {
+            // For memory exercises, check if the sequence or key items are present
+            final targetItems = currentContent.replaceAll(RegExp(r'[^\w\s\-,]'), '').trim();
+            
+            // Extract just the sequence or items after the colon
+            final colonIndex = targetItems.indexOf(':');
+            final itemsToCheck = colonIndex > 0 
+                ? targetItems.substring(colonIndex + 1).trim() 
+                : targetItems;
+                
+            // Check if the items are in the recognized text
+            final items = itemsToCheck.split(RegExp(r'[,\s-]+')).where((s) => s.isNotEmpty).toList();
+            int matchedItems = 0;
+            
+            for (final item in items) {
+              if (item.isNotEmpty && extracted.contains(item)) {
+                matchedItems++;
+              }
+            }
+            
+            // Consider correct if at least 60% of items are found
+            isCorrect = items.isNotEmpty && 
+                      (matchedItems / items.length) >= 0.6;
+          }
+          else if (widget.module.id == 'reading_comprehension') {
+            // For reading comprehension, extract the question and check for key answer words
+            final segments = currentContent.split('?');
+            if (segments.length > 1) {
+              // The answer is often found at the end of the content
+              final questionText = segments.last.trim().toLowerCase();
+              
+              // Check if the recognized text contains key answer words
+              isCorrect = extracted.contains(questionText) || 
+                        questionText.contains(extracted);
+            } else {
+              // If no question mark, just do a general comparison
+              isCorrect = extracted.contains(currentContent) || 
+                        currentContent.contains(extracted);
+            }
+          }
+          else {
+            // Default comparison
+            isCorrect = extracted == currentContent;
+          }
+          
+          hasChecked = true;
+        });
+      }
+    } catch (e) {
+      print('Error in _processDrawing: ${e.toString()}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error processing drawing: ${e.toString()}')),
+      );
+    } finally {
+      setState(() {
+        _isProcessingDrawing = false;
+      });
+    }
+  }
+
+  // Determine if this module should use drawing input
+  bool _shouldUseDrawingInput() {
+    final drawingModules = ['word_formation', 'visual_tracking', 'memory_exercises', 'reading_comprehension'];
+    return drawingModules.contains(widget.module.id);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -693,9 +910,11 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.module.type == ModuleType.written 
-                              ? 'Write or photograph the following:' 
-                              : 'Say the following:',
+                          _shouldUseDrawingInput() 
+                              ? 'Write the answer with your finger:' 
+                              : (widget.module.type == ModuleType.written 
+                                  ? 'Write or photograph the following:' 
+                                  : 'Say the following:'),
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.grey[700],
@@ -716,7 +935,9 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                 const SizedBox(height: 24),
                 
                 // Module-specific input controls
-                if (widget.module.type == ModuleType.written)
+                if (_shouldUseDrawingInput())
+                  _buildDrawingInput()
+                else if (widget.module.type == ModuleType.written)
                   _buildOCRControls()
                 else
                   _buildSpeechControls(),
@@ -755,11 +976,169 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
           ),
           
           // Loading overlay
-          if (isProcessing)
+          if (isProcessing || _isProcessingDrawing)
             Container(
               color: Colors.black.withOpacity(0.3),
               child: const Center(
                 child: CircularProgressIndicator(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+  
+  // Drawing input interface
+  Widget _buildDrawingInput() {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            height: MediaQuery.of(context).size.height * 0.2,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.2),
+                  spreadRadius: 1,
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: RepaintBoundary(
+              child: GestureDetector(
+                onPanDown: (details) {
+                  setState(() {
+                    points.add(
+                      DrawingArea(
+                        point: details.localPosition,
+                        areaPaint: Paint()
+                          ..color = selectedColor
+                          ..strokeWidth = strokeWidth
+                          ..strokeCap = StrokeCap.round
+                          ..isAntiAlias = true,
+                      ),
+                    );
+                  });
+                },
+                onPanUpdate: (details) {
+                  setState(() {
+                    points.add(
+                      DrawingArea(
+                        point: details.localPosition,
+                        areaPaint: Paint()
+                          ..color = selectedColor
+                          ..strokeWidth = strokeWidth
+                          ..strokeCap = StrokeCap.round
+                          ..isAntiAlias = true,
+                      ),
+                    );
+                  });
+                },
+                onPanEnd: (details) {
+                  setState(() {
+                    points.add(null);
+                  });
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: CustomPaint(
+                    painter: MyCustomPainter(points: points),
+                    size: Size.infinite,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 8),
+          
+          // Drawing controls
+          Row(
+  mainAxisAlignment: MainAxisAlignment.center,
+  children: [
+    ElevatedButton(
+      onPressed: _clearDrawing,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white, // Sets text color to white
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: RoundedRectangleBorder( // Less rounded corners
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+      child: const Text('Clear'),
+    ),
+    const SizedBox(width: 16),
+    ElevatedButton(
+      onPressed: _processDrawing,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white, // Sets text color to white
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: RoundedRectangleBorder( // Less rounded corners
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ),
+      child: const Text('Check Answer'),
+    ),
+  ],
+),
+          
+          const SizedBox(height: 12),
+          
+          // Display recognized text
+          if (hasChecked)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isCorrect ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isCorrect ? Colors.green : Colors.red,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Recognized Text:',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    recognizedText.isEmpty ? 'No text recognized' : recognizedText,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isCorrect ? Colors.green[700] : Colors.red[700],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        isCorrect ? Icons.check_circle : Icons.cancel,
+                        color: isCorrect ? Colors.green : Colors.red,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isCorrect ? 'Correct!' : 'Try again',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isCorrect ? Colors.green[700] : Colors.red[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
         ],
