@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math' as math;
+import 'package:verbix/services/custom_practice_service.dart';
+import 'package:verbix/services/practice_stats_service.dart';
+import 'practice_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,7 +18,7 @@ class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   Map<String, dynamic>? _userData;
   int _practicesDoneToday = 0;
-  final List<Map<String, dynamic>> _dailyPractices = [];
+  List<PracticeModule> _dailyPractices = [];
   final List<Map<String, dynamic>> _popularModules = [];
 
   @override
@@ -50,64 +53,79 @@ class _HomePageState extends State<HomePage> {
       if (docSnapshot.exists) {
         setState(() {
           _userData = docSnapshot.data();
-          _isLoading = false;
         });
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading user data: ${e.toString()}')),
       );
+    } finally {
+      // Don't set _isLoading to false here, as we're still loading practices
+    }
+  }
+
+  Future<void> _loadPracticeData() async {
+    try {
+      // First try to fetch existing practices
+      final practices = await CustomPracticeService.fetchPractices();
+      
+      // If no practices or it's been more than 7 days since last generation,
+      // generate new practices
+      if (practices.isEmpty || _shouldRefreshPractices(practices)) {
+        final newPractices = await CustomPracticeService.generateCustomPractices();
+        await CustomPracticeService.savePractices(newPractices);
+        setState(() {
+          _dailyPractices = newPractices;
+          _practicesDoneToday = _countCompletedPractices(newPractices);
+        });
+      } else {
+        setState(() {
+          _dailyPractices = practices;
+          _practicesDoneToday = _countCompletedPractices(practices);
+        });
+      }
+
+      // Load popular modules (static for now)
+      setState(() {
+        _popularModules.addAll([
+          {
+            'id': 'cards_basic',
+            'title': 'Basic Cards',
+            'description': 'Practice with basic flashcards',
+            'popularity': 98,
+          },
+          {
+            'id': 'pronunciation',
+            'title': 'Pronunciation',
+            'description': 'Improve your accent',
+            'popularity': 87,
+          },
+        ]);
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading practices: ${e.toString()}')),
+      );
+    } finally {
       setState(() {
         _isLoading = false;
       });
     }
   }
 
-  Future<void> _loadPracticeData() async {
-    // This would typically come from your Firestore database
-    // For now, we'll use dummy data
+  bool _shouldRefreshPractices(List<PracticeModule> practices) {
+    if (practices.isEmpty) return true;
     
-    // Simulate loading daily practices
-    setState(() {
-      _dailyPractices.addAll([
-        {
-          'id': 'practice_e',
-          'title': 'Practice E',
-          'icon': 'assets/images/practice_e.png',
-          'completed': true,
-        },
-        {
-          'id': 'practice_s',
-          'title': 'Practice S',
-          'icon': 'assets/images/practice_s.png',
-          'completed': false,
-        },
-        {
-          'id': 'practice_r',
-          'title': 'Practice R',
-          'icon': 'assets/images/practice_r.png',
-          'completed': false,
-        },
-      ]);
+    // Find the most recent practice
+    final latestPractice = practices.reduce((a, b) => 
+      a.createdAt.isAfter(b.createdAt) ? a : b);
+      
+    // If it's been more than 7 days since the last practice was created, refresh
+    return DateTime.now().difference(latestPractice.createdAt).inDays > 7;
+  }
 
-      _popularModules.addAll([
-        {
-          'id': 'cards_basic',
-          'title': 'Basic Cards',
-          'description': 'Practice with basic flashcards',
-          'popularity': 98,
-        },
-        {
-          'id': 'pronunciation',
-          'title': 'Pronunciation',
-          'description': 'Improve your accent',
-          'popularity': 87,
-        },
-      ]);
-
-      // Random number of practices done today (0-3)
-      _practicesDoneToday = math.Random().nextInt(4);
-    });
+  int _countCompletedPractices(List<PracticeModule> practices) {
+    return practices.where((practice) => practice.completed).length;
   }
 
   Widget _buildMascot() {
@@ -177,8 +195,8 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 4),
                 Text(
                   hasPracticed
-                      ? 'You have done $_practicesDoneToday exercises today.'
-                      : "You haven't practiced today.",
+                      ? 'You have completed $_practicesDoneToday out of ${_dailyPractices.length} exercises today.'
+                      : "You haven't completed any practices today.",
                   style: TextStyle(
                     fontSize: 14,
                     color: hasPracticed ? Colors.green[700] : Colors.grey[700],
@@ -187,80 +205,160 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          
-          // No icon or arrow here - clean design
         ],
       ),
     );
+  }
+
+  // Helper function to get icon based on practice type
+  IconData _getPracticeIcon(PracticeType type) {
+    switch (type) {
+      case PracticeType.letterWriting:
+        return Icons.text_fields;
+      case PracticeType.sentenceWriting:
+        return Icons.short_text;
+      case PracticeType.phonetic:
+        return Icons.record_voice_over;
+      case PracticeType.letterReversal:
+        return Icons.compare_arrows;
+      case PracticeType.vowelSounds:
+        return Icons.volume_up;
+      default:
+        return Icons.school;
+    }
   }
 
   Widget _buildDailyPractices() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Your daily practices',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF324259),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Your daily practices',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF324259),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                setState(() {
+                  _isLoading = true;
+                });
+                try {
+                  final newPractices = await CustomPracticeService.generateCustomPractices();
+                  await CustomPracticeService.savePractices(newPractices);
+                  setState(() {
+                    _dailyPractices = newPractices;
+                    _practicesDoneToday = _countCompletedPractices(newPractices);
+                  });
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error refreshing practices: ${e.toString()}')),
+                  );
+                } finally {
+                  setState(() {
+                    _isLoading = false;
+                  });
+                }
+              },
+              child: Text(
+                'Refresh',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         
         // Practice items row
         SizedBox(
-          height: 100,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: _dailyPractices.length,
-            itemBuilder: (context, index) {
-              final practice = _dailyPractices[index];
-              return Container(
-                width: 80,
-                margin: const EdgeInsets.only(right: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFE0E0E0),
-                    width: 1,
-                  ),
+          height: 110,
+          child: _dailyPractices.isEmpty
+              ? const Center(child: Text('No practices available'))
+              : ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _dailyPractices.length,
+                  itemBuilder: (context, index) {
+                    final practice = _dailyPractices[index];
+                    return GestureDetector(
+                      onTap: () {
+                        // Navigate to practice screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PracticeScreen(practice: practice),
+                          ),
+                        ).then((_) => _loadPracticeData()); // Refresh when returning
+                      },
+                      child: Container(
+                        width: 90,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFE0E0E0),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.1),
+                              spreadRadius: 1,
+                              blurRadius: 2,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEEF2F6),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                _getPracticeIcon(practice.type),
+                                color: practice.completed 
+                                    ? Colors.green 
+                                    : const Color(0xFF324259),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: Text(
+                                practice.title,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (practice.completed)
+                              const Icon(
+                                Icons.check_circle,
+                                color: Colors.green,
+                                size: 16,
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEEF2F6),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.school,
-                        color: const Color(0xFF324259),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      practice['title'],
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    if (practice['completed'])
-                      const Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                        size: 16,
-                      ),
-                  ],
-                ),
-              );
-            },
-          ),
         ),
       ],
     );
