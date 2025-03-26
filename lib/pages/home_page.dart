@@ -42,11 +42,14 @@ class _HomePageState extends State<HomePage> {
     // Refresh data when returning to this screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadCompletedPractices();
+      // Save progress data at regular intervals
+      _saveUserProgressData();
     });
   }
 
   @override
   void dispose() {
+    _saveUserProgressData(); // Save progress when leaving the page
     _searchController.dispose();
     super.dispose();
   }
@@ -108,6 +111,9 @@ class _HomePageState extends State<HomePage> {
       
       // Load completed practices from Firebase
       await _loadCompletedPractices();
+      
+      // After loading all data, save the progress to track daily activity
+      await _saveUserProgressData();
       
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -698,6 +704,43 @@ class _HomePageState extends State<HomePage> {
         ),
       ],
     );
+  }
+
+  // Save combined user progress to Firestore in user/progress collection
+  Future<void> _saveUserProgressData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      
+      // Get today's date in YYYY-MM-DD format
+      final now = DateTime.now();
+      final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      
+      // Calculate total practices completed today (both types)
+      final totalPracticesCompleted = _practicesDoneToday + _modulesCompletedToday + _practicesCompletedToday;
+      
+      // Reference to user's progress document
+      final progressRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('progress')
+          .doc(dateStr);
+      
+      // Update or create the progress document
+      await progressRef.set({
+        'date': dateStr,
+        'practice_done': totalPracticesCompleted,
+        'daily_practices': _practicesDoneToday,
+        'modules_completed': _modulesCompletedToday,
+        'practice_modules': _practicesCompletedToday,
+        'last_updated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true)); // Use merge to update only these fields
+      
+      print('Saved user progress data for $dateStr: $totalPracticesCompleted total practices');
+      
+    } catch (e) {
+      print('Error saving user progress data: $e');
+    }
   }
 
   @override
