@@ -303,32 +303,40 @@ class _HomePageState extends State<HomePage> {
               
               // Mascot message
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      hasPracticed 
-                          ? '$greeting, $firstName!'
-                          : 'Uh oh...',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF324259),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      hasPracticed
-                          ? 'You have completed $_practicesDoneToday out of ${_dailyPractices.length} exercises today.'
-                          : "You haven't completed any practices today.",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: hasPracticed ? Colors.green[700] : Colors.grey[700],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      if (hasPracticed)
+        Text(
+          '$greeting, $firstName!',
+          style: const TextStyle(
+            fontSize: 22.0,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF324259),
+          ),
+        )
+      else
+        const Text(
+          'Uh oh...',
+          style: TextStyle(
+            fontSize: 18.0,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF324259),
+          ),
+        ),
+      const SizedBox(height: 4),
+      Text(
+        hasPracticed
+            ? ''
+            : "You haven't completed any practices today.",
+        style: TextStyle(
+          fontSize: 14,
+          color: hasPracticed ? Colors.green[700] : Colors.grey[700],
+        ),
+      ),
+    ],
+  ),
+),
             ],
           ),
           
@@ -582,6 +590,7 @@ class _HomePageState extends State<HomePage> {
                       margin: const EdgeInsets.only(right: 16),
                       child: Card(
                         elevation: 2,
+                        color: const Color.fromARGB(255, 233, 240, 252),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)
                         ),
@@ -681,10 +690,10 @@ class _HomePageState extends State<HomePage> {
                                     const SizedBox(height: 6),
                                     LinearProgressIndicator(
                                       value: module.progressPercentage,
-                                      backgroundColor: Colors.grey[300],
+                                      backgroundColor: const Color.fromARGB(255, 205, 205, 206),
                                       valueColor: AlwaysStoppedAnimation<Color>(
                                         module.progressPercentage == 1.0
-                                            ? Colors.green
+                                            ? const Color.fromARGB(255, 84, 156, 86)
                                             : Colors.blue,
                                       ),
                                       minHeight: 5,
