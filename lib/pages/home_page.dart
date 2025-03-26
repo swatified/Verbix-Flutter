@@ -4,8 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math' as math;
 import 'package:verbix/services/custom_practice_service.dart' as practice_service;
 import 'package:verbix/services/practice_stats_service.dart';
+import 'package:verbix/services/practice_module_service.dart'; // Import new service
 import 'practice_screen.dart';
-import 'practice_modules.dart';
+import 'module_details.dart'; // Renamed from practice_modules.dart for clarity
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,13 +21,19 @@ class _HomePageState extends State<HomePage> {
   Map<String, dynamic>? _userData;
   int _practicesDoneToday = 0;
   List<practice_service.PracticeModule> _dailyPractices = [];
-  final List<PracticeModule> _popularModules = [];
+  List<PracticeModule> _popularModules = [];
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _loadPracticeData();
+    
+    // Subscribe to module updates
+    PracticeModuleService.moduleStream.listen((modules) {
+      // Update popular modules when any module changes
+      _loadPopularModules();
+    });
   }
 
   @override
@@ -67,11 +74,9 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadPracticeData() async {
     try {
-      // First try to fetch existing practices
+      // First load daily practices (from previous code)
       final practices = await practice_service.CustomPracticeService.fetchPractices();
       
-      // If no practices or it's been more than 7 days since last generation,
-      // generate new practices
       if (practices.isEmpty || _shouldRefreshPractices(practices)) {
         final newPractices = await practice_service.CustomPracticeService.generateCustomPractices();
         await practice_service.CustomPracticeService.savePractices(newPractices);
@@ -86,43 +91,9 @@ class _HomePageState extends State<HomePage> {
         });
       }
 
-      // Load popular modules from the PracticeModule class in practice_modules.dart
-      setState(() {
-        _popularModules.addAll([
-          PracticeModule(
-            id: 'sentence_writing',
-            title: 'Sentence Writing',
-            description: 'Practice writing sentences with dyslexic challenges',
-            type: ModuleType.written,
-            totalExercises: 5,
-            completedExercises: 0,
-          ),
-          PracticeModule(
-            id: 'word_formation',
-            title: 'Word Formation',
-            description: 'Form words from letters (OCR based)',
-            type: ModuleType.written,
-            totalExercises: 5,
-            completedExercises: 0,
-          ),
-          PracticeModule(
-            id: 'speech_recognition',
-            title: 'Speech Recognition',
-            description: 'Practice speaking sentences clearly',
-            type: ModuleType.speech,
-            totalExercises: 5,
-            completedExercises: 0,
-          ),
-          PracticeModule(
-            id: 'phonetic_awareness',
-            title: 'Phonetic Awareness',
-            description: 'Practice with phonetic rules and sounds',
-            type: ModuleType.speech,
-            totalExercises: 5,
-            completedExercises: 0,
-          ),
-        ]);
-      });
+      // Load popular modules from our new service
+      await _loadPopularModules();
+      
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading practices: ${e.toString()}')),
@@ -131,6 +102,18 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+  
+  // New method to load popular modules
+  Future<void> _loadPopularModules() async {
+    try {
+      final popularModules = await PracticeModuleService.getPopularModules();
+      setState(() {
+        _popularModules = popularModules;
+      });
+    } catch (e) {
+      print('Error loading popular modules: $e');
     }
   }
 
@@ -150,6 +133,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildMascot() {
+    
     final bool hasPracticed = _practicesDoneToday > 0;
     final String firstName = _userData?['firstName'] ?? 'there';
     
@@ -250,141 +234,142 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildDailyPractices() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Your daily practices',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF324259),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              setState(() {
-                _isLoading = true;
-              });
-              try {
-                final newPractices = await practice_service.CustomPracticeService.generateCustomPractices();
-                await practice_service.CustomPracticeService.savePractices(newPractices);
-                setState(() {
-                  _dailyPractices = newPractices;
-                  _practicesDoneToday = _countCompletedPractices(newPractices);
-                });
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error refreshing practices: ${e.toString()}')),
-                );
-              } finally {
-                setState(() {
-                  _isLoading = false;
-                });
-              }
-            },
-            child: Text(
-              'Refresh',
+    // Existing implementation remains the same
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Your daily practices',
               style: TextStyle(
-                fontSize: 14,
-                color: Theme.of(context).primaryColor,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF324259),
               ),
             ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 4),
-      
-      // Practice items row - increased height and width
-      SizedBox(
-        height: 150, // Increased from 110
-        child: _dailyPractices.isEmpty
-            ? const Center(child: Text('No practices available'))
-            : ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _dailyPractices.length,
-                itemBuilder: (context, index) {
-                  final practice = _dailyPractices[index];
-                  return GestureDetector(
-                    onTap: () {
-                      // Navigate to practice screen
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PracticeScreen(practice: practice),
-                        ),
-                      ).then((_) => _loadPracticeData()); // Refresh when returning
-                    },
-                    child: Container(
-                      width: 120, // Increased from 90
-                      margin: const EdgeInsets.only(right: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: practice.completed
-                              ? Colors.green.withOpacity(0.5)
-                              : const Color(0xFFE0E0E0),
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
-                            spreadRadius: 1,
-                            blurRadius: 2,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 50, // Increased from 40
-                            height: 50, // Increased from 40
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEEF2F6),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              _getPracticeIcon(practice.type),
-                              color: practice.completed 
-                                  ? Colors.green 
-                                  : const Color(0xFF324259),
-                              size: 26, // Slightly larger icon
-                            ),
-                          ),
-                          const SizedBox(height: 8), // Increased from 8
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8), // Increased from 4
-                            child: Text(
-                              practice.title,
-                              style: const TextStyle(
-                                fontSize: 13, // Increased from 12
-                                fontWeight: FontWeight.w500,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(height: 8), // Added spacing
-                          if (practice.completed)
-                            const Icon(
-                              Icons.check_circle,
-                              color: Colors.green,
-                              size: 18, // Increased from 16
-                            ),
-                        ],
-                      ),
-                    ),
+            TextButton(
+              onPressed: () async {
+                setState(() {
+                  _isLoading = true;
+                });
+                try {
+                  final newPractices = await practice_service.CustomPracticeService.generateCustomPractices();
+                  await practice_service.CustomPracticeService.savePractices(newPractices);
+                  setState(() {
+                    _dailyPractices = newPractices;
+                    _practicesDoneToday = _countCompletedPractices(newPractices);
+                  });
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error refreshing practices: ${e.toString()}')),
                   );
-                },
+                } finally {
+                  setState(() {
+                    _isLoading = false;
+                  });
+                }
+              },
+              child: Text(
+                'Refresh',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).primaryColor,
+                ),
               ),
+            ),
+          ],
         ),
+        const SizedBox(height: 4),
+        
+        // Practice items row
+        SizedBox(
+          height: 150,
+          child: _dailyPractices.isEmpty
+              ? const Center(child: Text('No practices available'))
+              : ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _dailyPractices.length,
+                  itemBuilder: (context, index) {
+                    final practice = _dailyPractices[index];
+                    return GestureDetector(
+                      onTap: () {
+                        // Navigate to practice screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PracticeScreen(practice: practice),
+                          ),
+                        ).then((_) => _loadPracticeData()); // Refresh when returning
+                      },
+                      child: Container(
+                        width: 120,
+                        margin: const EdgeInsets.only(right: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: practice.completed
+                                ? Colors.green.withOpacity(0.5)
+                                : const Color(0xFFE0E0E0),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withOpacity(0.1),
+                              spreadRadius: 1,
+                              blurRadius: 2,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEEF2F6),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                _getPracticeIcon(practice.type),
+                                color: practice.completed 
+                                    ? Colors.green 
+                                    : const Color(0xFF324259),
+                                size: 26,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              child: Text(
+                                practice.title,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            if (practice.completed)
+                              const Icon(
+                                Icons.check_circle,
+                                color: Colors.green,
+                                size: 18,
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+          ),
       ],
     );
   }
@@ -405,141 +390,138 @@ class _HomePageState extends State<HomePage> {
         
         // Module cards in a horizontal scroll
         SizedBox(
-          height: 170, // Height for the module cards
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: _popularModules.length,
-            itemBuilder: (context, index) {
-              final module = _popularModules[index];
-              return Container(
-                width: MediaQuery.of(context).size.width * 0.65, // 60% of screen width
-                margin: const EdgeInsets.only(right: 6),
-                child: Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ModuleDetailScreen(
-                            module: module,
-                            onProgressUpdate: (completed) {
-                              // Handle the progress update
-                              setState(() {
-                                // Update the module progress
-                                final moduleIndex = _popularModules.indexWhere((m) => m.id == module.id);
-                                if (moduleIndex != -1) {
-                                  _popularModules[moduleIndex] = module.copyWith(
-                                    completedExercises: completed,
-                                  );
-                                }
-                              });
-                            },
+          height: 170,
+          child: _popularModules.isEmpty 
+              ? const Center(child: Text('No modules available'))
+              : ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _popularModules.length,
+                  itemBuilder: (context, index) {
+                    final module = _popularModules[index];
+                    return Container(
+                      width: MediaQuery.of(context).size.width * 0.70,
+                      margin: const EdgeInsets.only(right: 16),
+                      child: Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)
+                        ),
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ModuleDetailScreen(
+                                  module: module,
+                                  onProgressUpdate: (completed) {
+                                    // Update progress using the central service
+                                    PracticeModuleService.updateModuleProgress(
+                                      module.id, 
+                                      completed
+                                    );
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        module.title,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: module.type == ModuleType.written
+                                            ? Colors.blue.withOpacity(0.2)
+                                            : Colors.green.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        module.type == ModuleType.written ? "Written" : "Speech",
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: module.type == ModuleType.written
+                                              ? Colors.blue
+                                              : Colors.green,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  module.description,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[700],
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const Spacer(),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Progress: ${module.completedExercises}/${module.totalExercises}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        Text(
+                                          '${(module.progressPercentage * 100).toStringAsFixed(0)}%',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    LinearProgressIndicator(
+                                      value: module.progressPercentage,
+                                      backgroundColor: Colors.grey[300],
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        module.progressPercentage == 1.0
+                                            ? Colors.green
+                                            : Colors.blue,
+                                      ),
+                                      minHeight: 5,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    const SizedBox(height: 8),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ).then((_) {
-                        // Refresh the screen after returning
-                        setState(() {});
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  module.title,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: module.type == ModuleType.written
-                                      ? Colors.blue.withOpacity(0.2)
-                                      : Colors.green.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  module.type == ModuleType.written ? "Written" : "Speech",
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: module.type == ModuleType.written
-                                        ? Colors.blue
-                                        : Colors.green,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            module.description,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey[700],
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const Spacer(),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Progress: ${module.completedExercises}/${module.totalExercises}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${(module.progressPercentage * 100).toStringAsFixed(0)}%',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              LinearProgressIndicator(
-                                value: module.progressPercentage,
-                                backgroundColor: Colors.grey[300],
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  module.progressPercentage == 1.0
-                                      ? Colors.green
-                                      : Colors.blue,
-                                ),
-                                minHeight: 5,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ],
-                          ),
-                        ],
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
         ),
       ],
     );
