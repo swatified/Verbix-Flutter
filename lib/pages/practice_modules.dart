@@ -438,8 +438,8 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     'visual_tracking': [
       'Find the pattern: 1 2 3, 1 2 3, 1 2 _',
       'Track left to right: → → → ← → → ← → ←',
-      'Follow the pattern: ● ○ ● ○ ○ ● ○ ● ●',
-      'Scan for the letter d: a b c d e f g h i j k l m d n o p',
+      'Follow the pattern: A B A B B A B A A',
+      'Scan for the letter D: A B C D E F G H I J K L M N O P',
       'Count the circles: ■ ● ■ ● ● ■ ● ■ ● ■ ■ ●',
     ],
     'reading_comprehension': [
@@ -715,17 +715,22 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
           this.recognizedText = extracted.isEmpty ? "No text detected" : extracted;
           
           // Compare with current exercise
-          final currentContent = getCurrentExercise().toLowerCase();
+          final currentContent = getCurrentExercise();
           
           // Different comparison logic based on module type
           if (widget.module.id == 'word_formation') {
             // For word formation, check if the recognized text contains the target word
-            isCorrect = extracted.contains(currentContent) || 
-                        currentContent.contains(extracted);
+            isCorrect = extracted.contains(currentContent.toLowerCase()) || 
+                        currentContent.toLowerCase().contains(extracted);
           } 
           else if (widget.module.id == 'visual_tracking') {
             // Enhanced visual tracking validation
             isCorrect = _validateVisualTrackingAnswer(currentContent, extracted);
+            
+            // Specific check for number pattern exercise
+            if (currentContent.contains('Find the pattern')) {
+              isCorrect = extracted == '3' || extracted.contains('3') || extracted.contains('three');
+            }
           }
           else if (widget.module.id == 'reading_comprehension') {
             // Enhanced reading comprehension validation
@@ -733,7 +738,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
           }
           else {
             // Default comparison
-            isCorrect = extracted == currentContent;
+            isCorrect = extracted.toLowerCase() == currentContent.toLowerCase();
           }
           
           hasChecked = true;
@@ -753,10 +758,21 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
   
   // Custom validation for visual tracking exercises
   bool _validateVisualTrackingAnswer(String exerciseContent, String userAnswer) {
+    print('Visual tracking validation - Exercise: $exerciseContent, Answer: $userAnswer');
+    
+    // Debug the user input
+    final cleanUserAnswer = userAnswer.trim().toLowerCase();
+    print('Cleaned user answer: $cleanUserAnswer');
+    
     // Check which visual tracking exercise this is
     if (exerciseContent.contains('Find the pattern')) {
       // Simple number sequence - the answer is 3
-      return userAnswer.contains('3') || userAnswer.contains('three');
+      final isCorrect = cleanUserAnswer == '3' || 
+                        cleanUserAnswer == 'three' || 
+                        cleanUserAnswer.contains('3') || 
+                        cleanUserAnswer.contains('three');
+      print('Pattern exercise check result: $isCorrect');
+      return isCorrect;
     } 
     else if (exerciseContent.contains('Track left to right')) {
       // Arrow tracking exercise - check for arrows
@@ -765,10 +781,8 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
              userAnswer.contains('left');
     }
     else if (exerciseContent.contains('Follow the pattern')) {
-      // Pattern recognition - check for circle or pattern words
-      return userAnswer.contains('●') || userAnswer.contains('○') || 
-             userAnswer.contains('circle') || userAnswer.contains('pattern') || 
-             userAnswer.contains('dot');
+      // Letter pattern recognition - check for A or B
+      return userAnswer.toLowerCase().contains('b');
     }
     else if (exerciseContent.contains('Scan for the letter')) {
       // Letter scanning - check if they found the target letter (d)
@@ -798,7 +812,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     // Consider correct if at least 40% of pattern elements are found
     return targetWords.isNotEmpty && (matchedWords / targetWords.length) >= 0.4;
   }
-  
+
   // Custom validation for reading comprehension exercises
   bool _validateReadingComprehensionAnswer(String exerciseContent, String userAnswer) {
     // Extract the question from the content
