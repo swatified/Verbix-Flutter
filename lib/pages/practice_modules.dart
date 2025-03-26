@@ -111,14 +111,6 @@ class _PracticeModulesScreenState extends State<PracticeModulesScreen> {
         completedExercises: 0,
       ),
       PracticeModule(
-        id: 'memory_exercises',
-        title: 'Memory Exercises',
-        description: 'Strengthen working memory with exercises',
-        type: ModuleType.written,
-        totalExercises: 5,
-        completedExercises: 0,
-      ),
-      PracticeModule(
         id: 'reading_comprehension',
         title: 'Reading Comprehension',
         description: 'Read and answer questions about short texts',
@@ -444,18 +436,11 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
       'Sunshine',
     ],
     'visual_tracking': [
-      'Follow the sequence: 1-A-2-B-3-C-4-D-5-E',
+      'Find the pattern: 1 2 3, 1 2 3, 1 2 _',
       'Track left to right: → → → ← → → ← → ←',
       'Follow the pattern: ● ○ ● ○ ○ ● ○ ● ●',
       'Scan for the letter d: a b c d e f g h i j k l m d n o p',
       'Count the circles: ■ ● ■ ● ● ■ ● ■ ● ■ ■ ●',
-    ],
-    'memory_exercises': [
-      'Remember the sequence: 7-2-9-4-1',
-      'Recall these words: apple, chair, pencil, dog, sun',
-      'Remember the pattern: red, blue, green, red, yellow, blue',
-      'Memorize the sentence: The cat jumped over the tall fence',
-      'Remember the shapes: triangle, square, circle, rectangle, star',
     ],
     'reading_comprehension': [
       'Tom has a red ball. The ball is round. Tom likes to play with his ball. What color is Tom\'s ball?',
@@ -739,63 +724,12 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                         currentContent.contains(extracted);
           } 
           else if (widget.module.id == 'visual_tracking') {
-            // For visual tracking, check if key patterns are present
-            final cleanTarget = currentContent.replaceAll(RegExp(r'[^\w\s]'), '').trim();
-            final cleanExtracted = extracted.replaceAll(RegExp(r'[^\w\s]'), '').trim();
-            
-            // Check for pattern matches - more lenient
-            final targetWords = cleanTarget.split(' ');
-            int matchedWords = 0;
-            
-            for (final targetWord in targetWords) {
-              if (cleanExtracted.contains(targetWord)) {
-                matchedWords++;
-              }
-            }
-            
-            // Consider correct if at least 50% of pattern elements are found
-            isCorrect = targetWords.isNotEmpty && 
-                      (matchedWords / targetWords.length) >= 0.5;
-          }
-          else if (widget.module.id == 'memory_exercises') {
-            // For memory exercises, check if the sequence or key items are present
-            final targetItems = currentContent.replaceAll(RegExp(r'[^\w\s\-,]'), '').trim();
-            
-            // Extract just the sequence or items after the colon
-            final colonIndex = targetItems.indexOf(':');
-            final itemsToCheck = colonIndex > 0 
-                ? targetItems.substring(colonIndex + 1).trim() 
-                : targetItems;
-                
-            // Check if the items are in the recognized text
-            final items = itemsToCheck.split(RegExp(r'[,\s-]+')).where((s) => s.isNotEmpty).toList();
-            int matchedItems = 0;
-            
-            for (final item in items) {
-              if (item.isNotEmpty && extracted.contains(item)) {
-                matchedItems++;
-              }
-            }
-            
-            // Consider correct if at least 60% of items are found
-            isCorrect = items.isNotEmpty && 
-                      (matchedItems / items.length) >= 0.6;
+            // Enhanced visual tracking validation
+            isCorrect = _validateVisualTrackingAnswer(currentContent, extracted);
           }
           else if (widget.module.id == 'reading_comprehension') {
-            // For reading comprehension, extract the question and check for key answer words
-            final segments = currentContent.split('?');
-            if (segments.length > 1) {
-              // The answer is often found at the end of the content
-              final questionText = segments.last.trim().toLowerCase();
-              
-              // Check if the recognized text contains key answer words
-              isCorrect = extracted.contains(questionText) || 
-                        questionText.contains(extracted);
-            } else {
-              // If no question mark, just do a general comparison
-              isCorrect = extracted.contains(currentContent) || 
-                        currentContent.contains(extracted);
-            }
+            // Enhanced reading comprehension validation
+            isCorrect = _validateReadingComprehensionAnswer(currentContent, extracted);
           }
           else {
             // Default comparison
@@ -816,10 +750,108 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
       });
     }
   }
+  
+  // Custom validation for visual tracking exercises
+  bool _validateVisualTrackingAnswer(String exerciseContent, String userAnswer) {
+    // Check which visual tracking exercise this is
+    if (exerciseContent.contains('Find the pattern')) {
+      // Simple number sequence - the answer is 3
+      return userAnswer.contains('3') || userAnswer.contains('three');
+    } 
+    else if (exerciseContent.contains('Track left to right')) {
+      // Arrow tracking exercise - check for arrows
+      return userAnswer.contains('→') || userAnswer.contains('←') || 
+             userAnswer.contains('arrow') || userAnswer.contains('right') || 
+             userAnswer.contains('left');
+    }
+    else if (exerciseContent.contains('Follow the pattern')) {
+      // Pattern recognition - check for circle or pattern words
+      return userAnswer.contains('●') || userAnswer.contains('○') || 
+             userAnswer.contains('circle') || userAnswer.contains('pattern') || 
+             userAnswer.contains('dot');
+    }
+    else if (exerciseContent.contains('Scan for the letter')) {
+      // Letter scanning - check if they found the target letter (d)
+      return userAnswer.contains('d');
+    }
+    else if (exerciseContent.contains('Count the circles')) {
+      // Circle counting - check for numbers (the answer would be 6)
+      final numberPattern = RegExp(r'\b[5-7]\b'); // Accept 5, 6, or 7 as close enough
+      return numberPattern.hasMatch(userAnswer) || 
+             userAnswer.contains('six') || userAnswer.contains('6');
+    }
+    
+    // Default pattern matching for other visual exercises
+    final cleanTarget = exerciseContent.replaceAll(RegExp(r'[^\w\s]'), '').trim();
+    final cleanExtracted = userAnswer.replaceAll(RegExp(r'[^\w\s]'), '').trim();
+    
+    // Check for pattern matches - more lenient
+    final targetWords = cleanTarget.split(' ');
+    int matchedWords = 0;
+    
+    for (final targetWord in targetWords) {
+      if (targetWord.length > 3 && cleanExtracted.contains(targetWord)) { // Only match significant words
+        matchedWords++;
+      }
+    }
+    
+    // Consider correct if at least 40% of pattern elements are found
+    return targetWords.isNotEmpty && (matchedWords / targetWords.length) >= 0.4;
+  }
+  
+  // Custom validation for reading comprehension exercises
+  bool _validateReadingComprehensionAnswer(String exerciseContent, String userAnswer) {
+    // Extract the question from the content
+    final parts = exerciseContent.split('?');
+    if (parts.length < 2) {
+      return false; // No question found
+    }
+    
+    // Get the last part which typically contains the question
+    final questionPart = parts.last.trim().toLowerCase();
+    
+    // Extract correct answers based on the question context
+    Map<String, List<String>> correctAnswers = {
+      'Tom has a red ball': ['red'],
+      'Sara went to the store': ['milk', 'bread'],
+      'The sky is blue': ['green'],
+      'Ben has three pets': ['three', '3'],
+      'Maya likes to read books': ['dinosaurs', 'dinosaur'],
+    };
+    
+    // Find which question we're dealing with and check the answer
+    for (final key in correctAnswers.keys) {
+      if (exerciseContent.toLowerCase().contains(key.toLowerCase())) {
+        final answers = correctAnswers[key]!;
+        for (final answer in answers) {
+          if (userAnswer.toLowerCase().contains(answer.toLowerCase())) {
+            return true;
+          }
+        }
+        break;
+      }
+    }
+    
+    // If no specific match, do a more general check
+    // Extract potential answers from the text (usually nouns and colors)
+    final potentialAnswers = [
+      'red', 'blue', 'green', 'milk', 'bread', 'three', 'dog', 'cat', 
+      'fish', 'dinosaurs', 'trex', 'triceratops', 't-rex'
+    ];
+    
+    for (final answer in potentialAnswers) {
+      if (userAnswer.toLowerCase().contains(answer) && 
+          exerciseContent.toLowerCase().contains(answer)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
 
   // Determine if this module should use drawing input
   bool _shouldUseDrawingInput() {
-    final drawingModules = ['word_formation', 'visual_tracking', 'memory_exercises', 'reading_comprehension'];
+    final drawingModules = ['word_formation', 'visual_tracking', 'reading_comprehension'];
     return drawingModules.contains(widget.module.id);
   }
 
@@ -859,6 +891,17 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
                 child: const Text('Return to Modules'),
+              ),
+              // Add a button to restart the module
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () {
+                  widget.onProgressUpdate(0);
+                  setState(() {
+                    currentExercise = 0;
+                  });
+                },
+                child: const Text('Practice Again'),
               ),
             ],
           ),
