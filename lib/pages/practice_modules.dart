@@ -60,6 +60,7 @@ class PracticeModulesScreen extends StatefulWidget {
 class _PracticeModulesScreenState extends State<PracticeModulesScreen> {
   List<PracticeModule> modules = [];
   bool isLoading = true;
+  late SharedPreferences prefs; // Add SharedPreferences instance
 
   @override
   void initState() {
@@ -68,6 +69,9 @@ class _PracticeModulesScreenState extends State<PracticeModulesScreen> {
   }
 
   Future<void> _initializeModules() async {
+    // Get SharedPreferences instance once
+    prefs = await SharedPreferences.getInstance();
+    
     // Define the default modules
     final defaultModules = [
       PracticeModule(
@@ -121,16 +125,32 @@ class _PracticeModulesScreenState extends State<PracticeModulesScreen> {
     ];
 
     // Load saved progress
-    final prefs = await SharedPreferences.getInstance();
     final savedModules = prefs.getString('practice_modules');
 
     if (savedModules != null) {
-      final List<dynamic> decodedModules = json.decode(savedModules);
-      modules = decodedModules
-          .map((moduleJson) => PracticeModule.fromJson(moduleJson))
-          .toList();
+      try {
+        final List<dynamic> decodedModules = json.decode(savedModules);
+        modules = decodedModules
+            .map((moduleJson) => PracticeModule.fromJson(moduleJson))
+            .toList();
+        
+        // Make sure all existing modules are included (in case new ones were added)
+        for (final defaultModule in defaultModules) {
+          final existingModuleIndex = modules.indexWhere((m) => m.id == defaultModule.id);
+          if (existingModuleIndex == -1) {
+            modules.add(defaultModule);
+          }
+        }
+      } catch (e) {
+        print('Error loading saved modules: $e');
+        modules = defaultModules;
+        // Save the default modules to fix corrupt data
+        await _saveProgress();
+      }
     } else {
       modules = defaultModules;
+      // Save the default modules for first-time initialization
+      await _saveProgress();
     }
 
     setState(() {
@@ -139,17 +159,25 @@ class _PracticeModulesScreenState extends State<PracticeModulesScreen> {
   }
 
   Future<void> _saveProgress() async {
-    final prefs = await SharedPreferences.getInstance();
-    final modulesJson = modules.map((module) => module.toJson()).toList();
-    await prefs.setString('practice_modules', json.encode(modulesJson));
+    try {
+      final modulesJson = modules.map((module) => module.toJson()).toList();
+      await prefs.setString('practice_modules', json.encode(modulesJson));
+      print('Progress saved successfully: ${modulesJson.length} modules');
+    } catch (e) {
+      print('Error saving progress: $e');
+    }
   }
 
   void _updateProgress(PracticeModule module, int completed) {
     setState(() {
       final index = modules.indexWhere((m) => m.id == module.id);
       if (index != -1) {
-        modules[index] = module.copyWith(completedExercises: completed);
-        _saveProgress();
+        // Only update if the new completion count is higher than the current one
+        if (completed > modules[index].completedExercises) {
+          modules[index] = module.copyWith(completedExercises: completed);
+          _saveProgress();
+          print('Module "${module.title}" progress updated: $completed/${module.totalExercises}');
+        }
       }
     });
   }
@@ -187,7 +215,10 @@ class _PracticeModulesScreenState extends State<PracticeModulesScreen> {
                           },
                         ),
                       ),
-                    );
+                    ).then((_) {
+                      // Refresh the modules list after returning from detail screen
+                      setState(() {});
+                    });
                   },
                 );
               },
@@ -439,7 +470,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
       'Find the pattern: 1 2 3, 1 2 3, 1 2 _',
       'Track left to right: → → → ← → → ← → ←',
       'Follow the pattern: A B A B B A B A A',
-      'Scan for the letter D: A B C D E F G H I J K L M N O P',
+      'Scan for the letter D: a b c d e f g h i j k l m n o p',
       'Count the circles: ■ ● ■ ● ● ■ ● ■ ● ■ ■ ●',
     ],
     'reading_comprehension': [
@@ -593,16 +624,26 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
   }
 
   void _nextExercise() {
-    if (currentExercise < widget.module.totalExercises - 1) {
-      setState(() {
-        currentExercise += 1;
-        recognizedText = '';
-        _speechText = '';
-        hasChecked = false;
-        isCorrect = false;
-      });
-    } else {
-      _completeModule();
+    if (isCorrect) {
+      // Update progress if this is a new highest completed exercise
+      if (currentExercise >= widget.module.completedExercises) {
+        // Only increment progress if we're at the highest completed exercise
+        widget.onProgressUpdate(currentExercise + 1);
+        print('Progress updated: ${currentExercise + 1}/${widget.module.totalExercises}');
+      }
+      
+      if (currentExercise < widget.module.totalExercises - 1) {
+        setState(() {
+          currentExercise += 1;
+          recognizedText = '';
+          _speechText = '';
+          hasChecked = false;
+          isCorrect = false;
+          points.clear(); // Reset drawing if applicable
+        });
+      } else {
+        _completeModule();
+      }
     }
   }
   
@@ -619,7 +660,9 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
   }
 
   void _completeModule() {
+    // Update to mark the entire module as complete
     widget.onProgressUpdate(widget.module.totalExercises);
+    print('Module completed: ${widget.module.title}');
     
     // Show completion dialog
     showDialog(
@@ -875,7 +918,12 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     if (widget.module.completedExercises >= widget.module.totalExercises) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(widget.module.title),
+          title: Text(widget.module.title,
+          style: const TextStyle(
+            color: Color(0xFF324259),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
           backgroundColor: Colors.white,
           elevation: 0,
         ),
@@ -955,6 +1003,22 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(10),
                 ),
+                
+                // Show saved progress indicator if different from current exercise
+                if (widget.module.completedExercises > 0 && 
+                    widget.module.completedExercises != currentExercise)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(
+                      'Saved progress: ${widget.module.completedExercises}/${widget.module.totalExercises}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                
                 const SizedBox(height: 24),
                 
                 // Exercise content
