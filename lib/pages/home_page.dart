@@ -105,7 +105,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
   
-  // New method to load popular modules
   Future<void> _loadPopularModules() async {
     try {
       final popularModules = await PracticeModuleService.getPopularModules();
@@ -114,6 +113,38 @@ class _HomePageState extends State<HomePage> {
       });
     } catch (e) {
       print('Error loading popular modules: $e');
+    }
+  }
+  
+  // New method to save daily progress to the database
+  Future<void> _saveDailyProgress(List<practice_service.PracticeModule> practices) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      
+      // Get yesterday's date as this is for the day that just ended
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final dateStr = "${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}";
+      
+      // Count completed practices
+      final completed = practices.where((practice) => practice.completed).length;
+      final total = practices.length;
+      
+      // Save to Firestore
+      await FirebaseFirestore.instance
+          .collection('dailyProgress')
+          .doc('${user.uid}_$dateStr')
+          .set({
+            'userId': user.uid,
+            'date': dateStr,
+            'completed': completed,
+            'total': total,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+          
+      print('Saved daily progress: $completed/$total for $dateStr');
+    } catch (e) {
+      print('Error saving daily progress: $e');
     }
   }
 
@@ -125,16 +156,26 @@ class _HomePageState extends State<HomePage> {
       a.createdAt.isAfter(b.createdAt) ? a : b);
       
     // If it's been more than 7 days since the last practice was created, refresh
-    if (DateTime.now().difference(latestPractice.createdAt).inDays > 7) return true;
+    if (DateTime.now().difference(latestPractice.createdAt).inDays > 7) {
+      _saveDailyProgress(practices); // Save progress before refreshing
+      return true;
+    }
     
     // Check if current date is different from the date when practices were created
     // This ensures practices refresh at 12am each day
     final today = DateTime.now();
     final createdDate = latestPractice.createdAt;
     
-    return today.year != createdDate.year || 
-           today.month != createdDate.month || 
-           today.day != createdDate.day;
+    final needsRefresh = today.year != createdDate.year || 
+                         today.month != createdDate.month || 
+                         today.day != createdDate.day;
+    
+    // If we need to refresh for a new day, save yesterday's progress first
+    if (needsRefresh) {
+      _saveDailyProgress(practices);
+    }
+    
+    return needsRefresh;
   }
 
   int _countCompletedPractices(List<practice_service.PracticeModule> practices) {
