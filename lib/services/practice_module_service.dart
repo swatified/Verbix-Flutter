@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Enum for module types
 enum ModuleType { written, speech }
@@ -71,6 +73,7 @@ class PracticeModule {
 // PracticeModuleService to manage modules across the app
 class PracticeModuleService {
   static const String _modulesKey = 'practice_modules';
+  static const String _completedModulesKey = 'completed_modules_today';
   static List<PracticeModule>? _cachedModules;
   static final StreamController<List<PracticeModule>> _moduleStreamController = 
       StreamController<List<PracticeModule>>.broadcast();
@@ -207,9 +210,10 @@ class PracticeModuleService {
     final moduleIndex = _cachedModules!.indexWhere((m) => m.id == moduleId);
     
     if (moduleIndex != -1) {
+      final module = _cachedModules![moduleIndex];
       // Only update if the new completion count is higher than the current one
-      if (completedExercises > _cachedModules![moduleIndex].completedExercises) {
-        _cachedModules![moduleIndex] = _cachedModules![moduleIndex].copyWith(
+      if (completedExercises > module.completedExercises) {
+        _cachedModules![moduleIndex] = module.copyWith(
           completedExercises: completedExercises
         );
         
@@ -218,7 +222,103 @@ class PracticeModuleService {
         _moduleStreamController.add(_cachedModules!);
         
         print('Module "$moduleId" progress updated: $completedExercises');
+        
+        // If the module is now fully completed, record it
+        if (completedExercises >= module.totalExercises && 
+            module.completedExercises < module.totalExercises) {
+          await recordModuleCompletion(moduleId);
+        }
       }
+    }
+  }
+  
+  // Record that a module was fully completed today
+  static Future<void> recordModuleCompletion(String moduleId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      
+      // Get today's date in YYYY-MM-DD format
+      final now = DateTime.now();
+      final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      
+      // Reference to the user's daily stats document
+      final dailyStatsRef = FirebaseFirestore.instance
+          .collection('userStats')
+          .doc('${user.uid}_$dateStr');
+      
+      // Get current stats document or create if it doesn't exist
+      final docSnapshot = await dailyStatsRef.get();
+      
+      if (docSnapshot.exists) {
+        // Update existing document
+        await dailyStatsRef.update({
+          'completedModules': FieldValue.increment(1),
+          'moduleIds': FieldValue.arrayUnion([moduleId]),
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Create new document
+        await dailyStatsRef.set({
+          'userId': user.uid,
+          'date': dateStr,
+          'completedModules': 1,
+          'moduleIds': [moduleId],
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+      
+      // Also store locally to prevent duplicate counting if user completes again
+      await _storeLocalCompletion(moduleId);
+      
+      print('Module completion recorded for $moduleId on $dateStr');
+    } catch (e) {
+      print('Error recording module completion: $e');
+    }
+  }
+  
+  // Store completed module locally to prevent duplicate counting
+  static Future<void> _storeLocalCompletion(String moduleId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+      final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      
+      // Get existing completed modules for today
+      final completedModules = prefs.getStringList('$_completedModulesKey:$dateStr') ?? [];
+      
+      if (!completedModules.contains(moduleId)) {
+        completedModules.add(moduleId);
+        await prefs.setStringList('$_completedModulesKey:$dateStr', completedModules);
+      }
+    } catch (e) {
+      print('Error storing local completion: $e');
+    }
+  }
+  
+  // Get the number of modules completed today
+  static Future<int> getCompletedModulesToday() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return 0;
+      
+      final now = DateTime.now();
+      final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      
+      // Check Firebase for today's stats
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('userStats')
+          .doc('${user.uid}_$dateStr')
+          .get();
+      
+      if (docSnapshot.exists && docSnapshot.data()!.containsKey('completedModules')) {
+        return docSnapshot.data()!['completedModules'] as int;
+      }
+      
+      return 0;
+    } catch (e) {
+      print('Error getting completed modules count: $e');
+      return 0;
     }
   }
   

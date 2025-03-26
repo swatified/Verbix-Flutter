@@ -20,6 +20,7 @@ class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   Map<String, dynamic>? _userData;
   int _practicesDoneToday = 0;
+  int _modulesCompletedToday = 0;
   List<practice_service.PracticeModule> _dailyPractices = [];
   List<PracticeModule> _popularModules = [];
 
@@ -33,6 +34,8 @@ class _HomePageState extends State<HomePage> {
     PracticeModuleService.moduleStream.listen((modules) {
       // Update popular modules when any module changes
       _loadPopularModules();
+      // Also refresh modules completion count
+      _loadModulesCompletedToday();
     });
   }
 
@@ -94,6 +97,9 @@ class _HomePageState extends State<HomePage> {
       // Load popular modules from our new service
       await _loadPopularModules();
       
+      // Load modules completed today
+      await _loadModulesCompletedToday();
+      
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading practices: ${e.toString()}')),
@@ -145,6 +151,18 @@ class _HomePageState extends State<HomePage> {
       print('Saved daily progress: $completed/$total for $dateStr');
     } catch (e) {
       print('Error saving daily progress: $e');
+    }
+  }
+
+  // New method to load modules completed today
+  Future<void> _loadModulesCompletedToday() async {
+    try {
+      final completedCount = await PracticeModuleService.getCompletedModulesToday();
+      setState(() {
+        _modulesCompletedToday = completedCount;
+      });
+    } catch (e) {
+      print('Error loading completed modules: $e');
     }
   }
 
@@ -213,53 +231,84 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          // Mascot image
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: const Color(0xFFEEF2F6),
-            ),
-            child: Image.asset(
-              hasPracticed 
-                  ? 'assets/images/lexi_content.jpeg'
-                  : 'assets/images/lexi_sad.jpeg',
-              fit: BoxFit.contain,
-            ),
-          ),
-          const SizedBox(width: 14),
-          
-          // Mascot message
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          Row(
+            children: [
+              // Mascot image
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFFEEF2F6),
+                ),
+                child: Image.asset(
                   hasPracticed 
-                      ? '$greeting, $firstName!'
-                      : 'Uh oh...',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF324259),
-                  ),
+                      ? 'assets/images/lexi_content.jpeg'
+                      : 'assets/images/lexi_sad.jpeg',
+                  fit: BoxFit.contain,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  hasPracticed
-                      ? 'You have completed $_practicesDoneToday out of ${_dailyPractices.length} exercises today.'
-                      : "You haven't completed any practices today.",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: hasPracticed ? Colors.green[700] : Colors.grey[700],
-                  ),
+              ),
+              const SizedBox(width: 14),
+              
+              // Mascot message
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hasPracticed 
+                          ? '$greeting, $firstName!'
+                          : 'Uh oh...',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF324259),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      hasPracticed
+                          ? 'You have completed $_practicesDoneToday out of ${_dailyPractices.length} exercises today.'
+                          : "You haven't completed any practices today.",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: hasPracticed ? Colors.green[700] : Colors.grey[700],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+          
+          // Add modules completed count if any
+          if (_modulesCompletedToday > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 12.0),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8.0),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.star, color: Colors.amber[700], size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'You completed $_modulesCompletedToday ${_modulesCompletedToday == 1 ? 'module' : 'modules'} today!',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF324259),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

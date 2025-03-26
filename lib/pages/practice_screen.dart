@@ -407,6 +407,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
         widget.practice.type.toString().split('.').last
       );
       
+      // Record practice completion in daily stats
+      await _recordPracticeCompletion();
+      
       setState(() {
         _isCompleted = true;
         _isSubmitting = false;
@@ -439,6 +442,56 @@ class _PracticeScreenState extends State<PracticeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error completing practice: ${e.toString()}')),
       );
+    }
+  }
+  
+  // Record daily practice completion in Firebase
+  Future<void> _recordPracticeCompletion() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      
+      // Get today's date in YYYY-MM-DD format
+      final now = DateTime.now();
+      final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      
+      // Reference to the user's daily stats document
+      final dailyStatsRef = FirebaseFirestore.instance
+          .collection('userStats')
+          .doc('${user.uid}_$dateStr');
+      
+      // Get current stats document or create if it doesn't exist
+      final docSnapshot = await dailyStatsRef.get();
+      
+      final practiceId = widget.practice.id;
+      final practiceType = widget.practice.type.toString().split('.').last;
+      
+      if (docSnapshot.exists) {
+        // Update existing document
+        await dailyStatsRef.update({
+          'completedPractices': FieldValue.increment(1),
+          'practiceIds': FieldValue.arrayUnion([practiceId]),
+          'practiceTypes': FieldValue.arrayUnion([practiceType]),
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Create new document with both module and practice fields
+        await dailyStatsRef.set({
+          'userId': user.uid,
+          'date': dateStr,
+          'completedModules': 0, // Initialize module count
+          'moduleIds': [], // Initialize module ids array
+          'completedPractices': 1, // First practice completion
+          'practiceIds': [practiceId],
+          'practiceTypes': [practiceType],
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      }
+      
+      print('Practice completion recorded: $practiceId on $dateStr');
+    } catch (e) {
+      print('Error recording practice completion: $e');
+      // Continue execution - this isn't a critical error that should block the user
     }
   }
   

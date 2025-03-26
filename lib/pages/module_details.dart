@@ -285,6 +285,9 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
       widget.module.totalExercises
     );
     
+    // The recordModuleCompletion will be called inside updateModuleProgress
+    // when the module is detected as newly completed
+    
     print('Module completed: ${widget.module.title}');
     
     // Show completion dialog
