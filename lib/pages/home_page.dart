@@ -125,7 +125,16 @@ class _HomePageState extends State<HomePage> {
       a.createdAt.isAfter(b.createdAt) ? a : b);
       
     // If it's been more than 7 days since the last practice was created, refresh
-    return DateTime.now().difference(latestPractice.createdAt).inDays > 7;
+    if (DateTime.now().difference(latestPractice.createdAt).inDays > 7) return true;
+    
+    // Check if current date is different from the date when practices were created
+    // This ensures practices refresh at 12am each day
+    final today = DateTime.now();
+    final createdDate = latestPractice.createdAt;
+    
+    return today.year != createdDate.year || 
+           today.month != createdDate.month || 
+           today.day != createdDate.day;
   }
 
   int _countCompletedPractices(List<practice_service.PracticeModule> practices) {
