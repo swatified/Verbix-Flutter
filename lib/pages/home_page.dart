@@ -21,6 +21,7 @@ class _HomePageState extends State<HomePage> {
   Map<String, dynamic>? _userData;
   int _practicesDoneToday = 0;
   int _modulesCompletedToday = 0;
+  int _practicesCompletedToday = 0; // New field to track practice module completions
   List<practice_service.PracticeModule> _dailyPractices = [];
   List<PracticeModule> _popularModules = [];
 
@@ -36,6 +37,11 @@ class _HomePageState extends State<HomePage> {
       _loadPopularModules();
       // Also refresh modules completion count
       _loadModulesCompletedToday();
+    });
+    
+    // Refresh data when returning to this screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCompletedPractices();
     });
   }
 
@@ -100,6 +106,9 @@ class _HomePageState extends State<HomePage> {
       // Load modules completed today
       await _loadModulesCompletedToday();
       
+      // Load completed practices from Firebase
+      await _loadCompletedPractices();
+      
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading practices: ${e.toString()}')),
@@ -163,6 +172,40 @@ class _HomePageState extends State<HomePage> {
       });
     } catch (e) {
       print('Error loading completed modules: $e');
+    }
+  }
+
+  // New method to load completed practices from Firebase
+  Future<void> _loadCompletedPractices() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      
+      // Get today's date in YYYY-MM-DD format
+      final now = DateTime.now();
+      final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      
+      // Reference to the user's daily stats document
+      final dailyStatsRef = FirebaseFirestore.instance
+          .collection('userStats')
+          .doc('${user.uid}_$dateStr');
+      
+      final docSnapshot = await dailyStatsRef.get();
+      
+      if (docSnapshot.exists && docSnapshot.data()!.containsKey('completedPractices')) {
+        final completedPractices = docSnapshot.data()!['completedPractices'] as int;
+        setState(() {
+          _practicesCompletedToday = completedPractices;
+        });
+        print('Loaded $completedPractices completed practices for today');
+      } else {
+        setState(() {
+          _practicesCompletedToday = 0;
+        });
+        print('No completed practices found for today');
+      }
+    } catch (e) {
+      print('Error loading completed practices: $e');
     }
   }
 
@@ -283,30 +326,61 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           
-          // Add modules completed count if any
-          if (_modulesCompletedToday > 0)
+          // Add modules and practices completed count if any
+          if (_modulesCompletedToday > 0 || _practicesCompletedToday > 0)
             Padding(
               padding: const EdgeInsets.only(top: 12.0),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(8.0),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.star, color: Colors.amber[700], size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      'You completed $_modulesCompletedToday ${_modulesCompletedToday == 1 ? 'module' : 'modules'} today!',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF324259),
+              child: Column(
+                children: [
+                  // Show modules completed if any
+                  if (_modulesCompletedToday > 0)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.star, color: Colors.amber[700], size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'You completed $_modulesCompletedToday ${_modulesCompletedToday == 1 ? 'module' : 'modules'} today!',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF324259),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  
+                  // Show practices completed if any
+                  if (_practicesCompletedToday > 0)
+                    Container(
+                      width: double.infinity,
+                      margin: _modulesCompletedToday > 0 ? const EdgeInsets.only(top: 8.0) : EdgeInsets.zero,
+                      padding: const EdgeInsets.all(8.0),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'You completed $_practicesCompletedToday ${_practicesCompletedToday == 1 ? 'practice' : 'practices'} today!',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF324259),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ),
         ],

@@ -11,6 +11,7 @@ import 'package:verbix/services/practice_stats_service.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart'; // Add this import
+import 'package:shared_preferences/shared_preferences.dart'; // Add this import
 
 // Drawing area for handwriting input
 class DrawingArea {
@@ -467,6 +468,15 @@ class _PracticeScreenState extends State<PracticeScreen> {
       final practiceType = widget.practice.type.toString().split('.').last;
       
       if (docSnapshot.exists) {
+        // Check if this practice has already been recorded to avoid duplicates
+        final data = docSnapshot.data() as Map<String, dynamic>;
+        final practiceIds = List<String>.from(data['practiceIds'] ?? []);
+        
+        if (practiceIds.contains(practiceId)) {
+          print('Practice $practiceId already recorded for today, skipping');
+          return; // Skip if already recorded
+        }
+        
         // Update existing document
         await dailyStatsRef.update({
           'completedPractices': FieldValue.increment(1),
@@ -474,6 +484,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
           'practiceTypes': FieldValue.arrayUnion([practiceType]),
           'lastUpdated': FieldValue.serverTimestamp(),
         });
+
+        print('Updated existing stats document for $dateStr with practice $practiceId');
       } else {
         // Create new document with both module and practice fields
         await dailyStatsRef.set({
@@ -486,12 +498,48 @@ class _PracticeScreenState extends State<PracticeScreen> {
           'practiceTypes': [practiceType],
           'timestamp': FieldValue.serverTimestamp(),
         });
+
+        print('Created new stats document for $dateStr with practice $practiceId');
+      }
+
+      // Verify the data was saved correctly
+      final verificationDoc = await dailyStatsRef.get();
+      if (verificationDoc.exists) {
+        final data = verificationDoc.data() as Map<String, dynamic>;
+        final practiceIds = List<String>.from(data['practiceIds'] ?? []);
+        print('Verification: Document contains ${practiceIds.length} practices: $practiceIds');
+      } else {
+        print('ERROR: Failed to verify document - not found after save!');
       }
       
       print('Practice completion recorded: $practiceId on $dateStr');
+      
+      // Also store locally to prevent duplicate counting
+      await _storeLocalPracticeCompletion(practiceId);
+      
     } catch (e) {
       print('Error recording practice completion: $e');
       // Continue execution - this isn't a critical error that should block the user
+    }
+  }
+
+  // Store completed practice locally to prevent duplicate counting
+  Future<void> _storeLocalPracticeCompletion(String practiceId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+      final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+      // Get existing completed practices for today
+      final completedPractices = prefs.getStringList('completed_practices:$dateStr') ?? [];
+
+      if (!completedPractices.contains(practiceId)) {
+        completedPractices.add(practiceId);
+        await prefs.setStringList('completed_practices:$dateStr', completedPractices);
+        print('Stored practice $practiceId in local storage');
+      }
+    } catch (e) {
+      print('Error storing local practice completion: $e');
     }
   }
   
