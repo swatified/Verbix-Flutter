@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:math' as math;
-import 'package:verbix/services/custom_practice_service.dart';
+import 'package:verbix/services/custom_practice_service.dart' as practice_service;
 import 'package:verbix/services/practice_stats_service.dart';
 import 'practice_screen.dart';
+import 'practice_modules.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,8 +19,8 @@ class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   Map<String, dynamic>? _userData;
   int _practicesDoneToday = 0;
-  List<PracticeModule> _dailyPractices = [];
-  final List<Map<String, dynamic>> _popularModules = [];
+  List<practice_service.PracticeModule> _dailyPractices = [];
+  final List<PracticeModule> _popularModules = [];
 
   @override
   void initState() {
@@ -67,13 +68,13 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadPracticeData() async {
     try {
       // First try to fetch existing practices
-      final practices = await CustomPracticeService.fetchPractices();
+      final practices = await practice_service.CustomPracticeService.fetchPractices();
       
       // If no practices or it's been more than 7 days since last generation,
       // generate new practices
       if (practices.isEmpty || _shouldRefreshPractices(practices)) {
-        final newPractices = await CustomPracticeService.generateCustomPractices();
-        await CustomPracticeService.savePractices(newPractices);
+        final newPractices = await practice_service.CustomPracticeService.generateCustomPractices();
+        await practice_service.CustomPracticeService.savePractices(newPractices);
         setState(() {
           _dailyPractices = newPractices;
           _practicesDoneToday = _countCompletedPractices(newPractices);
@@ -85,21 +86,41 @@ class _HomePageState extends State<HomePage> {
         });
       }
 
-      // Load popular modules (static for now)
+      // Load popular modules from the PracticeModule class in practice_modules.dart
       setState(() {
         _popularModules.addAll([
-          {
-            'id': 'cards_basic',
-            'title': 'Basic Cards',
-            'description': 'Practice with basic flashcards',
-            'popularity': 98,
-          },
-          {
-            'id': 'pronunciation',
-            'title': 'Pronunciation',
-            'description': 'Improve your accent',
-            'popularity': 87,
-          },
+          PracticeModule(
+            id: 'sentence_writing',
+            title: 'Sentence Writing',
+            description: 'Practice writing sentences with dyslexic challenges',
+            type: ModuleType.written,
+            totalExercises: 5,
+            completedExercises: 0,
+          ),
+          PracticeModule(
+            id: 'word_formation',
+            title: 'Word Formation',
+            description: 'Form words from letters (OCR based)',
+            type: ModuleType.written,
+            totalExercises: 5,
+            completedExercises: 0,
+          ),
+          PracticeModule(
+            id: 'speech_recognition',
+            title: 'Speech Recognition',
+            description: 'Practice speaking sentences clearly',
+            type: ModuleType.speech,
+            totalExercises: 5,
+            completedExercises: 0,
+          ),
+          PracticeModule(
+            id: 'phonetic_awareness',
+            title: 'Phonetic Awareness',
+            description: 'Practice with phonetic rules and sounds',
+            type: ModuleType.speech,
+            totalExercises: 5,
+            completedExercises: 0,
+          ),
         ]);
       });
     } catch (e) {
@@ -113,7 +134,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  bool _shouldRefreshPractices(List<PracticeModule> practices) {
+  bool _shouldRefreshPractices(List<practice_service.PracticeModule> practices) {
     if (practices.isEmpty) return true;
     
     // Find the most recent practice
@@ -124,7 +145,7 @@ class _HomePageState extends State<HomePage> {
     return DateTime.now().difference(latestPractice.createdAt).inDays > 7;
   }
 
-  int _countCompletedPractices(List<PracticeModule> practices) {
+  int _countCompletedPractices(List<practice_service.PracticeModule> practices) {
     return practices.where((practice) => practice.completed).length;
   }
 
@@ -211,17 +232,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Helper function to get icon based on practice type
-  IconData _getPracticeIcon(PracticeType type) {
+  IconData _getPracticeIcon(practice_service.PracticeType type) {
     switch (type) {
-      case PracticeType.letterWriting:
+      case practice_service.PracticeType.letterWriting:
         return Icons.text_fields;
-      case PracticeType.sentenceWriting:
+      case practice_service.PracticeType.sentenceWriting:
         return Icons.short_text;
-      case PracticeType.phonetic:
+      case practice_service.PracticeType.phonetic:
         return Icons.record_voice_over;
-      case PracticeType.letterReversal:
+      case practice_service.PracticeType.letterReversal:
         return Icons.compare_arrows;
-      case PracticeType.vowelSounds:
+      case practice_service.PracticeType.vowelSounds:
         return Icons.volume_up;
       default:
         return Icons.school;
@@ -249,8 +270,8 @@ class _HomePageState extends State<HomePage> {
                 _isLoading = true;
               });
               try {
-                final newPractices = await CustomPracticeService.generateCustomPractices();
-                await CustomPracticeService.savePractices(newPractices);
+                final newPractices = await practice_service.CustomPracticeService.generateCustomPractices();
+                await practice_service.CustomPracticeService.savePractices(newPractices);
                 setState(() {
                   _dailyPractices = newPractices;
                   _practicesDoneToday = _countCompletedPractices(newPractices);
@@ -375,69 +396,149 @@ class _HomePageState extends State<HomePage> {
         const Text(
           'Popular exercise modules',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Color(0xFF324259),
           ),
         ),
         const SizedBox(height: 12),
         
-        // Cards module
-        Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFFE0E0E0),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
-                      'Cards',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF324259),
+        // Module cards in a horizontal scroll
+        SizedBox(
+          height: 170, // Height for the module cards
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: _popularModules.length,
+            itemBuilder: (context, index) {
+              final module = _popularModules[index];
+              return Container(
+                width: MediaQuery.of(context).size.width * 0.65, // 60% of screen width
+                margin: const EdgeInsets.only(right: 6),
+                child: Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ModuleDetailScreen(
+                            module: module,
+                            onProgressUpdate: (completed) {
+                              // Handle the progress update
+                              setState(() {
+                                // Update the module progress
+                                final moduleIndex = _popularModules.indexWhere((m) => m.id == module.id);
+                                if (moduleIndex != -1) {
+                                  _popularModules[moduleIndex] = module.copyWith(
+                                    completedExercises: completed,
+                                  );
+                                }
+                              });
+                            },
+                          ),
+                        ),
+                      ).then((_) {
+                        // Refresh the screen after returning
+                        setState(() {});
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  module.title,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: module.type == ModuleType.written
+                                      ? Colors.blue.withOpacity(0.2)
+                                      : Colors.green.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  module.type == ModuleType.written ? "Written" : "Speech",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: module.type == ModuleType.written
+                                        ? Colors.blue
+                                        : Colors.green,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            module.description,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[700],
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const Spacer(),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Progress: ${module.completedExercises}/${module.totalExercises}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${(module.progressPercentage * 100).toStringAsFixed(0)}%',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              LinearProgressIndicator(
+                                value: module.progressPercentage,
+                                backgroundColor: Colors.grey[300],
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  module.progressPercentage == 1.0
+                                      ? Colors.green
+                                      : Colors.blue,
+                                ),
+                                minHeight: 5,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Practice with flashcards',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF324259).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  'Personalized',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF324259),
-                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       ],
@@ -556,73 +657,6 @@ class _HomePageState extends State<HomePage> {
                           const SizedBox(height: 24),
                           _buildPopularModules(),
                           const SizedBox(height: 24),
-                          
-                          // Statistics/Insights section
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: const Color(0xFFE0E0E0),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: const [
-                                      Icon(
-                                        Icons.insert_chart_outlined,
-                                        color: Color(0xFF324259),
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Statistics',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF324259),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: const Color(0xFFE0E0E0),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: const [
-                                      Icon(
-                                        Icons.lightbulb_outline,
-                                        color: Color(0xFF324259),
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Insights',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF324259),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
                         ],
                       ),
                     ),

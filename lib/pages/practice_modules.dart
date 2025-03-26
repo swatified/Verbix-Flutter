@@ -189,7 +189,10 @@ class _PracticeModulesScreenState extends State<PracticeModulesScreen> {
       appBar: AppBar(
         title: const Text(
           'Practice Modules',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Color(0xFF324259),
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -918,12 +921,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     if (widget.module.completedExercises >= widget.module.totalExercises) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(widget.module.title,
-          style: const TextStyle(
-            color: Color(0xFF324259),
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+          title: Text(widget.module.title),
           backgroundColor: Colors.white,
           elevation: 0,
         ),
@@ -951,8 +949,12 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  backgroundColor: const Color(0xFF1F5377),
                 ),
-                child: const Text('Return to Modules'),
+                child: const Text('Return to Modules',
+                style: TextStyle(
+              color: Colors.white,),
+                ),
               ),
               // Add a button to restart the module
               const SizedBox(height: 12),
@@ -963,6 +965,9 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                     currentExercise = 0;
                   });
                 },
+                 style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                ),
                 child: const Text('Practice Again'),
               ),
             ],
