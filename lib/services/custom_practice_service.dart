@@ -22,6 +22,7 @@ class PracticeModule {
   final bool completed;
   final DateTime createdAt;
   final int difficulty; // 1-5 scale
+  List<ImageOption>? imageOptions;
 
   PracticeModule({
     required this.id,
@@ -31,6 +32,7 @@ class PracticeModule {
     this.completed = false,
     required this.createdAt,
     this.difficulty = 1,
+    this.imageOptions,
   });
 
   Map<String, dynamic> toMap() {
@@ -42,6 +44,7 @@ class PracticeModule {
       'completed': completed,
       'createdAt': createdAt,
       'difficulty': difficulty,
+      'imageOptions': imageOptions?.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -57,6 +60,10 @@ class PracticeModule {
       completed: map['completed'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       difficulty: map['difficulty'] ?? 1,
+      imageOptions: map['imageOptions'] != null
+          ? List<ImageOption>.from(
+              map['imageOptions'].map((x) => ImageOption.fromJson(x)))
+          : null,
     );
   }
 
@@ -69,6 +76,7 @@ class PracticeModule {
     bool? completed,
     DateTime? createdAt,
     int? difficulty,
+    List<ImageOption>? imageOptions,
   }) {
     return PracticeModule(
       id: id ?? this.id,
@@ -78,6 +86,33 @@ class PracticeModule {
       completed: completed ?? this.completed,
       createdAt: createdAt ?? this.createdAt,
       difficulty: difficulty ?? this.difficulty,
+      imageOptions: imageOptions ?? this.imageOptions,
+    );
+  }
+}
+
+class ImageOption {
+  final String id;
+  final String imageUrl;
+  final String word;
+
+  ImageOption({
+    required this.id,
+    required this.imageUrl,
+    required this.word,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'imageUrl': imageUrl,
+        'word': word,
+      };
+
+  factory ImageOption.fromJson(Map<String, dynamic> json) {
+    return ImageOption(
+      id: json['id'],
+      imageUrl: json['imageUrl'],
+      word: json['word'],
     );
   }
 }
@@ -218,7 +253,7 @@ class CustomPracticeService {
           orElse: () => PracticeType.letterWriting,
         );
         
-        practices.add(PracticeModule(
+        final practice = PracticeModule(
           id: 'practice_${DateTime.now().millisecondsSinceEpoch}_${practices.length}',
           title: item['title'],
           type: type,
@@ -226,7 +261,21 @@ class CustomPracticeService {
           completed: false,
           createdAt: DateTime.now(),
           difficulty: item['difficulty'] ?? 1,
-        ));
+        );
+
+        // When creating sentence writing exercises, add image options
+        if (practice.type == PracticeType.sentenceWriting) {
+          practice.imageOptions = [
+            ImageOption(
+              id: 'img1',
+              imageUrl: 'https://example.com/image1.jpg',
+              word: 'example',
+            ),
+            // Add more image options
+          ];
+        }
+
+        practices.add(practice);
       }
       
       // Ensure we have at most 5 practices
