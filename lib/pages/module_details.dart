@@ -164,8 +164,8 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
           isCorrect = matchPercentage >= 100;
         } else {
           // For single words, be more strict
-          isCorrect = cleanRecognized.contains(cleanTarget) || 
-                      cleanTarget.contains(cleanRecognized);
+          isCorrect = cleanRecognized.isNotEmpty && (cleanRecognized.contains(cleanTarget) || 
+                      cleanTarget.contains(cleanRecognized));
         }
         
         hasChecked = true;
@@ -176,6 +176,8 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
       setState(() {
         recognizedText = 'Error: ${e.toString()}';
         isProcessing = false;
+        isCorrect = false; // Ensure errors are marked as incorrect
+        hasChecked = true;
       });
     }
   }
@@ -216,8 +218,8 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
       
       // Compare with current exercise
       final currentContent = getCurrentExercise().toLowerCase();
-      isCorrect = _speechText.contains(currentContent) || 
-                  currentContent.contains(_speechText);
+      isCorrect = _speechText.isNotEmpty && (_speechText.contains(currentContent) || 
+                  currentContent.contains(_speechText));
       hasChecked = true;
     });
   }
@@ -384,8 +386,8 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
           // Different comparison logic based on module type
           if (widget.module.id == 'word_formation') {
             // For word formation, check if the recognized text contains the target word
-            isCorrect = extracted.contains(currentContent.toLowerCase()) || 
-                        currentContent.toLowerCase().contains(extracted);
+            isCorrect = extracted.isNotEmpty && (extracted.contains(currentContent.toLowerCase()) || 
+                        currentContent.toLowerCase().contains(extracted));
           } 
           else if (widget.module.id == 'visual_tracking') {
             // Enhanced visual tracking validation
