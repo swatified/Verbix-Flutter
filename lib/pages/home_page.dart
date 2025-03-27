@@ -7,6 +7,7 @@ import 'package:verbix/services/practice_stats_service.dart';
 import 'package:verbix/services/practice_module_service.dart'; // Import new service
 import 'practice_screen.dart';
 import 'module_details.dart'; // Renamed from practice_modules.dart for clarity
+import 'user_settings.dart';  // Added import for UserSettingsScreen
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -823,8 +824,19 @@ class _HomePageState extends State<HomePage> {
                         
                         // Profile avatar
                         GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/settings');
+                          onTap: () async {
+                            // Navigate to UserSettingsScreen and wait for result
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const UserSettingsScreen(),
+                              ),
+                            );
+                            
+                            // If changes were made (result is true), refresh user data
+                            if (result == true) {
+                              _loadUserData();
+                            }
                           },
                           child: Container(
                             width: 40,

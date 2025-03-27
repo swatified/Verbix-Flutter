@@ -873,7 +873,7 @@ Widget _buildColorLegendItem(String label, Color color) {
 
   Widget _buildProgressPieChart() {
     // Calculate percentages for pie chart
-    final completedPercentage = _todayPractices / _totalDailyPractices;
+    final completedPercentage = _dailyPractices / _totalDailyPractices;
     final remainingPercentage = 1 - completedPercentage;
     
     return Container(
