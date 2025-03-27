@@ -22,6 +22,7 @@ class _DashboardPageState extends State<DashboardPage> {
   List<Map<String, dynamic>> _monthlyData = [];
   List<Map<String, dynamic>> _yearlyData = [];
   int _todayPractices = 0;
+  int _dailyPractices = 0; // To specifically track daily_practices field
   int _totalDailyPractices = 5; // Maximum daily practices
   
   // Selected time period
@@ -107,10 +108,12 @@ class _DashboardPageState extends State<DashboardPage> {
       if (docSnapshot.exists) {
         setState(() {
           _todayPractices = docSnapshot.data()?['practice_done'] ?? 0;
+          _dailyPractices = docSnapshot.data()?['daily_practices'] ?? 0; 
         });
       } else {
         setState(() {
           _todayPractices = 0;
+          _dailyPractices = 0;
         });
       }
     } catch (e) {
@@ -964,13 +967,13 @@ class _DashboardPageState extends State<DashboardPage> {
                         centerSpaceRadius: 35,
                         sections: [
                           PieChartSectionData(
-                            value: _todayPractices.toDouble(),
+                            value: _dailyPractices.toDouble(),
                             color: const Color(0xFF1F5377),
                             title: '',
                             radius: 20,
                           ),
                           PieChartSectionData(
-                            value: (_totalDailyPractices - _todayPractices).toDouble(),
+                            value: (_totalDailyPractices - _dailyPractices).toDouble(),
                             color: const Color(0xFFE0E0E0),
                             title: '',
                             radius: 20,
@@ -984,7 +987,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            '$_todayPractices/$_totalDailyPractices',
+                            '$_dailyPractices/$_totalDailyPractices',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -1033,7 +1036,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Completed: $_todayPractices',
+                          'Completed: $_dailyPractices',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[700],
@@ -1054,7 +1057,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Remaining: ${_totalDailyPractices - _todayPractices}',
+                          'Remaining: ${_totalDailyPractices - _dailyPractices}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[700],
