@@ -75,7 +75,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     ],
     'visual_tracking': [
       'Find the pattern: 1 2 3, 1 2 3, 1 2 _',
-      'Track left to right: → → → ← → → ← → ←',
+      'Track left to right: → → → ← → → ← →',
       'Follow the pattern: A B A B B A B A A',
       'Scan for the letter D: a b c d e f g h i j k l m n o p',
       'Count the circles: ■ ● ■ ● ● ■ ● ■ ● ■ ■ ●',
@@ -444,9 +444,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     } 
     else if (exerciseContent.contains('Track left to right')) {
       // Arrow tracking exercise - check for arrows
-      return userAnswer.contains('→') || userAnswer.contains('←') || 
-             userAnswer.contains('arrow') || userAnswer.contains('right') || 
-             userAnswer.contains('left');
+      return userAnswer.contains('←') || userAnswer.contains('left');
     }
     else if (exerciseContent.contains('Follow the pattern')) {
       // Letter pattern recognition - check for A or B
@@ -608,141 +606,144 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Progress indicator
-                Text(
-                  'Exercise ${currentExercise + 1} of ${widget.module.totalExercises}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Progress indicator
+                  Text(
+                    'Exercise ${currentExercise + 1} of ${widget.module.totalExercises}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                LinearProgressIndicator(
-                  value: (currentExercise + 1) / widget.module.totalExercises,
-                  backgroundColor: Colors.grey[300],
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
-                  minHeight: 6,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                
-                // Show saved progress indicator if different from current exercise
-                if (widget.module.completedExercises > 0 && 
-                    widget.module.completedExercises != currentExercise)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
-                    child: Text(
-                      'Saved progress: ${widget.module.completedExercises}/${widget.module.totalExercises}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                        fontStyle: FontStyle.italic,
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: (currentExercise + 1) / widget.module.totalExercises,
+                    backgroundColor: Colors.grey[300],
+                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                    minHeight: 6,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  
+                  // Show saved progress indicator if different from current exercise
+                  if (widget.module.completedExercises > 0 && 
+                      widget.module.completedExercises != currentExercise)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text(
+                        'Saved progress: ${widget.module.completedExercises}/${widget.module.totalExercises}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
-                  ),
-                
-                const SizedBox(height: 24),
-                
-                // Exercise content
-                Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _shouldUseDrawingInput() 
-                              ? 'Write the answer with your finger:' 
-                              : (widget.module.type == ModuleType.written 
-                                  ? 'Write or photograph the following:' 
-                                  : 'Say the following:'),
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          currentContent,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                
-                // Module-specific input controls
-                if (_shouldUseDrawingInput())
-                  _buildDrawingInput()
-                else if (widget.module.type == ModuleType.written)
-                  _buildOCRControls()
-                else
-                  _buildSpeechControls(),
-                
-                const Spacer(),
-                
-                // Navigation buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Previous button (if not the first exercise)
-                    currentExercise > 0
-                        ? ElevatedButton(
-                            onPressed: _previousExercise,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey[300],
-                              foregroundColor: Colors.black,
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Exercise content
+                  Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _shouldUseDrawingInput() 
+                                ? 'Write the answer with your finger:' 
+                                : (widget.module.type == ModuleType.written 
+                                    ? 'Write or photograph the following:' 
+                                    : 'Say the following:'),
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[700],
                             ),
-                            child: const Text('Previous'),
-                          )
-                        : const SizedBox(width: 88), // Placeholder for alignment
-                    
-                    // Next/Complete button (enabled only if exercise is correct)
-                    ElevatedButton(
-                      onPressed: isCorrect ? _nextExercise : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        disabledBackgroundColor: Colors.grey,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            currentContent,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Text(isLastExercise ? 'Complete Module' : 'Next'),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          // Loading overlay
-          if (isProcessing || _isProcessingDrawing)
-            Container(
-              color: Colors.black.withOpacity(0.3),
-              child: const Center(
-                child: CircularProgressIndicator(),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Module-specific input controls
+                  if (_shouldUseDrawingInput())
+                    _buildDrawingInput()
+                  else if (widget.module.type == ModuleType.written)
+                    Expanded(child: _buildOCRControls())
+                  else
+                    Expanded(child: _buildSpeechControls()),
+                  
+                  // Navigation buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Previous button (if not the first exercise)
+                      currentExercise > 0
+                          ? ElevatedButton(
+                              onPressed: _previousExercise,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey[300],
+                                foregroundColor: Colors.black,
+                              ),
+                              child: const Text('Previous'),
+                            )
+                          : const SizedBox(width: 88), // Placeholder for alignment
+                      
+                      // Next/Complete button (enabled only if exercise is correct)
+                      ElevatedButton(
+                        onPressed: isCorrect ? _nextExercise : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          disabledBackgroundColor: Colors.grey,
+                        ),
+                        child: Text(isLastExercise ? 'Complete Module' : 'Next'),
+                      ),
+                    ],
+                  ),
+                  
+                  // Small bottom padding
+                  const SizedBox(height: 12),
+                ],
               ),
             ),
-        ],
+            
+            // Loading overlay
+            if (isProcessing || _isProcessingDrawing)
+              Container(
+                color: Colors.black.withOpacity(0.3),
+                child: const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
-  
+
   // Determine if this module should use drawing input
   bool _shouldUseDrawingInput() {
     final drawingModules = ['word_formation', 'visual_tracking', 'reading_comprehension'];
     return drawingModules.contains(widget.module.id);
   }
-  
+
   // Drawing input interface
   Widget _buildDrawingInput() {
     return Expanded(
@@ -810,7 +811,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
             ),
           ),
           
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           
           // Drawing controls
           Row(
@@ -820,9 +821,9 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                 onPressed: _clearDrawing,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
-                  foregroundColor: Colors.white, // Sets text color to white
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder( // Less rounded corners
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -833,9 +834,9 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                 onPressed: _processDrawing,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white, // Sets text color to white
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder( // Less rounded corners
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -844,7 +845,9 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
             ],
           ),
           
-          const SizedBox(height: 12),
+          // Use Spacer before recognition results to push content up
+          // This is the key change - use a strong spacer before the results
+          const SizedBox(height: 10), // or even smaller like height: 4
           
           // Display recognized text
           if (hasChecked)
@@ -896,6 +899,9 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                 ],
               ),
             ),
+            
+          // Small spacer at the bottom
+          const Spacer(flex: 1),
         ],
       ),
     );
@@ -919,6 +925,9 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
           ),
         ),
         const SizedBox(height: 16),
+        
+        // Strong spacer to push feedback up when needed
+        const Spacer(flex: 4),
         
         // Recognized text display (if available)
         if (hasChecked)
@@ -970,6 +979,9 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
               ],
             ),
           ),
+          
+        // Small spacer at bottom
+        const Spacer(flex: 1),
       ],
     );
   }
@@ -1007,7 +1019,9 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        
+        // Strong spacer to push feedback up
+        const Spacer(flex: 4),
         
         // Recognized speech display (if available)
         if (hasChecked && _speechText.isNotEmpty)
@@ -1059,6 +1073,9 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
               ],
             ),
           ),
+          
+        // Small spacer at bottom
+        const Spacer(flex: 1),
       ],
     );
   }
