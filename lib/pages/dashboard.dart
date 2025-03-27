@@ -258,87 +258,39 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: [
-                  // Top bar with title and profile
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
-                          spreadRadius: 1,
-                          blurRadius: 3,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Dashboard',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF324259),
-                            ),
-                          ),
-                        ),
-                        
-                        // Profile avatar
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/settings');
-                          },
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFF324259),
-                                width: 2,
-                              ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: _userData?['avatarIndex'] != null
-                                  ? Image.asset(
-                                      'assets/images/avatar${_userData!['avatarIndex'] + 1}.png',
-                                      fit: BoxFit.cover,
-                                    )
-                                  : const Icon(Icons.person),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  // Main content area with scrolling
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildUserInfoCard(),
-                          const SizedBox(height: 20),
-                          _buildPracticeStatisticsCard(),
-                          const SizedBox(height: 20),
-                          _buildProgressPieChart(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+      appBar: AppBar(
+        title: const Text(
+          'Dashboard',
+          style: TextStyle(
+            color: Color(0xFF324259),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
       ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                // Main content area with scrolling
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildUserInfoCard(),
+                        const SizedBox(height: 20),
+                        _buildPracticeStatisticsCard(),
+                        const SizedBox(height: 20),
+                        _buildProgressPieChart(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 
@@ -363,30 +315,22 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       child: Row(
         children: [
-          // User avatar
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFF1F5377),
-                width: 2,
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(30),
+          
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 85, 
+              height: 85,
               child: _userData?['avatarIndex'] != null
                   ? Image.asset(
                       'assets/images/avatar${_userData!['avatarIndex'] + 1}.png',
                       fit: BoxFit.cover,
                     )
-                  : const Icon(Icons.person),
+                  : const Icon(Icons.person, size: 70), // Increased icon size too
             ),
           ),
           const SizedBox(width: 16),
           
-          // User info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,7 +338,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 Text(
                   '$firstName $lastName',
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 21,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF324259),
                   ),
@@ -405,27 +349,10 @@ class _DashboardPageState extends State<DashboardPage> {
                     'Age: $age',
                     style: TextStyle(
                       fontSize: 14,
+                      fontWeight: FontWeight.w500,
                       color: Colors.grey[700],
                     ),
                   ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.star,
-                      color: Colors.amber,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Total Practices: ${_todayPractices > 0 ? _todayPractices : '0'}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -786,141 +713,163 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildYearlyContributionChart() {
-    // GitHub-style contribution chart
-    if (_yearlyData.isEmpty) {
-      return const Center(child: Text('No data available'));
+  // GitHub-style contribution chart
+  if (_yearlyData.isEmpty) {
+    return const Center(child: Text('No data available'));
+  }
+  
+  // Calculate number of weeks to display (up to 52 weeks - 1 year)
+  final int daysInYear = 365;
+  final int cellsPerRow = 7; // 7 days per week
+  final int numWeeks = (daysInYear / cellsPerRow).ceil();
+  
+  // Map dates to values for quick lookup
+  final Map<String, int> dateValueMap = {};
+  for (var data in _yearlyData) {
+    final date = data['date'] as DateTime;
+    final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    dateValueMap[dateStr] = data['value'] as int;
+  }
+  
+  // Create a list of all dates for the year
+  final List<DateTime> allDates = [];
+  final now = DateTime.now();
+  final yearStart = DateTime(now.year, 1, 1);
+  
+  for (int i = 0; i < daysInYear; i++) {
+    final date = yearStart.add(Duration(days: i));
+    if (date.isBefore(now.add(const Duration(days: 1)))) {
+      allDates.add(date);
     }
-    
-    // Calculate number of weeks to display (up to 52 weeks - 1 year)
-    final int daysInYear = 365;
-    final int cellsPerRow = 7; // 7 days per week
-    final int numWeeks = (daysInYear / cellsPerRow).ceil();
-    
-    // Map dates to values for quick lookup
-    final Map<String, int> dateValueMap = {};
-    for (var data in _yearlyData) {
-      final date = data['date'] as DateTime;
-      final dateStr = DateFormat('yyyy-MM-dd').format(date);
-      dateValueMap[dateStr] = data['value'] as int;
-    }
-    
-    // Create a list of all dates for the year
-    final List<DateTime> allDates = [];
-    final now = DateTime.now();
-    final yearStart = DateTime(now.year, 1, 1);
-    
-    for (int i = 0; i < daysInYear; i++) {
-      final date = yearStart.add(Duration(days: i));
-      if (date.isBefore(now.add(const Duration(days: 1)))) {
-        allDates.add(date);
-      }
-    }
-    
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Practice Contributions',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF324259),
-            ),
+  }
+  
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.2),
+          spreadRadius: 1,
+          blurRadius: 3,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'Practice Contributions',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF324259),
           ),
-          const SizedBox(height: 8),
-          Container(
-            height: 170,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: Colors.white,
-            ),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: List.generate(numWeeks, (weekIndex) {
-                  return Column(
-                    children: List.generate(7, (dayIndex) {
-                      final cellIndex = weekIndex * 7 + dayIndex;
-                      
-                      if (cellIndex >= allDates.length) {
-                        return const SizedBox(height: 14); // Empty space for future dates
-                      }
-                      
-                      final date = allDates[cellIndex];
-                      final dateStr = DateFormat('yyyy-MM-dd').format(date);
-                      final value = dateValueMap[dateStr] ?? 0;
-                      
-                      // Determine contribution color based on value
-                      Color cellColor;
-                      if (value == 0) {
-                        cellColor = const Color(0xFFEEEEEE);
-                      } else if (value <= 2) {
-                        cellColor = const Color(0xFFAED6F1);
-                      } else if (value <= 5) {
-                        cellColor = const Color(0xFF5DADE2);
-                      } else if (value <= 8) {
-                        cellColor = const Color(0xFF3498DB);
-                      } else {
-                        cellColor = const Color(0xFF2E86C1);
-                      }
-                      
-                      return Container(
-                        width: 12,
-                        height: 12,
-                        margin: const EdgeInsets.all(1),
+        ),
+        const SizedBox(height: 12),
+        
+        // Use a constrained box with aspect ratio instead of fixed height
+        AspectRatio(
+          aspectRatio: 3.5, // Width:Height ratio
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(numWeeks, (weekIndex) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(7, (dayIndex) {
+                    final cellIndex = weekIndex * 7 + dayIndex;
+                    
+                    if (cellIndex >= allDates.length) {
+                      return Padding(
+                        padding: const EdgeInsets.all(1.0),
+                        child: SizedBox(width: 8, height: 8),
+                      );
+                    }
+                    
+                    final date = allDates[cellIndex];
+                    final dateStr = DateFormat('yyyy-MM-dd').format(date);
+                    final value = dateValueMap[dateStr] ?? 0;
+                    
+                    // Determine contribution color based on value
+                    Color cellColor;
+                    if (value == 0) {
+                      cellColor = const Color(0xFFEEEEEE);
+                    } else if (value <= 2) {
+                      cellColor = const Color(0xFFAED6F1);
+                    } else if (value <= 5) {
+                      cellColor = const Color(0xFF5DADE2);
+                    } else if (value <= 8) {
+                      cellColor = const Color(0xFF3498DB);
+                    } else {
+                      cellColor = const Color(0xFF2E86C1);
+                    }
+                    
+                    return Padding(
+                      padding: const EdgeInsets.all(1.0),
+                      child: Container(
+                        width: 8,
+                        height: 8,
                         decoration: BoxDecoration(
                           color: cellColor,
                           borderRadius: BorderRadius.circular(2),
                         ),
-                      );
-                    }),
-                  );
-                }),
-              ),
+                      ),
+                    );
+                  }),
+                );
+              }),
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              _buildColorLegendItem('None', const Color(0xFFEEEEEE)),
-              _buildColorLegendItem('1-2', const Color(0xFFAED6F1)),
-              _buildColorLegendItem('3-5', const Color(0xFF5DADE2)),
-              _buildColorLegendItem('6-8', const Color(0xFF3498DB)),
-              _buildColorLegendItem('9+', const Color(0xFF2E86C1)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Use Wrap widget for the color legend
+        Wrap(
+          spacing: 12.0, // Space between legend items
+          runSpacing: 8.0, // Space between rows when wrapped
+          children: [
+            _buildColorLegendItem('None', const Color(0xFFEEEEEE)),
+            _buildColorLegendItem('1-2', const Color(0xFFAED6F1)),
+            _buildColorLegendItem('3-5', const Color(0xFF5DADE2)),
+            _buildColorLegendItem('6-8', const Color(0xFF3498DB)),
+            _buildColorLegendItem('9+', const Color(0xFF2E86C1)),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
-  Widget _buildColorLegendItem(String label, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 12.0),
-      child: Row(
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.grey[700],
-            ),
-          ),
-        ],
+// Make legend item responsive
+Widget _buildColorLegendItem(String label, Color color) {
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 8,  // Smaller fixed size
+        height: 8,  // Smaller fixed size
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(2),
+        ),
       ),
-    );
-  }
+      const SizedBox(width: 4),
+      Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          color: Colors.grey[700],
+        ),
+      ),
+    ],
+  );
+}
 
   Widget _buildProgressPieChart() {
     // Calculate percentages for pie chart
