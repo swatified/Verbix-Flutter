@@ -321,109 +321,189 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
   
   // Process drawing for OCR
   Future<void> _processDrawing() async {
-    if (points.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please draw something first')),
-      );
-      return;
+  if (points.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please draw something first')),
+    );
+    return;
+  }
+  
+  setState(() {
+    _isProcessingDrawing = true;
+    recognizedText = '';
+    isCorrect = false;
+    hasChecked = false;
+  });
+  
+  try {
+    // Convert drawing to image
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    
+    // White background
+    final backgroundPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    
+    // Use the actual size of the drawing area
+    final size = MediaQuery.of(context).size;
+    final width = size.width - 32; // Account for padding
+    final height = 300.0; // Increased height for better recognition
+    
+    canvas.drawRect(Rect.fromLTWH(0, 0, width, height), backgroundPaint);
+    
+    // Draw the points
+    for (int i = 0; i < points.length - 1; i++) {
+      if (points[i] != null && points[i + 1] != null) {
+        canvas.drawLine(points[i]!.point, points[i + 1]!.point, points[i]!.areaPaint);
+      } else if (points[i] != null && points[i + 1] == null) {
+        canvas.drawPoints(ui.PointMode.points, [points[i]!.point], points[i]!.areaPaint);
+      }
     }
     
-    setState(() {
-      _isProcessingDrawing = true;
-      recognizedText = '';
-      isCorrect = false;
-      hasChecked = false;
-    });
+    // Convert to image
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(width.toInt(), height.toInt());
+    final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
     
-    try {
-      // Convert drawing to image
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-      
-      // White background
-      final backgroundPaint = Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.fill;
-      
-      // Use the actual size of the drawing area
-      final size = MediaQuery.of(context).size;
-      final width = size.width - 32; // Account for padding
-      final height = 300.0; // Increased height for better recognition
-      
-      canvas.drawRect(Rect.fromLTWH(0, 0, width, height), backgroundPaint);
-      
-      // Draw the points
-      for (int i = 0; i < points.length - 1; i++) {
-        if (points[i] != null && points[i + 1] != null) {
-          canvas.drawLine(points[i]!.point, points[i + 1]!.point, points[i]!.areaPaint);
-        } else if (points[i] != null && points[i + 1] == null) {
-          canvas.drawPoints(ui.PointMode.points, [points[i]!.point], points[i]!.areaPaint);
-        }
-      }
-      
-      // Convert to image
-      final picture = recorder.endRecording();
-      final img = await picture.toImage(width.toInt(), height.toInt());
-      final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
-      
-      if (pngBytes != null) {
-        final buffer = pngBytes.buffer;
-        final tempDir = await getTemporaryDirectory();
-        final file = await File('${tempDir.path}/drawing.png').writeAsBytes(
-          buffer.asUint8List(pngBytes.offsetInBytes, pngBytes.lengthInBytes)
-        );
-        
-        // Use ML Kit for text recognition
-        final inputImage = InputImage.fromFile(file);
-        final recognizedText = await textRecognizer.processImage(inputImage);
-        
-        // Process the recognized text
-        final extracted = recognizedText.text.toLowerCase().trim();
-        
-        setState(() {
-          this.recognizedText = extracted.isEmpty ? "No text detected" : extracted;
-          
-          // Compare with current exercise
-          final currentContent = getCurrentExercise();
-          
-          // Different comparison logic based on module type
-          if (widget.module.id == 'word_formation') {
-            // For word formation, check if the recognized text contains the target word
-            isCorrect = extracted.isNotEmpty && (extracted.contains(currentContent.toLowerCase()) || 
-                        currentContent.toLowerCase().contains(extracted));
-          } 
-          else if (widget.module.id == 'visual_tracking') {
-            // Enhanced visual tracking validation
-            isCorrect = _validateVisualTrackingAnswer(currentContent, extracted);
-            
-            // Specific check for number pattern exercise
-            if (currentContent.contains('Find the pattern')) {
-              isCorrect = extracted == '3' || extracted.contains('3') || extracted.contains('three');
-            }
-          }
-          else if (widget.module.id == 'reading_comprehension') {
-            // Enhanced reading comprehension validation
-            isCorrect = _validateReadingComprehensionAnswer(currentContent, extracted);
-          }
-          else {
-            // Default comparison
-            isCorrect = extracted.toLowerCase() == currentContent.toLowerCase();
-          }
-          
-          hasChecked = true;
-        });
-      }
-    } catch (e) {
-      print('Error in _processDrawing: ${e.toString()}');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error processing drawing: ${e.toString()}')),
+    if (pngBytes != null) {
+      final buffer = pngBytes.buffer;
+      final tempDir = await getTemporaryDirectory();
+      final file = await File('${tempDir.path}/drawing.png').writeAsBytes(
+        buffer.asUint8List(pngBytes.offsetInBytes, pngBytes.lengthInBytes)
       );
-    } finally {
+      
+      // Use ML Kit for text recognition
+      final inputImage = InputImage.fromFile(file);
+      final recognizedText = await textRecognizer.processImage(inputImage);
+      
+      // Process the recognized text
+      final extracted = recognizedText.text.toLowerCase().trim();
+      
       setState(() {
-        _isProcessingDrawing = false;
+        // Ensure we always set hasChecked=true even if no text was recognized
+        hasChecked = true;
+        
+        // Set a more user-friendly message when no text is detected
+        this.recognizedText = extracted.isEmpty ? "No text detected" : extracted;
+        
+        // Compare with current exercise
+        final currentContent = getCurrentExercise();
+        
+        // Different comparison logic based on module type
+        if (widget.module.id == 'word_formation') {
+          // For word formation, require exact match
+          isCorrect = extracted.isNotEmpty && extracted.toLowerCase().trim() == currentContent.toLowerCase().trim();
+        } 
+        else if (widget.module.id == 'visual_tracking') {
+          // For visual tracking exercises, we still need some specialized validation
+          // but make it stricter
+          
+          // Specific check for number pattern exercise
+          if (currentContent.contains('Find the pattern')) {
+            isCorrect = extracted == '3' || extracted == 'three';
+          } else {
+            // Use stricter validation for other visual tracking exercises
+            isCorrect = _validateVisualTrackingAnswerStrict(currentContent, extracted);
+          }
+        }
+        else if (widget.module.id == 'reading_comprehension') {
+          // Use stricter validation for reading comprehension
+          isCorrect = _validateReadingComprehensionAnswerStrict(currentContent, extracted);
+        }
+        else {
+          // Default comparison - exact match only
+          isCorrect = extracted.toLowerCase().trim() == currentContent.toLowerCase().trim();
+        }
+      });
+    } else {
+      // Handle case where image conversion failed
+      setState(() {
+        hasChecked = true;
+        recognizedText = "Error: Could not process image";
+        isCorrect = false;
       });
     }
+  } catch (e) {
+    print('Error in _processDrawing: ${e.toString()}');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error processing drawing: ${e.toString()}')),
+    );
+    
+    // Make sure we update UI state even in case of errors
+    setState(() {
+      hasChecked = true;
+      recognizedText = "Error processing drawing";
+      isCorrect = false;
+      _isProcessingDrawing = false;
+    });
+  } finally {
+    setState(() {
+      _isProcessingDrawing = false;
+    });
   }
+}
+
+// Stricter validation for visual tracking exercises
+bool _validateVisualTrackingAnswerStrict(String exerciseContent, String userAnswer) {
+  print('Strict visual tracking validation - Exercise: $exerciseContent, Answer: $userAnswer');
+  
+  // Debug the user input
+  final cleanUserAnswer = userAnswer.trim().toLowerCase();
+  print('Cleaned user answer: $cleanUserAnswer');
+  
+  // Check which visual tracking exercise this is
+  if (exerciseContent.contains('Find the pattern')) {
+    // Only accept exact "3" or "three"
+    return cleanUserAnswer == '3' || cleanUserAnswer == 'three';
+  } 
+  else if (exerciseContent.contains('Track left to right')) {
+    // Arrow tracking exercise - require exact arrow match
+    return cleanUserAnswer == '←' || cleanUserAnswer == 'left arrow';
+  }
+  else if (exerciseContent.contains('Follow the pattern')) {
+    // Letter pattern recognition - require exact match of expected letter
+    return cleanUserAnswer == 'b';
+  }
+  else if (exerciseContent.contains('Scan for the letter')) {
+    // Letter scanning - exact match only
+    return cleanUserAnswer == 'd';
+  }
+  else if (exerciseContent.contains('Count the circles')) {
+    // Circle counting - exact number only (6)
+    return cleanUserAnswer == '6' || cleanUserAnswer == 'six';
+  }
+  
+  // For any other pattern, default to exact match
+  return false;
+}
+
+// Stricter validation for reading comprehension exercises
+bool _validateReadingComprehensionAnswerStrict(String exerciseContent, String userAnswer) {
+  // Clean up the user answer
+  final cleanAnswer = userAnswer.trim().toLowerCase();
+  
+  // Match exact answers based on the specific question
+  if (exerciseContent.contains('Tom has a red ball')) {
+    return cleanAnswer == 'red';
+  } 
+  else if (exerciseContent.contains('Sara went to the store')) {
+    // For this one, accept either "milk and bread" or "bread and milk"
+    return cleanAnswer == 'milk and bread' || cleanAnswer == 'bread and milk';
+  } 
+  else if (exerciseContent.contains('The sky is blue')) {
+    return cleanAnswer == 'green';
+  } 
+  else if (exerciseContent.contains('Ben has three pets')) {
+    return cleanAnswer == 'three' || cleanAnswer == '3';
+  } 
+  else if (exerciseContent.contains('Maya likes to read books')) {
+    return cleanAnswer == 'dinosaurs' || cleanAnswer == 'dinosaur';
+  }
+  
+  // Default to exact match if none of the specific cases apply
+  return false;
+}
 
   bool _validateVisualTrackingAnswer(String exerciseContent, String userAnswer) {
     print('Visual tracking validation - Exercise: $exerciseContent, Answer: $userAnswer');
@@ -746,166 +826,166 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
 
   // Drawing input interface
   Widget _buildDrawingInput() {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            height: MediaQuery.of(context).size.height * 0.2,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  spreadRadius: 1,
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: RepaintBoundary(
-              child: GestureDetector(
-                onPanDown: (details) {
-                  setState(() {
-                    points.add(
-                      DrawingArea(
-                        point: details.localPosition,
-                        areaPaint: Paint()
-                          ..color = selectedColor
-                          ..strokeWidth = strokeWidth
-                          ..strokeCap = StrokeCap.round
-                          ..isAntiAlias = true,
-                      ),
-                    );
-                  });
-                },
-                onPanUpdate: (details) {
-                  setState(() {
-                    points.add(
-                      DrawingArea(
-                        point: details.localPosition,
-                        areaPaint: Paint()
-                          ..color = selectedColor
-                          ..strokeWidth = strokeWidth
-                          ..strokeCap = StrokeCap.round
-                          ..isAntiAlias = true,
-                      ),
-                    );
-                  });
-                },
-                onPanEnd: (details) {
-                  setState(() {
-                    points.add(null);
-                  });
-                },
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: CustomPaint(
-                    painter: MyCustomPainter(points: points),
-                    size: Size.infinite,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Drawing controls
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(
-                onPressed: _clearDrawing,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                child: const Text('Clear'),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton(
-                onPressed: _processDrawing,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                child: const Text('Check Answer'),
+  return Expanded(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          height: MediaQuery.of(context).size.height * 0.2,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.2),
+                spreadRadius: 1,
+                blurRadius: 2,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
-          
-          // Use Spacer before recognition results to push content up
-          // This is the key change - use a strong spacer before the results
-          const SizedBox(height: 10), // or even smaller like height: 4
-          
-          // Display recognized text
-          if (hasChecked)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isCorrect ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isCorrect ? Colors.green : Colors.red,
+          child: RepaintBoundary(
+            child: GestureDetector(
+              onPanDown: (details) {
+                setState(() {
+                  points.add(
+                    DrawingArea(
+                      point: details.localPosition,
+                      areaPaint: Paint()
+                        ..color = selectedColor
+                        ..strokeWidth = strokeWidth
+                        ..strokeCap = StrokeCap.round
+                        ..isAntiAlias = true,
+                    ),
+                  );
+                });
+              },
+              onPanUpdate: (details) {
+                setState(() {
+                  points.add(
+                    DrawingArea(
+                      point: details.localPosition,
+                      areaPaint: Paint()
+                        ..color = selectedColor
+                        ..strokeWidth = strokeWidth
+                        ..strokeCap = StrokeCap.round
+                        ..isAntiAlias = true,
+                    ),
+                  );
+                });
+              },
+              onPanEnd: (details) {
+                setState(() {
+                  points.add(null);
+                });
+              },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: CustomPaint(
+                  painter: MyCustomPainter(points: points),
+                  size: Size.infinite,
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Recognized Text:',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    recognizedText.isEmpty ? 'No text recognized' : recognizedText,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: isCorrect ? Colors.green[700] : Colors.red[700],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        isCorrect ? Icons.check_circle : Icons.cancel,
-                        color: isCorrect ? Colors.green : Colors.red,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        isCorrect ? 'Correct!' : 'Try again',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: isCorrect ? Colors.green[700] : Colors.red[700],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Drawing controls
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: _clearDrawing,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              child: const Text('Clear'),
+            ),
+            const SizedBox(width: 16),
+            ElevatedButton(
+              onPressed: _processDrawing,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              child: const Text('Check Answer'),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 10),
+        
+        // Display recognized text - MODIFIED SECTION
+        if (hasChecked)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isCorrect ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isCorrect ? Colors.green : Colors.red,
               ),
             ),
-            
-          // Small spacer at the bottom
-          const Spacer(flex: 1),
-        ],
-      ),
-    );
-  }
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Recognized Text:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  // Show a more user-friendly message when no text recognized
+                  (recognizedText.isEmpty || recognizedText == "No text detected") 
+                      ? 'No text was recognized. Please try again with clearer writing.'
+                      : recognizedText,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: isCorrect ? Colors.green[700] : Colors.red[700],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      isCorrect ? Icons.check_circle : Icons.cancel,
+                      color: isCorrect ? Colors.green : Colors.red,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isCorrect ? 'Correct!' : 'Try again',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isCorrect ? Colors.green[700] : Colors.red[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          
+        const Spacer(flex: 1),
+      ],
+    ),
+  );
+}
 
   // Controls for OCR-based exercises
   Widget _buildOCRControls() {

@@ -251,10 +251,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
             final firstCharTarget = target.isNotEmpty ? target[0] : '';
             
             // Check exact match or first character match
-            if (extracted == target || 
-                firstCharExtracted == firstCharTarget ||
-                extracted.contains(target) || 
-                target.contains(extracted)) {
+            if (extracted == target) {
               _itemStatus[_currentIndex] = true;
               debugPrint('Letter match found: ${_itemStatus[_currentIndex]}');
             }
@@ -294,9 +291,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
             }
           } else if (widget.practice.type == PracticeType.vowelSounds) {
             // For vowel sounds, be a bit more lenient
-            if (extracted == target || 
-                extracted.contains(target) ||
-                _compareVowelSounds(extracted, target)) {
+            if (extracted == target) {
               _itemStatus[_currentIndex] = true;
             }
           } else {
