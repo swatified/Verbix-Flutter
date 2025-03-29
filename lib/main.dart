@@ -13,11 +13,15 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'pages/main_scaffold.dart'; 
 
 void main() async {
-  await dotenv.load();
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
+  // Ensure the service account file is available
+  await ensureServiceAccountExists();
+  
   runApp(const MyApp());
 }
 

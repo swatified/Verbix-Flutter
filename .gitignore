@@ -52,3 +52,6 @@ firebase_options.dart
 # Environment files that might contain secrets
 .env
 .env.*
+
+# Vertex ai files
+assets/service-account.json
