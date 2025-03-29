@@ -366,7 +366,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                         ElevatedButton(
                           onPressed: _isLoading ? null : _saveUserDetails,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF324259),
+                            backgroundColor: const Color(0xFF1F5377),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
