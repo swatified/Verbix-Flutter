@@ -223,7 +223,7 @@ class _AuthScreenState extends State<AuthScreen> {
               children: [
                 const SizedBox(height: 40),
                 Image.asset(
-                  'assets/images/lexi_rain_temp.jpeg',
+                  'assets/images/lexi_rain.png',
                   height: 150,
                 ),
                 const SizedBox(height: 20),
