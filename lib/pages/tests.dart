@@ -503,7 +503,7 @@ class _TestsPageState extends State<TestsPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Image.asset(
-            'assets/images/empty_tests.png', // Create this placeholder image
+            'assets/images/no_tests.png',
             width: 150,
             height: 150,
             fit: BoxFit.contain,
