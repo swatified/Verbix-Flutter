@@ -852,7 +852,7 @@ class _HomePageState extends State<HomePage> {
                               borderRadius: BorderRadius.circular(20),
                               child: _userData?['avatarIndex'] != null
                                   ? Image.asset(
-                                      'assets/images/avatar${_userData!['avatarIndex'] + 1}.png',
+                                      'assets/images/avatar${_userData!['avatarIndex'] + 1}.webp',
                                       fit: BoxFit.cover,
                                     )
                                   : const Icon(Icons.person),
