@@ -295,8 +295,8 @@ class _HomePageState extends State<HomePage> {
                 ),
                 child: Image.asset(
                   hasPracticed 
-                      ? 'assets/images/lexi_content.jpeg'
-                      : 'assets/images/lexi_sad.jpeg',
+                      ? 'assets/images/lexi_content.webp'
+                      : 'assets/images/lexi_sad.webp',
                   fit: BoxFit.contain,
                 ),
               ),

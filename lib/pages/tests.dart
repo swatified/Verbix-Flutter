@@ -503,7 +503,7 @@ class _TestsPageState extends State<TestsPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Image.asset(
-            'assets/images/no_tests.png',
+            'assets/images/no_tests.webp',
             width: 150,
             height: 150,
             fit: BoxFit.contain,

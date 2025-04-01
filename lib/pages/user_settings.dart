@@ -429,7 +429,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                               width: 180,
                               height: 180,
                               child: Image.asset(
-                                'assets/images/lexi_floating.png',
+                                'assets/images/lexi_floating.webp',
                                 fit: BoxFit.contain,
                               ),
                             ),
