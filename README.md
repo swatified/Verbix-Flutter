@@ -8,43 +8,36 @@
 [![Firebase](https://img.shields.io/badge/Firebase-Auth_&_Firestore-FFCA28.svg)](https://firebase.google.com)
 [![OCR](https://img.shields.io/badge/OCR-Google_ML_Kit-4285F4.svg)](https://developers.google.com/ml-kit)
 
-> <br/>Verbix is an innovative cross-platform application designed to support children with learning disabilities, particularly focusing on dyslexia which affects [5-10% of children worldwide](https://pmc.ncbi.nlm.nih.gov/articles/PMC6099274/#:~:text=Given%20that%20an%20estimated%205,and%20informed%20understandings%20of%20dyslexia.). The app utilizes advanced OCR through Google ML Kit, speech recognition technology, and Google's Vertex AI with Gemini models to analyze handwriting patterns and speech, providing personalized exercises and real-time feedback for improved learning outcomes. Developed entirely on Google's IDX cloud development platform.
+> <br/> Dyslexia is a learning disability which affects [5-10% of children worldwide](https://pmc.ncbi.nlm.nih.gov/articles/PMC6099274/#:~:text=Given%20that%20an%20estimated%205,and%20informed%20understandings%20of%20dyslexia.). Verbix is a cross-platform app that uses OCR and speech recognition to help children with dyslexia improve their reading and writing skills through personalized exercises and real-time feedback. 
 
 <br/>
 
 ![image](https://github.com/user-attachments/assets/79f3d5d3-2e0d-46da-aef5-293c8244bc76)
 <br/><br/>
 
-## Key Features
+## Key Features 🌟
 
-### 📝 *Advanced Handwriting Analysis*
-- Real-time OCR recognition using Google ML Kit for precise text analysis
-- Smart detection of letter confusions, inversions, and omissions common in dyslexia
-- Pattern recognition that identifies recurring mistakes across multiple exercises
-- Interactive doodling exercises for letter and word formation practice
-- Capture and analysis of paper-written sentences with instant feedback
+### *Advanced Handwriting Analysis*
 
-### 🗣️ *Comprehensive Speech Pattern Recognition*
-- Advanced speech-to-text analysis powered by cutting-edge recognition technology
-- Detailed pronunciation feedback highlighting sound confusions
-- Speech pattern tracking to identify improvement areas
-- Word-by-word breakdown of pronunciation accuracy
-- Vocal exercise modules targeting specific phonetic challenges
+- Real-time OCR detects dyslexia-specific letter confusions and patterns
+- Interactive doodling and paper-written sentence analysis with instant feedback
 
-### 💡 *Personalized Learning Journey*
-- AI-generated daily practice sets based on individual performance metrics
-- 5 tailored exercises refreshed daily to target specific improvement areas
-- Pre-built practice modules focusing on common dyslexia challenges
-- Progress visualization through intuitive dashboard charts and graphs
-- User profile customization with avatars and personal details
+### *Comprehensive Speech Pattern Recognition*
 
-### 🧠 *Vertex AI & Gemini-Powered Insights*
-- Sophisticated analysis of test results using Google's Vertex AI
-- Gemini AI models deliver personalized recommendations based on performance patterns
-- Adaptive difficulty scaling based on user improvement
-- Cross-modal learning patterns detection (comparing speech vs. writing performance)
-- Intelligent exercise generation that evolves with the user's progress
-<br/><br/>
+- Speech-to-text analysis identifies pronunciation challenges and sound confusions
+- Targeted vocal exercises with word-by-word accuracy breakdown
+
+### *Personalized Learning Journey*
+
+- 5 daily AI-generated exercises based on individual performance
+- Visual progress tracking through intuitive dashboard analytics
+
+### *Vertex AI & Gemini-Powered Insights*
+
+- Gemini models provide adaptive recommendations that evolve with user progress
+- Cross-modal analysis compares speech and writing patterns for comprehensive support
+
+<br/>
 
 ## App Flow
 
@@ -210,61 +203,45 @@ verbix/
    
 <br/>
 
-## *App Navigation & Usage*
-</br>
+## 📱 *App Navigation & Usage*
 
-### 🚀 Initial Setup
-1. Launch the app and complete the authentication process
-2. Create your profile by entering your name, age, and selecting a personalized avatar
-3. All profile information is securely stored in Firestore for a personalized experience
+<table>
+  <tr>
+    <td width="20%"><b>Setup</b></td>
+    <td>Authenticate, create profile, and sync to Firestore</td>
+  </tr>
+  <tr>
+    <td><b>Home Page</b></td>
+    <td>Access personalized exercises, practice modules, tests, and profile settings</td>
+  </tr>
+  <tr>
+    <td><b>Navigation</b></td>
+    <td>Four sections: Home, Tests, Practice Modules, and Dashboard</td>
+  </tr>
+  <tr>
+    <td><b>Testing</b></td>
+    <td>Complete written and spoken tests for Vertex AI analysis and personalized recommendations</td>
+  </tr>
+  <tr>
+    <td><b>Exercises</b></td>
+    <td>Interactive formats including doodle writing, paper analysis, speech practice, and combined modules</td>
+  </tr>
+  <tr>
+    <td><b>Profile</b></td>
+    <td>Manage personal details, avatar, view statistics, and account settings</td>
+  </tr>
+</table>
 
-### 🏠 Home Page Navigation
-The home page serves as your learning hub with access to:
-- **Custom Daily Exercises**: 5 personalized activities refreshed daily based on your test results
-- **Pre-made Practice Modules**: Structured learning exercises targeting common dyslexia challenges
-- **Quick Test Access**: Start a new assessment to refresh your personalized learning plan
-- **Profile Settings**: Access your profile via the avatar icon in the top right corner
-
-### 🧭 Bottom Navigation Bar
-The app features an intuitive navigation system with four main sections:
-1. **Home**: Your personalized dashboard with daily exercises
-2. **Tests**: Assessment center to evaluate your current skills
-3. **Practice Modules**: Library of pre-built learning exercises
-4. **Dashboard**: Visual representation of your progress and achievements
-
-### 📊 Testing Process
-1. Navigate to the Tests section and tap the "+" icon to begin a new assessment
-2. You'll be presented with a test sentence to complete in two ways:
-   - Write the sentence on paper and submit a photo
-   - Record yourself speaking the same sentence
-3. Vertex AI analyzes both inputs to identify specific improvement areas
-4. Based on test results, your daily practice exercises will be automatically updated
-5. Test history and progress are stored for ongoing comparison
-
-### 🎯 Exercise Types
-The app offers multiple interactive exercise formats:
-- **Doodle Writing**: Practice letter and word formation using touch input
-- **Paper Writing**: Write sentences on paper and capture for analysis
-- **Speech Exercises**: Speak words and sentences for pronunciation feedback
-- **Combined Modules**: Multi-modal exercises that integrate writing and speaking
-
-### 👤 Profile Management
-Access your profile settings through the avatar icon to:
-* Update personal information (name, age)
-* Change your avatar
-* View achievement statistics
-* Log out from your account
-  
 <br/>
 
-## Team
+## 👥 Team
 
 - [**Swati Sharma**](https://github.com/swatified) - Project Lead & Developer
 - [**Garima Srivastav**](https://github.com/techy4shri) - Lead Designer and Illustrator
 - [**Abdul Wahid Khan**](https://github.com/Wahid7852) - Cloud Specialist
 <br/><br/>
 
-## License
+## 📄 License
 Copyright © 2024 Swati Sharma. All rights reserved.
 See [LICENSE](LICENSE.md) for details.
 <br/><br/>
