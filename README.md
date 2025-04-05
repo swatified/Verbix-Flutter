@@ -161,7 +161,7 @@ verbix/
 
 2. Navigate to the project directory:
    ```bash
-   cd verbix
+   cd Verbix-Flutter
    ```
 
 3. Create a `.env` file in the root directory based on this template:
