@@ -2,10 +2,10 @@
 [![Copyright](https://img.shields.io/badge/License-All_Rights_Reserved-red.svg)](LICENSE.md)
 [![Vertex AI](https://img.shields.io/badge/Vertex_AI-Google_Cloud-4285F4.svg)](https://cloud.google.com/vertex-ai)
 [![Gemini](https://img.shields.io/badge/Gemini-AI-8E44AD.svg)](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/gemini)
-[![Platform](https://img.shields.io/badge/Platform-Flutter-02569B.svg)](https://github.com/yourusername/verbix)
+[![Platform](https://img.shields.io/badge/Platform-Flutter-02569B.svg)](https://docs.flutter.dev/)
 [![Dart](https://img.shields.io/badge/Dart-3.7.0+-0175C2.svg)](https://dart.dev/)
-[![Firebase](https://img.shields.io/badge/Firebase-Auth_&_Firestore-FFCA28.svg)](https://firebase.google.com)
 [![IDX](https://img.shields.io/badge/IDX-Cloud_Platform-4285F4.svg)](https://idx.google.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-Auth_&_Firestore-FFCA28.svg)](https://firebase.google.com)
 [![OCR](https://img.shields.io/badge/OCR-Google_ML_Kit-4285F4.svg)](https://developers.google.com/ml-kit)
 
 > <br/>Verbix is an innovative cross-platform application designed to support children with learning disabilities, particularly focusing on dyslexia which affects [5-10% of children worldwide](https://pmc.ncbi.nlm.nih.gov/articles/PMC6099274/#:~:text=Given%20that%20an%20estimated%205,and%20informed%20understandings%20of%20dyslexia.). The app utilizes advanced OCR through Google ML Kit, speech recognition technology, and Google's Vertex AI with Gemini models to analyze handwriting patterns and speech, providing personalized exercises and real-time feedback for improved learning outcomes. Developed entirely on Google's IDX cloud development platform.
