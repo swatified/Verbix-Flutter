@@ -213,26 +213,26 @@ verbix/
 ## 👥 App Navigation & Usage
 
 
-> ### Initial Setup
+### 🚀 Initial Setup
 1. Launch the app and complete the authentication process
 2. Create your profile by entering your name, age, and selecting a personalized avatar
 3. All profile information is securely stored in Firestore for a personalized experience
 
-> ### Home Page Navigation
+### 🏠 Home Page Navigation
 The home page serves as your learning hub with access to:
 - **Custom Daily Exercises**: 5 personalized activities refreshed daily based on your test results
 - **Pre-made Practice Modules**: Structured learning exercises targeting common dyslexia challenges
 - **Quick Test Access**: Start a new assessment to refresh your personalized learning plan
 - **Profile Settings**: Access your profile via the avatar icon in the top right corner
 
-> ### Bottom Navigation Bar
+### 🧭 Bottom Navigation Bar
 The app features an intuitive navigation system with four main sections:
 1. **Home**: Your personalized dashboard with daily exercises
 2. **Tests**: Assessment center to evaluate your current skills
 3. **Practice Modules**: Library of pre-built learning exercises
 4. **Dashboard**: Visual representation of your progress and achievements
 
-> ### Testing Process
+### 📊 Testing Process
 1. Navigate to the Tests section and tap the "+" icon to begin a new assessment
 2. You'll be presented with a test sentence to complete in two ways:
    - Write the sentence on paper and submit a photo
@@ -241,14 +241,14 @@ The app features an intuitive navigation system with four main sections:
 4. Based on test results, your daily practice exercises will be automatically updated
 5. Test history and progress are stored for ongoing comparison
 
-> ### Exercise Types
+### 🎯 Exercise Types
 The app offers multiple interactive exercise formats:
 - **Doodle Writing**: Practice letter and word formation using touch input
 - **Paper Writing**: Write sentences on paper and capture for analysis
 - **Speech Exercises**: Speak words and sentences for pronunciation feedback
 - **Combined Modules**: Multi-modal exercises that integrate writing and speaking
 
-> ###  Profile Management
+### 👤 Profile Management
 Access your profile settings through the avatar icon to:
 * Update personal information (name, age)
 * Change your avatar
