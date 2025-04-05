@@ -1,12 +1,12 @@
 # Verbix 📚
 [![Copyright](https://img.shields.io/badge/License-All_Rights_Reserved-red.svg)](LICENSE.md)
+[![Vertex AI](https://img.shields.io/badge/Vertex_AI-Google_Cloud-4285F4.svg)](https://cloud.google.com/vertex-ai)
+[![Gemini](https://img.shields.io/badge/Gemini-AI-8E44AD.svg)](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/gemini)
 [![Platform](https://img.shields.io/badge/Platform-Flutter-02569B.svg)](https://github.com/yourusername/verbix)
 [![Dart](https://img.shields.io/badge/Dart-3.7.0+-0175C2.svg)](https://dart.dev/)
 [![Firebase](https://img.shields.io/badge/Firebase-Auth_&_Firestore-FFCA28.svg)](https://firebase.google.com)
+[![IDX](https://img.shields.io/badge/IDX-Cloud_Platform-4285F4.svg)](https://idx.google.com/)
 [![OCR](https://img.shields.io/badge/OCR-Google_ML_Kit-4285F4.svg)](https://developers.google.com/ml-kit)
-[![Vertex AI](https://img.shields.io/badge/Vertex_AI-Google_Cloud-4285F4.svg)](https://cloud.google.com/vertex-ai)
-[![Gemini](https://img.shields.io/badge/Gemini-AI-8E44AD.svg)](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/gemini)
-[![IDX](https://img.shields.io/badge/IDX-Cloud_Development-4285F4.svg)](https://idx.google.com/)
 
 > <br/>Verbix is an innovative cross-platform application designed to support children with learning disabilities, particularly focusing on dyslexia which affects [5-10% of children worldwide](https://pmc.ncbi.nlm.nih.gov/articles/PMC6099274/#:~:text=Given%20that%20an%20estimated%205,and%20informed%20understandings%20of%20dyslexia.). The app utilizes advanced OCR through Google ML Kit, speech recognition technology, and Google's Vertex AI with Gemini models to analyze handwriting patterns and speech, providing personalized exercises and real-time feedback for improved learning outcomes. Developed entirely on Google's IDX cloud development platform.
 
@@ -217,7 +217,6 @@ verbix/
 1. Launch the app and complete the authentication process
 2. Create your profile by entering your name, age, and selecting a personalized avatar
 3. All profile information is securely stored in Firestore for a personalized experience
-<br/>
 
 ### 🏠 Home Page Navigation
 The home page serves as your learning hub with access to:
@@ -225,7 +224,6 @@ The home page serves as your learning hub with access to:
 - **Pre-made Practice Modules**: Structured learning exercises targeting common dyslexia challenges
 - **Quick Test Access**: Start a new assessment to refresh your personalized learning plan
 - **Profile Settings**: Access your profile via the avatar icon in the top right corner
-<br/>
 
 ### 🧭 Bottom Navigation Bar
 The app features an intuitive navigation system with four main sections:
@@ -233,7 +231,6 @@ The app features an intuitive navigation system with four main sections:
 2. **Tests**: Assessment center to evaluate your current skills
 3. **Practice Modules**: Library of pre-built learning exercises
 4. **Dashboard**: Visual representation of your progress and achievements
-<br/>
 
 ### 📊 Testing Process
 1. Navigate to the Tests section and tap the "+" icon to begin a new assessment
@@ -243,7 +240,6 @@ The app features an intuitive navigation system with four main sections:
 3. Vertex AI analyzes both inputs to identify specific improvement areas
 4. Based on test results, your daily practice exercises will be automatically updated
 5. Test history and progress are stored for ongoing comparison
-<br/>
 
 ### 🎯 Exercise Types
 The app offers multiple interactive exercise formats:
@@ -251,7 +247,6 @@ The app offers multiple interactive exercise formats:
 - **Paper Writing**: Write sentences on paper and capture for analysis
 - **Speech Exercises**: Speak words and sentences for pronunciation feedback
 - **Combined Modules**: Multi-modal exercises that integrate writing and speaking
-<br/>
 
 ### 👤 Profile Management
 Access your profile settings through the avatar icon to:
@@ -260,7 +255,7 @@ Access your profile settings through the avatar icon to:
 * View achievement statistics
 * Log out from your account
   
-<br/><br/>
+<br/>
 
 ## 👥 Team
 
