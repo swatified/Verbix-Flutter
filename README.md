@@ -156,7 +156,7 @@ verbix/
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/verbix.git
+   git clone https://github.com/swatified/Verbix-Flutter
    ```
 
 2. Navigate to the project directory:
@@ -260,7 +260,7 @@ Access your profile settings through the avatar icon to:
 ## Team
 
 - [**Swati Sharma**](https://github.com/swatified) - Project Lead & Developer
-- [**Garima Srivastav**](https://github.com/techy4shri) - Lead UI Designer and Illustrator
+- [**Garima Srivastav**](https://github.com/techy4shri) - Lead Designer and Illustrator
 - [**Abdul Wahid Khan**](https://github.com/Wahid7852) - Cloud Specialist
 <br/><br/>
 
