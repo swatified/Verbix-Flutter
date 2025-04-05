@@ -208,7 +208,7 @@ verbix/
 <table>
   <tr>
     <td width="20%"><b>Setup</b></td>
-    <td>Authenticate, create profile, and sync to Firestore</td>
+    <td>Authenticate, create profile</td>
   </tr>
   <tr>
     <td><b>Home Page</b></td>
@@ -237,7 +237,7 @@ verbix/
 ## 👥 Team
 
 - [**Swati Sharma**](https://github.com/swatified) - Project Lead & Developer
-- [**Garima Srivastav**](https://github.com/techy4shri) - Lead Designer and Illustrator
+- [**Garima**](https://github.com/techy4shri) - Lead Designer and Illustrator
 - [**Abdul Wahid Khan**](https://github.com/Wahid7852) - Cloud Specialist
 <br/><br/>
 
