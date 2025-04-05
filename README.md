@@ -143,7 +143,7 @@ verbix/
 
 <br/>
 
-## 🔧 Installation & Setup
+## 🔧 *Installation & Setup*
 
 ### Prerequisites
 - Flutter SDK 3.7.0 or higher
@@ -210,8 +210,8 @@ verbix/
    
 <br/>
 
-## 👥 App Navigation & Usage
-
+## *App Navigation & Usage*
+</br>
 
 ### 🚀 Initial Setup
 1. Launch the app and complete the authentication process
@@ -257,14 +257,14 @@ Access your profile settings through the avatar icon to:
   
 <br/>
 
-## 👥 Team
+## Team
 
 - [**Swati Sharma**](https://github.com/swatified) - Project Lead & Developer
 - [**Garima Srivastav**](https://github.com/techy4shri) - Lead UI Designer and Illustrator
 - [**Abdul Wahid Khan**](https://github.com/Wahid7852) - Cloud Specialist
 <br/><br/>
 
-## License 
+## License
 Copyright © 2024 Swati Sharma. All rights reserved.
 See [LICENSE](LICENSE.md) for details.
 <br/><br/>
