@@ -9,9 +9,13 @@
 [![IDX](https://img.shields.io/badge/IDX-Cloud_Development-4285F4.svg)](https://idx.google.com/)
 
 > <br/>Verbix is an innovative cross-platform application designed to support children with learning disabilities, particularly focusing on dyslexia which affects [5-10% of children worldwide](https://pmc.ncbi.nlm.nih.gov/articles/PMC6099274/#:~:text=Given%20that%20an%20estimated%205,and%20informed%20understandings%20of%20dyslexia.). The app utilizes advanced OCR through Google ML Kit, speech recognition technology, and Google's Vertex AI with Gemini models to analyze handwriting patterns and speech, providing personalized exercises and real-time feedback for improved learning outcomes. Developed entirely on Google's IDX cloud development platform.
-> <br/><br/>
 
-## 🌟 Key Features
+<br/>
+
+![image](https://github.com/user-attachments/assets/79f3d5d3-2e0d-46da-aef5-293c8244bc76)
+<br/><br/>
+
+## Key Features
 
 ### 📝 *Advanced Handwriting Analysis*
 - Real-time OCR recognition using Google ML Kit for precise text analysis
@@ -40,23 +44,70 @@
 - Adaptive difficulty scaling based on user improvement
 - Cross-modal learning patterns detection (comparing speech vs. writing performance)
 - Intelligent exercise generation that evolves with the user's progress
+<br/><br/>
 
 ## App Flow
 
 ![image](https://github.com/user-attachments/assets/601fcb33-ca7e-4d12-bb32-56b6c22d7cbd)
+<br/><br/><br/>
 
+<h3 style="text-decoration: underline;">🛠️ Technical Architecture</h3>
 
-## 🛠️ Technical Stack
-
-- **Platform**: Flutter cross-platform framework
-- **Programming Language**: Dart
-- **Development Environment**: IDX Platform
-- **Backend Services**: Firebase
-- **OCR Technology**: Google ML Kit
-- **AI Components**: Vertex AI & Gemini Models
-- **Database**: Cloud Firestore
-- **Authentication**: Firebase Auth
-- **Analytics**: FL Chart
+<table>
+  <tr>
+    <td><b>🔷 Core Framework</b></td>
+    <td>
+      • Flutter (cross-platform UI toolkit)</br>
+      • Dart 3.7.0+ programming language</br>
+      • Material Design components
+    </td>
+  </tr>
+  <tr>
+    <td><b>☁️ Backend & Storage</b></td>
+    <td>
+      • Firebase (backend-as-a-service)</br>
+      • Cloud Firestore (NoSQL database)</br>
+      • Firebase Authentication</br>
+      • Firebase Storage (for user assets)
+    </td>
+  </tr>
+  <tr>
+    <td><b>🧠 AI & Intelligence</b></td>
+    <td>
+      • Google ML Kit (text recognition)</br>
+      • Vertex AI (advanced analysis)</br>
+      • Gemini AI Models (personalized insights)</br>
+      • Speech-to-Text API
+    </td>
+  </tr>
+  <tr>
+    <td><b>📊 Data & Analytics</b></td>
+    <td>
+      • FL Chart (data visualization)</br>
+      • Firebase Analytics (usage metrics)</br>
+      • Custom analytics engine
+    </td>
+  </tr>
+  <tr>
+    <td><b>🔧 Development Tools</b></td>
+    <td>
+      • Google IDX Platform (cloud development)</br>
+      • Git version control</br>
+      • Flutter DevTools</br>
+      • Firebase CLI
+    </td>
+  </tr>
+  <tr>
+    <td><b>📱 Device Capabilities</b></td>
+    <td>
+      • Camera integration</br>
+      • Microphone access</br>
+      • Local storage</br>
+      • Push notifications
+    </td>
+  </tr>
+</table>
+<br/><br/>
 
 ## Project Structure
 
@@ -89,6 +140,8 @@ verbix/
 │   └── vertex-credentials.json           # Vertex AI authentication
 └── .env                                  # Environment configuration
 ```
+
+<br/>
 
 ## 🔧 Installation & Setup
 
@@ -154,13 +207,17 @@ verbix/
    flutter build apk --release
    ```
    The APK will be available at `build/app/outputs/flutter-apk/app-release.apk`
+   
+<br/>
 
 ## 👥 App Navigation & Usage
+
 
 ### 🚀 Initial Setup
 1. Launch the app and complete the authentication process
 2. Create your profile by entering your name, age, and selecting a personalized avatar
 3. All profile information is securely stored in Firestore for a personalized experience
+<br/>
 
 ### 🏠 Home Page Navigation
 The home page serves as your learning hub with access to:
@@ -168,6 +225,7 @@ The home page serves as your learning hub with access to:
 - **Pre-made Practice Modules**: Structured learning exercises targeting common dyslexia challenges
 - **Quick Test Access**: Start a new assessment to refresh your personalized learning plan
 - **Profile Settings**: Access your profile via the avatar icon in the top right corner
+<br/>
 
 ### 🧭 Bottom Navigation Bar
 The app features an intuitive navigation system with four main sections:
@@ -175,6 +233,7 @@ The app features an intuitive navigation system with four main sections:
 2. **Tests**: Assessment center to evaluate your current skills
 3. **Practice Modules**: Library of pre-built learning exercises
 4. **Dashboard**: Visual representation of your progress and achievements
+<br/>
 
 ### 📊 Testing Process
 1. Navigate to the Tests section and tap the "+" icon to begin a new assessment
@@ -184,6 +243,7 @@ The app features an intuitive navigation system with four main sections:
 3. Vertex AI analyzes both inputs to identify specific improvement areas
 4. Based on test results, your daily practice exercises will be automatically updated
 5. Test history and progress are stored for ongoing comparison
+<br/>
 
 ### 🎯 Exercise Types
 The app offers multiple interactive exercise formats:
@@ -191,14 +251,16 @@ The app offers multiple interactive exercise formats:
 - **Paper Writing**: Write sentences on paper and capture for analysis
 - **Speech Exercises**: Speak words and sentences for pronunciation feedback
 - **Combined Modules**: Multi-modal exercises that integrate writing and speaking
+<br/>
 
 ### 👤 Profile Management
 Access your profile settings through the avatar icon to:
 * Update personal information (name, age)
 * Change your avatar
 * View achievement statistics
-* Log out from your account 
-
+* Log out from your account
+  
+<br/><br/>
 
 ## 👥 Team
 
@@ -207,6 +269,7 @@ Access your profile settings through the avatar icon to:
 - [**Abdul Wahid Khan**](https://github.com/Wahid7852) - Cloud Specialist
 <br/><br/>
 
-## License
-
-Copyright © 2024 Swati Sharma. All rights reserved. See LICENSE for details.
+## License 
+Copyright © 2024 Swati Sharma. All rights reserved.
+See [LICENSE](LICENSE.md) for details.
+<br/><br/>
