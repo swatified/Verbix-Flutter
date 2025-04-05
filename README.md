@@ -13,28 +13,28 @@
 
 ## 🌟 Key Features
 
-### 📝 Advanced Handwriting Analysis
+### 📝 *Advanced Handwriting Analysis*
 - Real-time OCR recognition using Google ML Kit for precise text analysis
 - Smart detection of letter confusions, inversions, and omissions common in dyslexia
 - Pattern recognition that identifies recurring mistakes across multiple exercises
 - Interactive doodling exercises for letter and word formation practice
 - Capture and analysis of paper-written sentences with instant feedback
 
-### 🗣️ Comprehensive Speech Pattern Recognition
+### 🗣️ *Comprehensive Speech Pattern Recognition*
 - Advanced speech-to-text analysis powered by cutting-edge recognition technology
 - Detailed pronunciation feedback highlighting sound confusions
 - Speech pattern tracking to identify improvement areas
 - Word-by-word breakdown of pronunciation accuracy
 - Vocal exercise modules targeting specific phonetic challenges
 
-### 💡 Personalized Learning Journey
+### 💡 *Personalized Learning Journey*
 - AI-generated daily practice sets based on individual performance metrics
 - 5 tailored exercises refreshed daily to target specific improvement areas
 - Pre-built practice modules focusing on common dyslexia challenges
 - Progress visualization through intuitive dashboard charts and graphs
 - User profile customization with avatars and personal details
 
-### 🧠 Vertex AI & Gemini-Powered Insights
+### 🧠 *Vertex AI & Gemini-Powered Insights*
 - Sophisticated analysis of test results using Google's Vertex AI
 - Gemini AI models deliver personalized recommendations based on performance patterns
 - Adaptive difficulty scaling based on user improvement
@@ -200,17 +200,13 @@ Access your profile settings through the avatar icon to:
 * Log out from your account 
 
 
+## 👥 Team
 
+- [**Swati Sharma**](https://github.com/swatified) - Project Lead & Developer
+- [**Garima Srivastav**](https://github.com/techy4shri) - Lead UI Designer and Illustrator
+- [**Abdul Wahid Khan**](https://github.com/Wahid7852) - Cloud Specialist
+<br/><br/>
 
 ## License
 
-All rights reserved. This project is proprietary and confidential.
-
-## Acknowledgments
-
-- [Google ML Kit](https://developers.google.com/ml-kit) for text recognition capabilities
-- [Flutter](https://flutter.dev/) for the incredible cross-platform framework
-- [Firebase](https://firebase.google.com/) for backend infrastructure
-- [Vertex AI](https://cloud.google.com/vertex-ai) for ML infrastructure
-- [Gemini AI](https://cloud.google.com/vertex-ai/docs/generative-ai/model-reference/gemini) for generative AI capabilities
-- [IDX Platform](https://idx.google.com/) for cloud development environment
+Copyright © 2024 Swati Sharma. All rights reserved. See LICENSE for details.
