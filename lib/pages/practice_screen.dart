@@ -362,160 +362,154 @@ class _PracticeScreenState extends State<PracticeScreen> {
   
   // Show feedback popup
   void _showFeedbackPopup(FeedbackState state) {
-  // Don't show feedback if already showing another feedback
-  if (_showingFeedback) return;
-  
-  setState(() {
-    _showingFeedback = true;
-  });
-  
-  // Define content based on state
-  IconData iconData;
-  String heading;
-  String message;
-  Color headerColor;
-  
-  switch (state) {
-    case FeedbackState.correct:
-      iconData = Icons.check_circle;
-      heading = 'Great job!';
-      message = 'Your answer is correct. Keep up the good work!';
-      headerColor = Colors.green;
-      break;
-    case FeedbackState.wrong:
-      iconData = Icons.cancel;
-      heading = 'Try Again';
-      message = 'Your answer is incorrect. Keep practicing!';
-      headerColor = Colors.red;
-      break;
-    case FeedbackState.noText:
-      iconData = Icons.help_outline;
-      heading = 'No Text Detected';
-      message = 'I couldn\'t read your answer. Please try again.';
-      headerColor = Colors.orange;
-      break;
-  }
-  
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (BuildContext context) {
-      return Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
+    // Don't show feedback if already showing another feedback
+    if (_showingFeedback) return;
+    
+    setState(() {
+      _showingFeedback = true;
+    });
+    
+    // Define content based on state
+    String gifAsset;
+    String heading;
+    String message;
+    Color headerColor;
+    
+    switch (state) {
+      case FeedbackState.correct:
+        gifAsset = 'assets/gifs/correct.gif';
+        heading = 'Great job!';
+        message = 'Your answer is correct. Keep up the good work!';
+        headerColor = Colors.green;
+        break;
+      case FeedbackState.wrong:
+        gifAsset = 'assets/gifs/wrong.gif';
+        heading = 'Oops!';
+        message = 'Your answer is incorrect. Keep practicing!';
+        headerColor = const Color.fromARGB(255, 194, 185, 18);
+        break;
+      case FeedbackState.noText:
+        gifAsset = 'assets/gifs/confused.gif';
+        heading = 'No Text Detected';
+        message = 'I couldn\'t read your answer. Please try again.';
+        headerColor = const Color.fromARGB(255, 114, 63, 151);
+        break;
+    }
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Close button at the top right
-              Align(
-                alignment: Alignment.topRight,
-                child: GestureDetector(
-                  onTap: () {
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Close button at the top right
+                Align(
+                  alignment: Alignment.topRight,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      setState(() {
+                        _showingFeedback = false;
+                      });
+                    },
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.grey,
+                      size: 24,
+                    ),
+                  ),
+                ),
+
+                // GIF animation
+                SizedBox(
+                  height: 120,
+                  width: 120,
+                  child: Image.asset(
+                    gifAsset,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Heading
+                Text(
+                  heading,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: headerColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+
+                // Message
+                Text(
+                  message,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF324259),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+
+                // Continue button
+                ElevatedButton(
+                  onPressed: () {
                     Navigator.of(context).pop();
                     setState(() {
                       _showingFeedback = false;
                     });
+                    
+                    // If answer is correct, move to next item automatically
+                    if (state == FeedbackState.correct && _itemStatus[_currentIndex]) {
+                      _nextItem();
+                    }
                   },
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.grey,
-                    size: 24,
-                  ),
-                ),
-              ),
-
-              // Icon animation with a simple animation effect
-              TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0.0, end: 1.0),
-                duration: const Duration(milliseconds: 500),
-                builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: value,
-                    child: Icon(
-                      iconData,
-                      size: 80,
-                      color: headerColor,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: headerColor,
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
                     ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Heading
-              Text(
-                heading,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: headerColor,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-
-              // Message
-              Text(
-                message,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF324259),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-
-              // Continue button
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  setState(() {
-                    _showingFeedback = false;
-                  });
-                  
-                  // If answer is correct, move to next item automatically
-                  if (state == FeedbackState.correct && _itemStatus[_currentIndex]) {
-                    _nextItem();
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: headerColor,
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Text(
+                    state == FeedbackState.correct ? 'Continue' : 'Try Again',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-                child: Text(
-                  state == FeedbackState.correct ? 'Continue' : 'Try Again',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
   
   // Helper method for vowel sound comparison
   bool _compareVowelSounds(String extracted, String target) {
