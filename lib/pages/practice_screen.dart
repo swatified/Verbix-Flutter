@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:verbix/services/custom_practice_service.dart';
 import 'package:verbix/services/practice_stats_service.dart';
+import 'package:verbix/services/audio_service.dart'; // Add this import
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -45,6 +46,9 @@ class _PracticeScreenState extends State<PracticeScreen> {
   bool _isProcessingDrawing = false;
   String _recognizedText = '';
   bool _showingFeedback = false;
+  
+  // Add audio service
+  final AudioService _audioService = AudioService();
   
   // Controllers for written responses
   final List<TextEditingController> _textControllers = [];
@@ -381,18 +385,21 @@ class _PracticeScreenState extends State<PracticeScreen> {
         heading = 'Great job!';
         message = 'Your answer is correct. Keep up the good work!';
         headerColor = Colors.green;
+        _audioService.playCorrectSound(); // Play correct sound
         break;
       case FeedbackState.wrong:
         gifAsset = 'assets/gifs/wrong.gif';
         heading = 'Oops!';
         message = 'Your answer is incorrect. Keep practicing!';
         headerColor = const Color.fromARGB(255, 194, 185, 18);
+        _audioService.playWrongSound(); // Play wrong sound
         break;
       case FeedbackState.noText:
         gifAsset = 'assets/gifs/confused.gif';
         heading = 'No Text Detected';
         message = 'I couldn\'t read your answer. Please try again.';
         headerColor = const Color.fromARGB(255, 114, 63, 151);
+        _audioService.playWrongSound(); // Play wrong sound for this too
         break;
     }
     
@@ -509,7 +516,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
         );
       },
     );
-  }
+  } 
   
   // Helper method for vowel sound comparison
   bool _compareVowelSounds(String extracted, String target) {
