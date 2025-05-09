@@ -55,3 +55,7 @@ firebase_options.dart
 
 # Vertex ai files
 assets/service-account.json
+
+# Keystore files
+flutter-keystore.jks
+**/android/key.properties
