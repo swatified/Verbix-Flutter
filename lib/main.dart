@@ -15,7 +15,6 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:verbix/services/audio_service.dart';
-import 'package:verbix/services/user_level_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,10 +33,6 @@ void main() async {
   // Initialize the AudioService
   final audioService = AudioService();
   await audioService.initialize();
-  
-  // Initialize the UserLevelService
-  final userLevelService = UserLevelService();
-  await userLevelService.initialize();
   
   runApp(const MyApp());
 }

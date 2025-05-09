@@ -4,7 +4,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:verbix/services/user_level_service.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'dart:math';
@@ -220,15 +219,11 @@ class CustomPracticeService {
   // Generate custom practice modules based on test results
   static Future<List<PracticeModule>> generateCustomPractices() async {
     try {
-      // Get user's current difficulty level
-      final userLevelService = UserLevelService();
-      final difficultyLevel = userLevelService.currentDifficultyLevel;
-      
       // Fetch recent test results
       final testResults = await _fetchRecentTestResults();
       if (testResults.isEmpty) {
         // Return default practices if no test results
-        return _createDefaultPractices(difficultyLevel: difficultyLevel);
+        return _createDefaultPractices();
       }
 
       // Extract patterns from test results
@@ -247,29 +242,22 @@ class CustomPracticeService {
         'writtenAnalysis': writtenAnalyses.join('\n\n'),
         'speechAnalysis': speechAnalyses.join('\n\n'),
         'recommendations': recommendations.join('\n\n'),
-        'difficultyLevel': difficultyLevel.toString().split('.').last,
       };
 
       // Generate personalized practices using Vertex AI
       return await _generatePracticesWithGemini(combinedAnalyses);
     } catch (e) {
       print('Error generating custom practices: $e');
-      // Get difficulty level for default practices
-      final userLevelService = UserLevelService();
-      final difficultyLevel = userLevelService.currentDifficultyLevel;
-      return _createDefaultPractices(difficultyLevel: difficultyLevel);
+      return _createDefaultPractices();
     }
   }
 
   // Generate practices using Vertex AI API
   static Future<List<PracticeModule>> _generatePracticesWithGemini(
-      Map<String, dynamic> analyses) async {
+      Map<String, String> analyses) async {
     try {
       // Create a unique generation ID for this request
       final randomSeed = DateTime.now().millisecondsSinceEpoch;
-      
-      // Get difficulty level from analyses or default to medium
-      final difficulty = analyses['difficultyLevel'] ?? 'medium';
       
       // Create the prompt for Vertex AI
       final prompt = '''
@@ -284,15 +272,10 @@ class CustomPracticeService {
 
       ### Recommendations:
       ${analyses['recommendations']}
-      
-      ### Current Difficulty Level:
-      ${difficulty}
 
       ## Task
       Create 5 personalized practice modules for this user based on their dyslexia test results. 
       Each module should target a specific pattern or challenge identified in the analysis.
-      
-      The difficulty level should be ${difficulty.toUpperCase()}.
 
       ## Requirements
       For each practice module, provide the following in JSON format:
@@ -315,11 +298,6 @@ class CustomPracticeService {
       - For phonetic: Include 5 words that target difficult sounds
       - For letterReversal: Include 5 pairs of easily confused letters/words
       - For vowelSounds: Include 5 words with challenging vowel sounds
-
-      Adjust the complexity based on difficulty level:
-      - For EASY level: Use simpler letters, shorter sentences, simpler words
-      - For MEDIUM level: Balance complexity and simplicity
-      - For HARD level: Use more complex patterns, longer sentences, and challenging words
 
       Keep content appropriate for age 7-12 reading level. Focus on specific patterns found in their test results.
 
@@ -428,10 +406,7 @@ class CustomPracticeService {
       return _createPracticesFromJsonData(jsonData);
     } catch (e) {
       print('Error with Vertex AI API: $e');
-      // Get difficulty level for default practices
-      final userLevelService = UserLevelService();
-      final difficultyLevel = userLevelService.currentDifficultyLevel;
-      return _createDefaultPractices(difficultyLevel: difficultyLevel);
+      return _createDefaultPractices();
     }
   }
   
@@ -573,108 +548,58 @@ class CustomPracticeService {
   }
 
   // Create default practices when no test data is available
-  static List<PracticeModule> _createDefaultPractices({DifficultyLevel difficultyLevel = DifficultyLevel.medium}) {
-    // Select content based on difficulty level
-    List<String> letterWritingContent;
-    List<String> sentenceWritingContent;
-    List<String> phoneticContent;
-    List<String> letterReversalContent;
-    List<String> vowelSoundsContent;
-    int baseDifficulty;
-    
-    switch (difficultyLevel) {
-      case DifficultyLevel.easy:
-        letterWritingContent = ['a', 'c', 'e', 'i', 'o'];
-        sentenceWritingContent = [
-          'I can read.',
-          'The cat sat.',
-          'She has a pen.',
-          'Look at me.',
-          'I like dogs.'
-        ];
-        phoneticContent = ['cat', 'dog', 'sun', 'hat', 'bed'];
-        letterReversalContent = ['on/no', 'am/ma', 'us/su', 'at/ta', 'in/ni'];
-        vowelSoundsContent = ['cat', 'dog', 'map', 'sun', 'red'];
-        baseDifficulty = 1;
-        break;
-        
-      case DifficultyLevel.hard:
-        letterWritingContent = ['q', 'z', 'x', 'j', 'v'];
-        sentenceWritingContent = [
-          'The mysterious creature disappeared into the forest quickly.',
-          'Scientists discovered an extraordinary phenomenon yesterday.',
-          'The adventurous explorers navigated through treacherous terrain.',
-          'Fluorescent lights illuminated the laboratory equipment.',
-          'The archaeologist carefully excavated the ancient artifacts.'
-        ];
-        phoneticContent = ['psychology', 'pneumonia', 'rhythm', 'throughout', 'enthusiastic'];
-        letterReversalContent = ['consequence/subsequent', 'permissible/impermissible', 'environment/experimental', 'consistent/persistent', 'industrial/instrumental'];
-        vowelSoundsContent = ['beautiful', 'cautious', 'lieutenant', 'thorough', 'peculiar'];
-        baseDifficulty = 3;
-        break;
-        
-      case DifficultyLevel.medium:
-      default:
-        letterWritingContent = ['b', 'd', 'p', 'q', 'm'];
-        sentenceWritingContent = [
-          'The dog ran to the park.',
-          'She went to the store today.',
-          'They played games after school.',
-          'We saw birds in the tree.',
-          'He likes to read books.'
-        ];
-        phoneticContent = ['through', 'thought', 'strength', 'special', 'straight'];
-        letterReversalContent = ['was/saw', 'on/no', 'of/for', 'form/from', 'who/how'];
-        vowelSoundsContent = ['team', 'boat', 'night', 'house', 'food'];
-        baseDifficulty = 2;
-        break;
-    }
-    
+  static List<PracticeModule> _createDefaultPractices() {
     return [
       PracticeModule(
         id: 'default_letter_writing',
         title: 'Letter Practice',
         type: PracticeType.letterWriting,
-        content: letterWritingContent,
+        content: ['b', 'd', 'p', 'q', 'm'],
         completed: false,
         createdAt: DateTime.now(),
-        difficulty: baseDifficulty,
+        difficulty: 1,
       ),
       PracticeModule(
         id: 'default_sentence_writing',
         title: 'Sentence Writing',
         type: PracticeType.sentenceWriting,
-        content: sentenceWritingContent,
+        content: [
+          'The dog ran to the park.',
+          'She went to the store today.',
+          'They played games after school.',
+          'We saw birds in the tree.',
+          'He likes to read books.'
+        ],
         completed: false,
         createdAt: DateTime.now(),
-        difficulty: baseDifficulty,
+        difficulty: 2,
       ),
       PracticeModule(
         id: 'default_phonetic',
         title: 'Sound Practice',
         type: PracticeType.phonetic,
-        content: phoneticContent,
+        content: ['through', 'thought', 'strength', 'special', 'straight'],
         completed: false,
         createdAt: DateTime.now(),
-        difficulty: baseDifficulty,
+        difficulty: 3,
       ),
       PracticeModule(
         id: 'default_reversal',
         title: 'Similar Words',
         type: PracticeType.letterReversal,
-        content: letterReversalContent,
+        content: ['was/saw', 'on/no', 'of/for', 'form/from', 'who/how'],
         completed: false,
         createdAt: DateTime.now(),
-        difficulty: baseDifficulty,
+        difficulty: 2,
       ),
       PracticeModule(
         id: 'default_vowels',
         title: 'Vowel Sounds',
         type: PracticeType.vowelSounds,
-        content: vowelSoundsContent,
+        content: ['team', 'boat', 'night', 'house', 'food'],
         completed: false,
         createdAt: DateTime.now(),
-        difficulty: baseDifficulty,
+        difficulty: 2,
       ),
     ];
   }

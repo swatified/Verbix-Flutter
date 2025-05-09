@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'package:verbix/services/custom_practice_service.dart' as practice_service;
 import 'package:verbix/services/practice_stats_service.dart';
 import 'package:verbix/services/practice_module_service.dart'; // Import new service
-import 'package:verbix/services/user_level_service.dart'; // Add this import
 import 'practice_screen.dart';
 import 'module_details.dart'; // Renamed from practice_modules.dart for clarity
 import 'user_settings.dart';  // Added import for UserSettingsScreen
@@ -26,15 +25,10 @@ class _HomePageState extends State<HomePage> {
   int _practicesCompletedToday = 0; // New field to track practice module completions
   List<practice_service.PracticeModule> _dailyPractices = [];
   List<PracticeModule> _popularModules = [];
-  
-  // Add difficulty level
-  DifficultyLevel _difficultyLevel = DifficultyLevel.medium;
-  final UserLevelService _userLevelService = UserLevelService();
 
   @override
   void initState() {
     super.initState();
-    _initializeServices();
     _loadUserData();
     _loadPracticeData();
     
@@ -44,15 +38,6 @@ class _HomePageState extends State<HomePage> {
       _loadPopularModules();
       // Also refresh modules completion count
       _loadModulesCompletedToday();
-    });
-    
-    // Subscribe to difficulty level updates
-    _userLevelService.levelStream.listen((level) {
-      setState(() {
-        _difficultyLevel = _userLevelService.currentDifficultyLevel;
-      });
-      // Refresh practices when level changes
-      _loadPracticeData(forceRefresh: true);
     });
     
     // Refresh data when returning to this screen
@@ -68,15 +53,6 @@ class _HomePageState extends State<HomePage> {
     _saveUserProgressData(); // Save progress when leaving the page
     _searchController.dispose();
     super.dispose();
-  }
-
-  Future<void> _initializeServices() async {
-    try {
-      await _userLevelService.initialize();
-      _difficultyLevel = _userLevelService.currentDifficultyLevel;
-    } catch (e) {
-      print('Error initializing services: $e');
-    }
   }
 
   Future<void> _loadUserData() async {
@@ -109,12 +85,12 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _loadPracticeData({bool forceRefresh = false}) async {
+  Future<void> _loadPracticeData() async {
     try {
       // First load daily practices (from previous code)
       final practices = await practice_service.CustomPracticeService.fetchPractices();
       
-      if (practices.isEmpty || _shouldRefreshPractices(practices) || forceRefresh) {
+      if (practices.isEmpty || _shouldRefreshPractices(practices)) {
         final newPractices = await practice_service.CustomPracticeService.generateCustomPractices();
         await practice_service.CustomPracticeService.savePractices(newPractices);
         setState(() {
@@ -139,9 +115,6 @@ class _HomePageState extends State<HomePage> {
       
       // After loading all data, save the progress to track daily activity
       await _saveUserProgressData();
-      
-      // Check user's level
-      await _userLevelService.checkAndUpdateLevel();
       
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -294,25 +267,6 @@ class _HomePageState extends State<HomePage> {
       greeting = 'Good evening';
     }
     
-    // Get difficulty level text
-    String difficultyText;
-    Color difficultyColor;
-    
-    switch (_difficultyLevel) {
-      case DifficultyLevel.easy:
-        difficultyText = 'Easy';
-        difficultyColor = Colors.green;
-        break;
-      case DifficultyLevel.hard:
-        difficultyText = 'Hard';
-        difficultyColor = Colors.red;
-        break;
-      case DifficultyLevel.medium:
-      default:
-        difficultyText = 'Medium';
-        difficultyColor = Colors.blue;
-    }
-    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -350,67 +304,41 @@ class _HomePageState extends State<HomePage> {
               
               // Mascot message
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (hasPracticed)
-                      Text(
-                        '$greeting, $firstName!',
-                        style: const TextStyle(
-                          fontSize: 22.0,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF324259),
-                        ),
-                      )
-                    else
-                      const Text(
-                        'Uh oh...',
-                        style: TextStyle(
-                          fontSize: 18.0,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF324259),
-                        ),
-                      ),
-                    const SizedBox(height: 4),
-                    Text(
-                      hasPracticed
-                          ? ''
-                          : "You haven't completed any practices today.",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: hasPracticed ? Colors.green[700] : Colors.grey[700],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      if (hasPracticed)
+        Text(
+          '$greeting, $firstName!',
+          style: const TextStyle(
+            fontSize: 22.0,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF324259),
           ),
-          
-          // Add difficulty level indicator
-          Container(
-            margin: const EdgeInsets.only(top: 8, right: 14, bottom: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: difficultyColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: difficultyColor.withOpacity(0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.access_time, size: 16, color: difficultyColor),
-                const SizedBox(width: 4),
-                Text(
-                  'Current Level: $difficultyText',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: difficultyColor,
-                  ),
-                ),
-              ],
-            ),
+        )
+      else
+        const Text(
+          'Uh oh...',
+          style: TextStyle(
+            fontSize: 18.0,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF324259),
+          ),
+        ),
+      const SizedBox(height: 4),
+      Text(
+        hasPracticed
+            ? ''
+            : "You haven't completed any practices today.",
+        style: TextStyle(
+          fontSize: 14,
+          color: hasPracticed ? Colors.green[700] : Colors.grey[700],
+        ),
+      ),
+    ],
+  ),
+),
+            ],
           ),
           
           // Add modules and practices completed count if any

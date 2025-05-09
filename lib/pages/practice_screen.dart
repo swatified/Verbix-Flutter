@@ -8,8 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:verbix/services/custom_practice_service.dart';
 import 'package:verbix/services/practice_stats_service.dart';
-import 'package:verbix/services/audio_service.dart';
-import 'package:verbix/services/user_level_service.dart';
+import 'package:verbix/services/audio_service.dart'; // Add this import
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -47,9 +46,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
   bool _isProcessingDrawing = false;
   String _recognizedText = '';
   bool _showingFeedback = false;
-  
-  // Add user level service
-  final UserLevelService _userLevelService = UserLevelService();
   
   // Add audio service
   final AudioService _audioService = AudioService();
@@ -390,12 +386,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
         message = 'Your answer is correct. Keep up the good work!';
         headerColor = Colors.green;
         _audioService.playCorrectSound(); // Play correct sound
-        
-        // Record successful attempt
-        _userLevelService.recordExerciseAttempt(
-          exerciseId: '${widget.practice.id}_$_currentIndex',
-          isCorrect: true,
-        );
         break;
       case FeedbackState.wrong:
         gifAsset = 'assets/gifs/wrong.gif';
@@ -403,12 +393,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
         message = 'Your answer is incorrect. Keep practicing!';
         headerColor = const Color.fromARGB(255, 194, 185, 18);
         _audioService.playWrongSound(); // Play wrong sound
-        
-        // Record unsuccessful attempt
-        _userLevelService.recordExerciseAttempt(
-          exerciseId: '${widget.practice.id}_$_currentIndex',
-          isCorrect: false,
-        );
         break;
       case FeedbackState.noText:
         gifAsset = 'assets/gifs/confused.gif';
@@ -416,8 +400,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
         message = 'I couldn\'t read your answer. Please try again.';
         headerColor = const Color.fromARGB(255, 114, 63, 151);
         _audioService.playWrongSound(); // Play wrong sound for this too
-        
-        // Don't record no-text attempts as they are ambiguous
         break;
     }
     
