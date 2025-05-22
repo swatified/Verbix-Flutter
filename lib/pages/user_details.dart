@@ -73,13 +73,15 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         throw Exception('No user signed in');
       }
       
-      // Save user details to Firestore
+      // Save user details to Firestore with initial level
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'age': age,
         'avatarIndex': _selectedAvatarIndex,
         'email': user.email,
+        'level': 'easy', // Initialize all users at easy level
+        'levelUpdatedAt': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
       });
       

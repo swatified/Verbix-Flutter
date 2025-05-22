@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:verbix/services/custom_practice_service.dart' as practice_service;
 import 'package:verbix/services/practice_stats_service.dart';
 import 'package:verbix/services/practice_module_service.dart'; // Import new service
+import 'package:verbix/services/daily_scoring_service.dart';
 import 'practice_screen.dart';
 import 'module_details.dart'; // Renamed from practice_modules.dart for clarity
 import 'user_settings.dart';  // Added import for UserSettingsScreen
@@ -25,12 +26,16 @@ class _HomePageState extends State<HomePage> {
   int _practicesCompletedToday = 0; // New field to track practice module completions
   List<practice_service.PracticeModule> _dailyPractices = [];
   List<PracticeModule> _popularModules = [];
+  DifficultyLevel _currentLevel = DifficultyLevel.easy;
+  DailyScore? _todayScore;
+  bool _isLoadingLevel = true;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _loadPracticeData();
+    _loadLevelAndScore();
     
     // Subscribe to module updates
     PracticeModuleService.moduleStream.listen((modules) {
@@ -753,6 +758,268 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _loadLevelAndScore() async {
+    setState(() {
+      _isLoadingLevel = true;
+    });
+    
+    try {
+      // Check for day transitions first
+      await DailyScoringService.checkAndProcessDayTransition();
+      
+      // Load current level
+      final level = await DailyScoringService.getCurrentUserLevel();
+      
+      // Load today's score
+      final score = await DailyScoringService.getTodayScore();
+      
+      setState(() {
+        _currentLevel = level;
+        _todayScore = score;
+        _isLoadingLevel = false;
+      });
+      
+      print('Loaded level: ${level.toString().split('.').last}');
+      if (score != null) {
+        print('Today\'s score: ${score.correctAnswers}/${score.totalAttempts} (${(score.accuracy * 100).toStringAsFixed(1)}%)');
+      }
+    } catch (e) {
+      print('Error loading level and score: $e');
+      setState(() {
+        _isLoadingLevel = false;
+      });
+    }
+  }
+
+  Widget _buildLevelDisplay() {
+    if (_isLoadingLevel) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.2),
+              spreadRadius: 1,
+              blurRadius: 3,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final levelInfo = DailyScoringService.getLevelDisplayInfo(_currentLevel);
+    final todayAccuracy = _todayScore?.accuracy ?? 0.0;
+    final todayAttempts = _todayScore?.totalAttempts ?? 0;
+    final todayCorrect = _todayScore?.correctAnswers ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            (levelInfo['color'] as Color).withOpacity(0.1),
+            (levelInfo['color'] as Color).withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: (levelInfo['color'] as Color).withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: levelInfo['color'],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  levelInfo['icon'],
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Current Level: ${levelInfo['name']}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF324259),
+                      ),
+                    ),
+                    Text(
+                      levelInfo['description'],
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          if (todayAttempts > 0) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Today\'s Performance',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '${(todayAccuracy * 100).toStringAsFixed(1)}%',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: todayAccuracy >= 0.85 
+                              ? Colors.green 
+                              : todayAccuracy <= 0.25 
+                                  ? Colors.red 
+                                  : Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: todayAccuracy,
+                    backgroundColor: Colors.grey[300],
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      todayAccuracy >= 0.85 
+                          ? Colors.green 
+                          : todayAccuracy <= 0.25 
+                              ? Colors.red 
+                              : Colors.orange,
+                    ),
+                    minHeight: 6,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$todayCorrect correct out of $todayAttempts attempts',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  
+                  // Level up/down indicators
+                  if (todayAccuracy >= 0.85 && _currentLevel != DifficultyLevel.hard)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.trending_up, color: Colors.green, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            'On track to level up!',
+                            style: TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (todayAccuracy <= 0.25 && _currentLevel != DifficultyLevel.easy)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.trending_down, color: Colors.orange, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            'Practice more to maintain level',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.blue[600],
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Start practicing to see your daily progress!',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -871,6 +1138,8 @@ class _HomePageState extends State<HomePage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildMascot(),
+                          const SizedBox(height: 24),
+                          _buildLevelDisplay(),
                           const SizedBox(height: 24),
                           _buildDailyPractices(),
                           const SizedBox(height: 24),

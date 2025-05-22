@@ -8,6 +8,9 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:math';
 
+// Import the daily scoring service
+import 'daily_scoring_service.dart';
+
 // Types of practices
 enum PracticeType {
   letterWriting,
@@ -26,6 +29,7 @@ class PracticeModule {
   final bool completed;
   final DateTime createdAt;
   final int difficulty; // 1-5 scale
+  final DifficultyLevel difficultyLevel; // New field for easy/medium/hard
   List<ImageOption>? imageOptions;
 
   PracticeModule({
@@ -36,6 +40,7 @@ class PracticeModule {
     this.completed = false,
     required this.createdAt,
     this.difficulty = 1,
+    this.difficultyLevel = DifficultyLevel.easy,
     this.imageOptions,
   });
 
@@ -48,6 +53,7 @@ class PracticeModule {
       'completed': completed,
       'createdAt': createdAt,
       'difficulty': difficulty,
+      'difficultyLevel': difficultyLevel.toString().split('.').last,
       'imageOptions': imageOptions?.map((e) => e.toJson()).toList(),
     };
   }
@@ -64,6 +70,12 @@ class PracticeModule {
       completed: map['completed'] ?? false,
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       difficulty: map['difficulty'] ?? 1,
+      difficultyLevel: map['difficultyLevel'] != null
+          ? DifficultyLevel.values.firstWhere(
+              (e) => e.toString().split('.').last == map['difficultyLevel'],
+              orElse: () => DifficultyLevel.easy,
+            )
+          : DifficultyLevel.easy,
       imageOptions: map['imageOptions'] != null
           ? List<ImageOption>.from(
               map['imageOptions'].map((x) => ImageOption.fromJson(x)))
@@ -80,6 +92,7 @@ class PracticeModule {
     bool? completed,
     DateTime? createdAt,
     int? difficulty,
+    DifficultyLevel? difficultyLevel,
     List<ImageOption>? imageOptions,
   }) {
     return PracticeModule(
@@ -90,6 +103,7 @@ class PracticeModule {
       completed: completed ?? this.completed,
       createdAt: createdAt ?? this.createdAt,
       difficulty: difficulty ?? this.difficulty,
+      difficultyLevel: difficultyLevel ?? this.difficultyLevel,
       imageOptions: imageOptions ?? this.imageOptions,
     );
   }
@@ -124,7 +138,7 @@ class ImageOption {
 class CustomPracticeService {
   static final _projectId = dotenv.env['VERTEX_PROJECT_ID'] ?? '';
   static final _location = dotenv.env['VERTEX_LOCATION'] ?? 'us-central1';
-  static final _modelId = 'gemini-1.5-pro-001'; // Using full model name with version
+  static final _modelId = 'gemini-1.5-pro-001';
   static String? _accessToken;
   static DateTime? _tokenExpiry;
   
@@ -134,7 +148,6 @@ class CustomPracticeService {
     final credentialsPath = '${directory.path}/service-account.json';
     final file = File(credentialsPath);
     
-    // Check if credentials file exists
     if (!await file.exists()) {
       throw Exception('Service account credentials file not found at: $credentialsPath');
     }
@@ -146,30 +159,20 @@ class CustomPracticeService {
 
   // Get OAuth2 access token
   static Future<String> _getAccessToken() async {
-    // Check if we have a valid token already
     if (_accessToken != null && _tokenExpiry != null && DateTime.now().isBefore(_tokenExpiry!)) {
-      print("DEBUG: Using cached access token");
       return _accessToken!;
     }
     
     try {
-      print("DEBUG: Getting fresh access token");
       final credentials = await _getCredentials();
-      
-      // Define the scopes needed for Vertex AI
       final scopes = ['https://www.googleapis.com/auth/cloud-platform'];
-      
-      // Get the HTTP client with OAuth2 credentials
       final client = await clientViaServiceAccount(credentials, scopes);
       
-      // Store the token and its expiry
       _accessToken = client.credentials.accessToken.data;
       _tokenExpiry = client.credentials.accessToken.expiry;
       
-      print("DEBUG: Successfully obtained fresh access token, expires at: $_tokenExpiry");
       return _accessToken!;
     } catch (e) {
-      print("ERROR: Failed to get access token: $e");
       throw Exception('Failed to authenticate with Vertex AI: $e');
     }
   }
@@ -177,7 +180,6 @@ class CustomPracticeService {
   // Method to get authentication headers with token
   static Future<Map<String, String>> _getAuthHeaders() async {
     final token = await _getAccessToken();
-    print("DEBUG: Got auth headers with token");
     return {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -186,11 +188,7 @@ class CustomPracticeService {
 
   // Get the Vertex AI endpoint for Gemini
   static String get _endpoint {
-    print("DEBUG: Constructing endpoint with project=$_projectId, location=$_location, model=$_modelId");
-    // For Gemini models, use the generateContent endpoint
-    final endpoint = 'https://$_location-aiplatform.googleapis.com/v1/projects/$_projectId/locations/$_location/publishers/google/models/$_modelId:generateContent';
-    print("DEBUG: Endpoint: $endpoint");
-    return endpoint;
+    return 'https://$_location-aiplatform.googleapis.com/v1/projects/$_projectId/locations/$_location/publishers/google/models/$_modelId:generateContent';
   }
   
   // Fetch user's recent test results
@@ -206,7 +204,7 @@ class CustomPracticeService {
           .doc(user.uid)
           .collection('test_results')
           .orderBy('timestamp', descending: true)
-          .limit(3) // Get the most recent 3 tests
+          .limit(3)
           .get();
 
       return querySnapshot.docs.map((doc) => doc.data()).toList();
@@ -216,14 +214,19 @@ class CustomPracticeService {
     }
   }
 
-  // Generate custom practice modules based on test results
+  // Generate custom practice modules based on test results and difficulty level
   static Future<List<PracticeModule>> generateCustomPractices() async {
     try {
+      // Check day transition first
+      await DailyScoringService.checkAndProcessDayTransition();
+      
+      // Get user's current difficulty level
+      final userLevel = await DailyScoringService.getCurrentUserLevel();
+      
       // Fetch recent test results
       final testResults = await _fetchRecentTestResults();
       if (testResults.isEmpty) {
-        // Return default practices if no test results
-        return _createDefaultPractices();
+        return _createDefaultPractices(userLevel);
       }
 
       // Extract patterns from test results
@@ -245,23 +248,31 @@ class CustomPracticeService {
       };
 
       // Generate personalized practices using Vertex AI
-      return await _generatePracticesWithGemini(combinedAnalyses);
+      return await _generatePracticesWithGemini(combinedAnalyses, userLevel);
     } catch (e) {
       print('Error generating custom practices: $e');
-      return _createDefaultPractices();
+      final userLevel = await DailyScoringService.getCurrentUserLevel();
+      return _createDefaultPractices(userLevel);
     }
   }
 
-  // Generate practices using Vertex AI API
+  // Generate practices using Vertex AI API with difficulty level
   static Future<List<PracticeModule>> _generatePracticesWithGemini(
-      Map<String, String> analyses) async {
+      Map<String, String> analyses, DifficultyLevel userLevel) async {
     try {
-      // Create a unique generation ID for this request
       final randomSeed = DateTime.now().millisecondsSinceEpoch;
+      
+      // Get difficulty-specific instructions
+      final difficultyInstructions = _getDifficultyInstructions(userLevel);
       
       // Create the prompt for Vertex AI
       final prompt = '''
       # Dyslexia Practice Module Generation
+
+      ## User's Current Level: ${userLevel.toString().split('.').last.toUpperCase()}
+      
+      ## Difficulty Guidelines:
+      $difficultyInstructions
 
       ## User's Analysis Data
       ### Written Analysis:
@@ -274,8 +285,8 @@ class CustomPracticeService {
       ${analyses['recommendations']}
 
       ## Task
-      Create 5 personalized practice modules for this user based on their dyslexia test results. 
-      Each module should target a specific pattern or challenge identified in the analysis.
+      Create 5 personalized practice modules for this user based on their dyslexia test results and current difficulty level.
+      Each module should target a specific pattern or challenge identified in the analysis, adjusted for their current level.
 
       ## Requirements
       For each practice module, provide the following in JSON format:
@@ -283,32 +294,33 @@ class CustomPracticeService {
       ```json
       [
         {
-          "title": "Short descriptive title",
+          "title": "Short descriptive title appropriate for ${userLevel.toString().split('.').last} level",
           "type": "One of: letterWriting, sentenceWriting, phonetic, letterReversal, vowelSounds",
           "content": ["Item 1", "Item 2", "Item 3", "Item 4", "Item 5"],
-          "difficulty": number from 1-5
+          "difficulty": number from 1-5 (adjusted for ${userLevel.toString().split('.').last} level)
         },
         ...
       ]
       ```
 
-      For the "content" field:
-      - For letterWriting: Include 5 letters the user struggles with
-      - For sentenceWriting: Include 5 sentences with challenging patterns
-      - For phonetic: Include 5 words that target difficult sounds
-      - For letterReversal: Include 5 pairs of easily confused letters/words
-      - For vowelSounds: Include 5 words with challenging vowel sounds
+      For the "content" field based on ${userLevel.toString().split('.').last} level:
+      - For letterWriting: Include 5 letters following the difficulty guidelines above
+      - For sentenceWriting: Include 5 sentences following the length and complexity guidelines
+      - For phonetic: Include 5 words following the phonetic complexity guidelines
+      - For letterReversal: Include 5 pairs following the difficulty guidelines
+      - For vowelSounds: Include 5 words following the vowel complexity guidelines
 
-      Keep content appropriate for age 7-12 reading level. Focus on specific patterns found in their test results.
+      IMPORTANT DIFFICULTY ADJUSTMENTS:
+      ${_getSpecificContentGuidelines(userLevel)}
 
-      Important: Generate different content each time, including ${DateTime.now().toIso8601String()} as a timestamp to ensure uniqueness.
+      Generate different content each time, including ${DateTime.now().toIso8601String()} as a timestamp to ensure uniqueness.
       Generation ID: $randomSeed
       ''';
 
       // Get headers with OAuth token
       final headers = await _getAuthHeaders();
       
-      // Prepare request body for Gemini model in Vertex AI with randomness
+      // Prepare request body for Gemini model
       final requestBody = jsonEncode({
         "contents": [
           {
@@ -321,15 +333,12 @@ class CustomPracticeService {
           }
         ],
         "generationConfig": {
-          "temperature": 0.7, // Increase temperature for more variety
+          "temperature": 0.7,
           "maxOutputTokens": 1024,
           "topK": 40,
           "topP": 0.95
         }
       });
-      
-      print("DEBUG: Sending request to Vertex AI");
-      print("DEBUG: Full request body: $requestBody");
       
       final response = await http.post(
         Uri.parse(_endpoint),
@@ -338,21 +347,16 @@ class CustomPracticeService {
       );
       
       if (response.statusCode != 200) {
-        print("DEBUG: ⚠️ Error response: ${response.statusCode}");
-        print("DEBUG: ⚠️ Headers: ${response.headers}");
-        print("DEBUG: ⚠️ Full error body: ${response.body}");
         throw Exception("API call failed with status code: ${response.statusCode}");
       }
       
       final responseData = jsonDecode(response.body);
       
-      // Extract text from Gemini response format in Vertex AI
+      // Extract text from Gemini response
       String responseText = "";
       if (responseData.containsKey('candidates') && 
           responseData['candidates'] is List && 
           responseData['candidates'].isNotEmpty) {
-        
-        print("DEBUG: Found candidates in response");
         
         var candidate = responseData['candidates'][0];
         if (candidate.containsKey('content') && 
@@ -361,38 +365,22 @@ class CustomPracticeService {
             candidate['content']['parts'].isNotEmpty) {
           
           responseText = candidate['content']['parts'][0]['text'] ?? '';
-          print("DEBUG: Extracted text of length: ${responseText.length}");
-          print("DEBUG: First 100 chars: ${responseText.substring(0, min(100, responseText.length))}...");
-        } else {
-          print("DEBUG: ⚠️ Unexpected candidate format");
-          print("DEBUG: ⚠️ Candidate: $candidate");
         }
-      } else {
-        print("DEBUG: ⚠️ No candidates found in response");
-        throw Exception('Invalid response format from Vertex AI');
       }
 
-      // Extract JSON from the response - improve the regex to be more robust
+      // Extract JSON from the response
       final jsonRegex = RegExp(r'\[\s*\{.*?\}\s*\]', dotAll: true);
       final match = jsonRegex.firstMatch(responseText);
       
       if (match == null) {
-        print("DEBUG: ⚠️ No JSON found in response text");
-        print("DEBUG: ⚠️ Response text: $responseText");
-        
-        // Alternative approach - try to find JSON anywhere in the text
         final anyJsonMatch = RegExp(r'\[.*\]', dotAll: true).firstMatch(responseText);
         
         if (anyJsonMatch != null) {
           try {
             final jsonString = anyJsonMatch.group(0);
-            print("DEBUG: Found alternative JSON: ${jsonString?.substring(0, min(100, jsonString?.length ?? 0))}...");
             final List<dynamic> jsonData = json.decode(jsonString!);
-            
-            // Convert to PracticeModule objects
-            return _createPracticesFromJsonData(jsonData);
+            return _createPracticesFromJsonData(jsonData, userLevel);
           } catch (e) {
-            print("DEBUG: ⚠️ Failed to parse alternative JSON: $e");
             throw Exception('Could not extract valid JSON from response');
           }
         } else {
@@ -403,21 +391,89 @@ class CustomPracticeService {
       final jsonString = match.group(0);
       final List<dynamic> jsonData = json.decode(jsonString!);
       
-      return _createPracticesFromJsonData(jsonData);
+      return _createPracticesFromJsonData(jsonData, userLevel);
     } catch (e) {
       print('Error with Vertex AI API: $e');
-      return _createDefaultPractices();
+      return _createDefaultPractices(userLevel);
+    }
+  }
+
+  // Get difficulty-specific instructions
+  static String _getDifficultyInstructions(DifficultyLevel level) {
+    switch (level) {
+      case DifficultyLevel.easy:
+        return '''
+        EASY LEVEL GUIDELINES:
+        - Use simple, short words (3-5 letters)
+        - Simple sentence structures (5-8 words)
+        - Common, everyday vocabulary
+        - Clear phonetic patterns
+        - Basic letter combinations
+        - Avoid complex grammar or punctuation
+        ''';
+      case DifficultyLevel.medium:
+        return '''
+        MEDIUM LEVEL GUIDELINES:
+        - Moderate length words (4-7 letters)
+        - Medium sentences (6-12 words)
+        - Mix of common and slightly challenging vocabulary
+        - More complex phonetic patterns
+        - Include some compound words
+        - Basic punctuation (periods, commas)
+        ''';
+      case DifficultyLevel.hard:
+        return '''
+        HARD LEVEL GUIDELINES:
+        - Longer words (6-10+ letters)
+        - Complex sentences (10-15+ words)
+        - Advanced vocabulary and concepts
+        - Complex phonetic patterns and silent letters
+        - Multi-syllable words
+        - Advanced punctuation and grammar
+        - Include challenging letter combinations
+        ''';
+    }
+  }
+
+  // Get specific content guidelines for each practice type
+  static String _getSpecificContentGuidelines(DifficultyLevel level) {
+    switch (level) {
+      case DifficultyLevel.easy:
+        return '''
+        EASY CONTENT SPECIFICS:
+        - Letters: Focus on commonly confused letters (b/d, p/q, m/w)
+        - Sentences: "The cat sat." "I like dogs." "We go home."
+        - Phonetic: Simple words like "cat", "dog", "run", "big", "sun"
+        - Reversals: Simple pairs like "was/saw", "on/no", "it/ti"
+        - Vowels: Short vowel sounds in simple words like "cat", "pet", "sit"
+        ''';
+      case DifficultyLevel.medium:
+        return '''
+        MEDIUM CONTENT SPECIFICS:
+        - Letters: Include cursive transitions and less common letters
+        - Sentences: "The quick brown fox jumps." "She walked to the store yesterday."
+        - Phonetic: Words with blends like "string", "splash", "through"
+        - Reversals: More complex pairs like "form/from", "trail/trial"
+        - Vowels: Long vowels and diphthongs like "boat", "night", "house"
+        ''';
+      case DifficultyLevel.hard:
+        return '''
+        HARD CONTENT SPECIFICS:
+        - Letters: Complex letter combinations and ligatures
+        - Sentences: "The extraordinary circumstances required immediate attention." "Despite the challenging weather conditions, they persevered."
+        - Phonetic: Complex words like "extraordinary", "circumstances", "perseverance"
+        - Reversals: Challenging pairs like "psychology/psychologist", "definitely/defiantly"
+        - Vowels: Complex vowel patterns like "beautiful", "curious", "mysterious"
+        ''';
     }
   }
   
   // Helper method to create practice modules from JSON data
-  static List<PracticeModule> _createPracticesFromJsonData(List<dynamic> jsonData) {
-    // Convert to PracticeModule objects
+  static List<PracticeModule> _createPracticesFromJsonData(List<dynamic> jsonData, DifficultyLevel userLevel) {
     List<PracticeModule> practices = [];
     
     for (var item in jsonData) {
       try {
-        // Convert the "type" string to PracticeType enum
         final typeStr = item['type'] as String;
         final type = PracticeType.values.firstWhere(
           (e) => e.toString().split('.').last == typeStr,
@@ -432,9 +488,9 @@ class CustomPracticeService {
           completed: false,
           createdAt: DateTime.now(),
           difficulty: item['difficulty'] ?? 1,
+          difficultyLevel: userLevel, // Set the user's current level
         );
 
-        // When creating sentence writing exercises, add image options
         if (practice.type == PracticeType.sentenceWriting) {
           practice.imageOptions = [
             ImageOption(
@@ -442,18 +498,15 @@ class CustomPracticeService {
               imageUrl: 'https://example.com/image1.jpg',
               word: 'example',
             ),
-            // Add more image options
           ];
         }
 
         practices.add(practice);
       } catch (e) {
-        print("DEBUG: Error creating practice module: $e");
-        // Continue to next item
+        print("Error creating practice module: $e");
       }
     }
     
-    // Ensure we have at most 5 practices
     return practices.take(5).toList();
   }
 
@@ -465,10 +518,9 @@ class CustomPracticeService {
         throw Exception('No user signed in');
       }
       
-      // Get a batch write instance
       final batch = FirebaseFirestore.instance.batch();
       
-      // First, delete existing practices to avoid duplicates
+      // Delete existing practices
       final existingPractices = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -490,7 +542,6 @@ class CustomPracticeService {
         batch.set(docRef, practice.toMap());
       }
       
-      // Commit the batch
       await batch.commit();
     } catch (e) {
       print('Error saving practices: $e');
@@ -513,8 +564,8 @@ class CustomPracticeService {
           .get();
 
       if (querySnapshot.docs.isEmpty) {
-        // No practices found, create and save default ones
-        final defaults = _createDefaultPractices();
+        final userLevel = await DailyScoringService.getCurrentUserLevel();
+        final defaults = _createDefaultPractices(userLevel);
         await savePractices(defaults);
         return defaults;
       }
@@ -524,7 +575,8 @@ class CustomPracticeService {
           .toList();
     } catch (e) {
       print('Error fetching practices: $e');
-      return _createDefaultPractices();
+      final userLevel = await DailyScoringService.getCurrentUserLevel();
+      return _createDefaultPractices(userLevel);
     }
   }
 
@@ -547,60 +599,188 @@ class CustomPracticeService {
     }
   }
 
-  // Create default practices when no test data is available
-  static List<PracticeModule> _createDefaultPractices() {
-    return [
-      PracticeModule(
-        id: 'default_letter_writing',
-        title: 'Letter Practice',
-        type: PracticeType.letterWriting,
-        content: ['b', 'd', 'p', 'q', 'm'],
-        completed: false,
-        createdAt: DateTime.now(),
-        difficulty: 1,
-      ),
-      PracticeModule(
-        id: 'default_sentence_writing',
-        title: 'Sentence Writing',
-        type: PracticeType.sentenceWriting,
-        content: [
-          'The dog ran to the park.',
-          'She went to the store today.',
-          'They played games after school.',
-          'We saw birds in the tree.',
-          'He likes to read books.'
-        ],
-        completed: false,
-        createdAt: DateTime.now(),
-        difficulty: 2,
-      ),
-      PracticeModule(
-        id: 'default_phonetic',
-        title: 'Sound Practice',
-        type: PracticeType.phonetic,
-        content: ['through', 'thought', 'strength', 'special', 'straight'],
-        completed: false,
-        createdAt: DateTime.now(),
-        difficulty: 3,
-      ),
-      PracticeModule(
-        id: 'default_reversal',
-        title: 'Similar Words',
-        type: PracticeType.letterReversal,
-        content: ['was/saw', 'on/no', 'of/for', 'form/from', 'who/how'],
-        completed: false,
-        createdAt: DateTime.now(),
-        difficulty: 2,
-      ),
-      PracticeModule(
-        id: 'default_vowels',
-        title: 'Vowel Sounds',
-        type: PracticeType.vowelSounds,
-        content: ['team', 'boat', 'night', 'house', 'food'],
-        completed: false,
-        createdAt: DateTime.now(),
-        difficulty: 2,
-      ),
-    ];
+  // Create default practices based on difficulty level
+  static List<PracticeModule> _createDefaultPractices(DifficultyLevel level) {
+    switch (level) {
+      case DifficultyLevel.easy:
+        return [
+          PracticeModule(
+            id: 'default_letter_writing_easy',
+            title: 'Basic Letter Practice',
+            type: PracticeType.letterWriting,
+            content: ['b', 'd', 'p', 'q', 'm'],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 1,
+            difficultyLevel: level,
+          ),
+          PracticeModule(
+            id: 'default_sentence_writing_easy',
+            title: 'Simple Sentences',
+            type: PracticeType.sentenceWriting,
+            content: [
+              'The cat sat.',
+              'I like dogs.',
+              'We go home.',
+              'She is nice.',
+              'He can run.'
+            ],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 1,
+            difficultyLevel: level,
+          ),
+          PracticeModule(
+            id: 'default_phonetic_easy',
+            title: 'Simple Sounds',
+            type: PracticeType.phonetic,
+            content: ['cat', 'dog', 'run', 'big', 'sun'],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 1,
+            difficultyLevel: level,
+          ),
+          PracticeModule(
+            id: 'default_reversal_easy',
+            title: 'Letter Pairs',
+            type: PracticeType.letterReversal,
+            content: ['was/saw', 'on/no', 'it/ti', 'am/ma', 'at/ta'],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 1,
+            difficultyLevel: level,
+          ),
+          PracticeModule(
+            id: 'default_vowels_easy',
+            title: 'Short Vowels',
+            type: PracticeType.vowelSounds,
+            content: ['cat', 'pet', 'sit', 'dot', 'cut'],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 1,
+            difficultyLevel: level,
+          ),
+        ];
+      
+      case DifficultyLevel.medium:
+        return [
+          PracticeModule(
+            id: 'default_letter_writing_medium',
+            title: 'Advanced Letter Practice',
+            type: PracticeType.letterWriting,
+            content: ['g', 'j', 'y', 'f', 'z'],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 3,
+            difficultyLevel: level,
+          ),
+          PracticeModule(
+            id: 'default_sentence_writing_medium',
+            title: 'Compound Sentences',
+            type: PracticeType.sentenceWriting,
+            content: [
+              'The quick brown fox jumps over the fence.',
+              'She walked to the store yesterday morning.',
+              'They played games after finishing their homework.',
+              'We saw many colorful birds in the tall tree.',
+              'He likes to read adventure books at night.'
+            ],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 3,
+            difficultyLevel: level,
+          ),
+          PracticeModule(
+            id: 'default_phonetic_medium',
+            title: 'Complex Sounds',
+            type: PracticeType.phonetic,
+            content: ['string', 'splash', 'through', 'bright', 'school'],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 3,
+            difficultyLevel: level,
+          ),
+          PracticeModule(
+            id: 'default_reversal_medium',
+            title: 'Word Reversals',
+            type: PracticeType.letterReversal,
+            content: ['form/from', 'trail/trial', 'angel/angle', 'quite/quiet', 'desert/dessert'],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 3,
+            difficultyLevel: level,
+          ),
+          PracticeModule(
+            id: 'default_vowels_medium',
+            title: 'Long Vowels',
+            type: PracticeType.vowelSounds,
+            content: ['boat', 'night', 'house', 'coin', 'fruit'],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 3,
+            difficultyLevel: level,
+          ),
+        ];
+      
+      case DifficultyLevel.hard:
+        return [
+          PracticeModule(
+            id: 'default_letter_writing_hard',
+            title: 'Complex Letters',
+            type: PracticeType.letterWriting,
+            content: ['x', 'k', 'v', 'w', 'u'],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 5,
+            difficultyLevel: level,
+          ),
+          PracticeModule(
+            id: 'default_sentence_writing_hard',
+            title: 'Advanced Sentences',
+            type: PracticeType.sentenceWriting,
+            content: [
+              'The extraordinary circumstances required immediate attention from the authorities.',
+              'Despite the challenging weather conditions, they persevered through the journey.',
+              'The magnificent architecture demonstrated the civilization\'s advanced engineering.',
+              'Contemporary literature influences modern philosophical discussions significantly.',
+              'Environmental conservation efforts require collaborative international cooperation.'
+            ],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 5,
+            difficultyLevel: level,
+          ),
+          PracticeModule(
+            id: 'default_phonetic_hard',
+            title: 'Advanced Phonetics',
+            type: PracticeType.phonetic,
+            content: ['extraordinary', 'circumstances', 'perseverance', 'magnificent', 'contemporary'],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 5,
+            difficultyLevel: level,
+          ),
+          PracticeModule(
+            id: 'default_reversal_hard',
+            title: 'Complex Reversals',
+            type: PracticeType.letterReversal,
+            content: ['psychology/psychologist', 'definitely/defiantly', 'accept/except', 'affect/effect', 'principal/principle'],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 5,
+            difficultyLevel: level,
+          ),
+          PracticeModule(
+            id: 'default_vowels_hard',
+            title: 'Complex Vowels',
+            type: PracticeType.vowelSounds,
+            content: ['beautiful', 'curious', 'mysterious', 'previous', 'serious'],
+            completed: false,
+            createdAt: DateTime.now(),
+            difficulty: 5,
+            difficultyLevel: level,
+          ),
+        ];
+    }
   }
 }

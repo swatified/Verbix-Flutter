@@ -13,6 +13,7 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:verbix/services/daily_scoring_service.dart';
 
 // DrawingArea for handwriting input
 class DrawingArea {
@@ -87,6 +88,20 @@ class _PracticeScreenState extends State<PracticeScreen> {
       _initSpeech();
     }
   }
+
+  // Record attempt in the daily scoring system
+  Future<void> _recordAttemptInScoring(bool isCorrect) async {
+    try {
+      await DailyScoringService.recordAttempt(
+        isCorrect: isCorrect,
+        practiceId: widget.practice.id,
+        practiceType: widget.practice.type.toString().split('.').last,
+      );
+      print('Recorded attempt in scoring system: $isCorrect');
+    } catch (e) {
+      print('Error recording attempt in scoring: $e');
+    }
+  }
   
   @override
   void dispose() {
@@ -133,236 +148,260 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
   
   void _onSpeechResult(SpeechRecognitionResult result) {
-    setState(() {
-      _speechText = result.recognizedWords.toLowerCase();
+  setState(() {
+    _speechText = result.recognizedWords.toLowerCase();
+    
+    // For phonetic exercise, check if the spoken word matches the target
+    if (widget.practice.type == PracticeType.phonetic) {
+      final targetWord = widget.practice.content[_currentIndex].toLowerCase();
+      bool isCorrect = _speechText.contains(targetWord);
       
-      // For phonetic exercise, check if the spoken word matches the target
-      if (widget.practice.type == PracticeType.phonetic) {
-        final targetWord = widget.practice.content[_currentIndex].toLowerCase();
-        if (_speechText.contains(targetWord)) {
-          _itemStatus[_currentIndex] = true;
-          // Show feedback popup for correct answer
-          _showFeedbackPopup(FeedbackState.correct);
-        } else if (_speechText.isNotEmpty) {
-          // Show feedback popup for wrong answer
-          _showFeedbackPopup(FeedbackState.wrong);
-        }
+      if (isCorrect) {
+        _itemStatus[_currentIndex] = true;
+        // Record the attempt in scoring system
+        _recordAttemptInScoring(true);
+        // Show feedback popup for correct answer
+        _showFeedbackPopup(FeedbackState.correct);
+      } else if (_speechText.isNotEmpty) {
+        // Record the attempt in scoring system
+        _recordAttemptInScoring(false);
+        // Show feedback popup for wrong answer
+        _showFeedbackPopup(FeedbackState.wrong);
       }
-    });
-  }
+    }
+  });
+}
   
   Future<void> _checkWrittenResponse() async {
-    final response = _textControllers[_currentIndex].text.trim().toLowerCase();
-    final target = widget.practice.content[_currentIndex].toLowerCase();
-    
-    bool isCorrect = false;
-    
-    // Different comparison logic based on practice type
-    switch (widget.practice.type) {
-      case PracticeType.letterWriting:
-        isCorrect = response == target;
-        break;
-      case PracticeType.sentenceWriting:
-        // More lenient check for sentences - remove punctuation and extra spaces
-        final cleanTarget = target.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(RegExp(r'\s+'), ' ');
-        final cleanResponse = response.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(RegExp(r'\s+'), ' ');
-        isCorrect = cleanResponse == cleanTarget;
-        break;
-      case PracticeType.letterReversal:
-        // Check if user entered either of the two options in the pair
-        final options = target.split('/');
-        isCorrect = options.contains(response);
-        break;
-      case PracticeType.vowelSounds:
-        isCorrect = response == target;
-        break;
-      default:
-        isCorrect = response == target;
-    }
-    
-    setState(() {
-      _itemStatus[_currentIndex] = isCorrect;
-    });
-    
-    // Show feedback popup based on result
-    if (response.isEmpty) {
-      _showFeedbackPopup(FeedbackState.noText);
-    } else if (isCorrect) {
-      _showFeedbackPopup(FeedbackState.correct);
-    } else {
-      _showFeedbackPopup(FeedbackState.wrong);
-    }
+  final response = _textControllers[_currentIndex].text.trim().toLowerCase();
+  final target = widget.practice.content[_currentIndex].toLowerCase();
+  
+  bool isCorrect = false;
+  
+  // Different comparison logic based on practice type
+  switch (widget.practice.type) {
+    case PracticeType.letterWriting:
+      isCorrect = response == target;
+      break;
+    case PracticeType.sentenceWriting:
+      // More lenient check for sentences - remove punctuation and extra spaces
+      final cleanTarget = target.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(RegExp(r'\s+'), ' ');
+      final cleanResponse = response.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(RegExp(r'\s+'), ' ');
+      isCorrect = cleanResponse == cleanTarget;
+      break;
+    case PracticeType.letterReversal:
+      // Check if user entered either of the two options in the pair
+      final options = target.split('/');
+      isCorrect = options.contains(response);
+      break;
+    case PracticeType.vowelSounds:
+      isCorrect = response == target;
+      break;
+    default:
+      isCorrect = response == target;
   }
   
+  setState(() {
+    _itemStatus[_currentIndex] = isCorrect;
+  });
+
+  // Record the attempt in scoring system
+  await _recordAttemptInScoring(isCorrect);
+  
+  // Show feedback popup based on result
+  if (response.isEmpty) {
+    _showFeedbackPopup(FeedbackState.noText);
+  } else if (isCorrect) {
+    _showFeedbackPopup(FeedbackState.correct);
+  } else {
+    _showFeedbackPopup(FeedbackState.wrong);
+  }
+}
+  
   Future<void> _processDrawing() async {
-    if (points.isEmpty) {
-      _showFeedbackPopup(FeedbackState.noText);
-      return;
+  if (points.isEmpty) {
+    _showFeedbackPopup(FeedbackState.noText);
+    return;
+  }
+  
+  setState(() {
+    _isProcessingDrawing = true;
+  });
+  
+  try {
+    // Convert drawing to image
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    
+    // White background
+    final backgroundPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    
+    // Use the actual size of the drawing area
+    final size = MediaQuery.of(context).size;
+    final width = size.width - 32; // Account for padding
+    final height = 300.0; // Increased height for better recognition
+    
+    canvas.drawRect(Rect.fromLTWH(0, 0, width, height), backgroundPaint);
+    
+    // Draw the points - scale them to fit the image size
+    for (int i = 0; i < points.length - 1; i++) {
+      if (points[i] != null && points[i + 1] != null) {
+        canvas.drawLine(points[i]!.point, points[i + 1]!.point, points[i]!.areaPaint);
+      } else if (points[i] != null && points[i + 1] == null) {
+        canvas.drawPoints(ui.PointMode.points, [points[i]!.point], points[i]!.areaPaint);
+      }
     }
     
-    setState(() {
-      _isProcessingDrawing = true;
-    });
+    // Convert to image
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(width.toInt(), height.toInt());
+    final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
     
-    try {
-      // Convert drawing to image
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-      
-      // White background
-      final backgroundPaint = Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.fill;
-      
-      // Use the actual size of the drawing area
-      final size = MediaQuery.of(context).size;
-      final width = size.width - 32; // Account for padding
-      final height = 300.0; // Increased height for better recognition
-      
-      canvas.drawRect(Rect.fromLTWH(0, 0, width, height), backgroundPaint);
-      
-      // Draw the points - scale them to fit the image size
-      for (int i = 0; i < points.length - 1; i++) {
-        if (points[i] != null && points[i + 1] != null) {
-          canvas.drawLine(points[i]!.point, points[i + 1]!.point, points[i]!.areaPaint);
-        } else if (points[i] != null && points[i + 1] == null) {
-          canvas.drawPoints(ui.PointMode.points, [points[i]!.point], points[i]!.areaPaint);
-        }
-      }
-      
-      // Convert to image
-      final picture = recorder.endRecording();
-      final img = await picture.toImage(width.toInt(), height.toInt());
-      final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
-      
-      if (pngBytes != null) {
-        final buffer = pngBytes.buffer;
-        final tempDir = await getTemporaryDirectory();
-        final file = await File('${tempDir.path}/drawing.png').writeAsBytes(
-          buffer.asUint8List(pngBytes.offsetInBytes, pngBytes.lengthInBytes)
-        );
-        
-        // Use ML Kit for text recognition
-        final inputImage = InputImage.fromFile(file);
-        final recognizedText = await textRecognizer.processImage(inputImage);
-        
-        // Process the recognized text
-        final extracted = recognizedText.text.toLowerCase().trim();
-        
-        // Add debugging
-        debugPrint('Raw recognized text: $extracted');
-        
-        setState(() {
-          // Always set the recognized text, even if empty
-          if (extracted.isEmpty) {
-            _recognizedText = "No text detected";
-          } else {
-            _recognizedText = extracted;
-          }
-          debugPrint('Recognized text set to: "$_recognizedText"');
-          
-          // Default to incorrect
-          _itemStatus[_currentIndex] = false;
-          
-          // Check if the recognized text matches the target
-          final target = widget.practice.content[_currentIndex].toLowerCase();
-          
-          if (widget.practice.type == PracticeType.letterWriting) {
-            // For letters, be more specific in matching
-            debugPrint('Letter writing check: extracted="$extracted", target="$target"');
-            // Convert both to single characters if possible
-            final firstCharExtracted = extracted.isNotEmpty ? extracted[0] : '';
-            final firstCharTarget = target.isNotEmpty ? target[0] : '';
-            
-            // Check exact match or first character match
-            if (extracted == target) {
-              _itemStatus[_currentIndex] = true;
-              debugPrint('Letter match found: ${_itemStatus[_currentIndex]}');
-            }
-          } else if (widget.practice.type == PracticeType.sentenceWriting) {
-            // For sentences, use more lenient comparison
-            final cleanTarget = target.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
-            final cleanExtracted = extracted.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
-            
-            // Check if the extracted text contains at least 75% of the target words
-            final targetWords = cleanTarget.split(' ');
-            final extractedWords = cleanExtracted.split(' ');
-            
-            int matchedWords = 0;
-            for (final targetWord in targetWords) {
-              if (targetWord.isNotEmpty && extractedWords.any((word) => 
-                  word.isNotEmpty && 
-                  (word.contains(targetWord) || targetWord.contains(word)))) {
-                matchedWords++;
-              }
-            }
-            
-            final matchPercentage = targetWords.isEmpty ? 0 : (matchedWords / targetWords.length) * 100;
-            
-            // Debug the matching process
-            print('Target: $cleanTarget');
-            print('Extracted: $cleanExtracted');
-            print('Match percentage: $matchPercentage%');
-            
-            if (matchPercentage >= 75) {
-              _itemStatus[_currentIndex] = true;
-            }
-          } else if (widget.practice.type == PracticeType.letterReversal) {
-            // Process letter reversal - check for either option in pair
-            final options = target.split('/');
-            if (options.any((option) => extracted.contains(option))) {
-              _itemStatus[_currentIndex] = true;
-            }
-          } else if (widget.practice.type == PracticeType.vowelSounds) {
-            // For vowel sounds, be a bit more lenient
-            if (extracted == target) {
-              _itemStatus[_currentIndex] = true;
-            }
-          } else {
-            // For other types, use more specific checks
-            if (extracted == target) {
-              _itemStatus[_currentIndex] = true;
-            }
-          }
-          
-          // Add a final debug statement
-          debugPrint('Final status: ${_itemStatus[_currentIndex]}');
-        });
-        
-        // Show feedback popup based on result
-        if (extracted.isEmpty) {
-          _showFeedbackPopup(FeedbackState.noText);
-        } else if (_itemStatus[_currentIndex]) {
-          _showFeedbackPopup(FeedbackState.correct);
-        } else {
-          _showFeedbackPopup(FeedbackState.wrong);
-        }
-      }
-    } catch (e) {
-      debugPrint('Error in _processDrawing: ${e.toString()}');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error processing drawing: ${e.toString()}')),
+    if (pngBytes != null) {
+      final buffer = pngBytes.buffer;
+      final tempDir = await getTemporaryDirectory();
+      final file = await File('${tempDir.path}/drawing.png').writeAsBytes(
+        buffer.asUint8List(pngBytes.offsetInBytes, pngBytes.lengthInBytes)
       );
       
-      // Show no text detected popup
-      _showFeedbackPopup(FeedbackState.noText);
-    } finally {
+      // Use ML Kit for text recognition
+      final inputImage = InputImage.fromFile(file);
+      final recognizedText = await textRecognizer.processImage(inputImage);
+      
+      // Process the recognized text
+      final extracted = recognizedText.text.toLowerCase().trim();
+      
+      // Add debugging
+      debugPrint('Raw recognized text: $extracted');
+      
+      bool isCorrect = false; // Declare isCorrect variable outside setState
+      
       setState(() {
-        _isProcessingDrawing = false;
-        // If text is still empty after processing, set a message but don't change status
-        if (_recognizedText.isEmpty) {
+        // Always set the recognized text, even if empty
+        if (extracted.isEmpty) {
           _recognizedText = "No text detected";
-          // Only set to false if we don't already have a status for this item
-          if (!_itemStatus[_currentIndex]) {
-            _itemStatus[_currentIndex] = false;
+        } else {
+          _recognizedText = extracted;
+        }
+        debugPrint('Recognized text set to: "$_recognizedText"');
+        
+        // Default to incorrect
+        _itemStatus[_currentIndex] = false;
+        
+        // Check if the recognized text matches the target
+        final target = widget.practice.content[_currentIndex].toLowerCase();
+        
+        if (widget.practice.type == PracticeType.letterWriting) {
+          // For letters, be more specific in matching
+          debugPrint('Letter writing check: extracted="$extracted", target="$target"');
+          // Convert both to single characters if possible
+          final firstCharExtracted = extracted.isNotEmpty ? extracted[0] : '';
+          final firstCharTarget = target.isNotEmpty ? target[0] : '';
+          
+          // Check exact match or first character match
+          if (extracted == target) {
+            isCorrect = true;
+            _itemStatus[_currentIndex] = true;
+            debugPrint('Letter match found: ${_itemStatus[_currentIndex]}');
+          }
+        } else if (widget.practice.type == PracticeType.sentenceWriting) {
+          // For sentences, use more lenient comparison
+          final cleanTarget = target.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+          final cleanExtracted = extracted.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+          
+          // Check if the extracted text contains at least 75% of the target words
+          final targetWords = cleanTarget.split(' ');
+          final extractedWords = cleanExtracted.split(' ');
+          
+          int matchedWords = 0;
+          for (final targetWord in targetWords) {
+            if (targetWord.isNotEmpty && extractedWords.any((word) => 
+                word.isNotEmpty && 
+                (word.contains(targetWord) || targetWord.contains(word)))) {
+              matchedWords++;
+            }
           }
           
-          // Show no text detected popup
-          _showFeedbackPopup(FeedbackState.noText);
+          final matchPercentage = targetWords.isEmpty ? 0 : (matchedWords / targetWords.length) * 100;
+          
+          // Debug the matching process
+          print('Target: $cleanTarget');
+          print('Extracted: $cleanExtracted');
+          print('Match percentage: $matchPercentage%');
+          
+          if (matchPercentage >= 75) {
+            isCorrect = true;
+            _itemStatus[_currentIndex] = true;
+          }
+        } else if (widget.practice.type == PracticeType.letterReversal) {
+          // Process letter reversal - check for either option in pair
+          final options = target.split('/');
+          if (options.any((option) => extracted.contains(option))) {
+            isCorrect = true;
+            _itemStatus[_currentIndex] = true;
+          }
+        } else if (widget.practice.type == PracticeType.vowelSounds) {
+          // For vowel sounds, be a bit more lenient
+          if (extracted == target) {
+            isCorrect = true;
+            _itemStatus[_currentIndex] = true;
+          }
+        } else {
+          // For other types, use more specific checks
+          if (extracted == target) {
+            isCorrect = true;
+            _itemStatus[_currentIndex] = true;
+          }
         }
+        
+        // Add a final debug statement
+        debugPrint('Final status: ${_itemStatus[_currentIndex]}');
       });
+      
+      // Record the attempt in scoring system
+      if (extracted.isNotEmpty) {
+        await _recordAttemptInScoring(isCorrect);
+      }
+      
+      // Show feedback popup based on result
+      if (extracted.isEmpty) {
+        _showFeedbackPopup(FeedbackState.noText);
+      } else if (_itemStatus[_currentIndex]) {
+        _showFeedbackPopup(FeedbackState.correct);
+      } else {
+        _showFeedbackPopup(FeedbackState.wrong);
+      }
     }
+  } catch (e) {
+    debugPrint('Error in _processDrawing: ${e.toString()}');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error processing drawing: ${e.toString()}')),
+    );
+    
+    // Record as incorrect attempt
+    await _recordAttemptInScoring(false);
+    
+    // Show no text detected popup
+    _showFeedbackPopup(FeedbackState.noText);
+  } finally {
+    setState(() {
+      _isProcessingDrawing = false;
+      // If text is still empty after processing, set a message but don't change status
+      if (_recognizedText.isEmpty) {
+        _recognizedText = "No text detected";
+        // Only set to false if we don't already have a status for this item
+        if (!_itemStatus[_currentIndex]) {
+          _itemStatus[_currentIndex] = false;
+        }
+        
+        // Show no text detected popup
+        _showFeedbackPopup(FeedbackState.noText);
+      }
+    });
   }
+}
   
   // Show feedback popup
   void _showFeedbackPopup(FeedbackState state) {
@@ -750,93 +789,102 @@ class _PracticeScreenState extends State<PracticeScreen> {
   
   // Take photo for OCR
   Future<void> _takePhoto() async {
-    setState(() {
-      _isProcessingDrawing = true;
-      _recognizedText = '';
-      _itemStatus[_currentIndex] = false;
-    });
+  setState(() {
+    _isProcessingDrawing = true;
+    _recognizedText = '';
+    _itemStatus[_currentIndex] = false;
+  });
+  
+  try {
+    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    if (photo == null) {
+      setState(() {
+        _isProcessingDrawing = false;
+      });
+      return;
+    }
     
-    try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
-      if (photo == null) {
-        setState(() {
-          _isProcessingDrawing = false;
-        });
+    _imageFile = File(photo.path);
+    final inputImage = InputImage.fromFilePath(photo.path);
+    final recognizedText = await textRecognizer.processImage(inputImage);
+    
+    final extractedText = recognizedText.text.trim();
+    
+    bool isCorrect = false; // Declare isCorrect variable outside setState
+    
+    setState(() {
+      _recognizedText = extractedText.isEmpty 
+          ? "No text detected in image" 
+          : extractedText;
+      
+      // Always set to false if empty text is detected
+      if (extractedText.isEmpty) {
+        _itemStatus[_currentIndex] = false;
+        _isProcessingDrawing = false;
+        _showFeedbackPopup(FeedbackState.noText);
         return;
       }
       
-      _imageFile = File(photo.path);
-      final inputImage = InputImage.fromFilePath(photo.path);
-      final recognizedText = await textRecognizer.processImage(inputImage);
-      
-      final extractedText = recognizedText.text.trim();
-      
-      setState(() {
-        _recognizedText = extractedText.isEmpty 
-            ? "No text detected in image" 
-            : extractedText;
+      // Check if the recognized text matches the current exercise
+      final currentContent = widget.practice.content[_currentIndex].toLowerCase();
+      final cleanRecognized = extractedText.toLowerCase()
+        .replaceAll(RegExp(r'[^\w\s]'), '')
+        .trim();
+      final cleanTarget = currentContent
+        .replaceAll(RegExp(r'[^\w\s]'), '')
+        .trim();
         
-        // Always set to false if empty text is detected
-        if (extractedText.isEmpty) {
-          _itemStatus[_currentIndex] = false;
-          _isProcessingDrawing = false;
-          _showFeedbackPopup(FeedbackState.noText);
-          return;
-        }
-        
-        // Check if the recognized text matches the current exercise
-        final currentContent = widget.practice.content[_currentIndex].toLowerCase();
-        final cleanRecognized = extractedText.toLowerCase()
-          .replaceAll(RegExp(r'[^\w\s]'), '')
-          .trim();
-        final cleanTarget = currentContent
-          .replaceAll(RegExp(r'[^\w\s]'), '')
-          .trim();
-          
-        // Extra check for empty text after cleaning
-        if (cleanRecognized.isEmpty) {
-          _itemStatus[_currentIndex] = false;
-          _isProcessingDrawing = false;
-          _showFeedbackPopup(FeedbackState.noText);
-          return;
-        }
-          
-        // For sentences, use more lenient comparison (75% match)
-        final targetWords = cleanTarget.split(' ');
-        final recognizedWords = cleanRecognized.split(' ');
-        
-        int matchedWords = 0;
-        for (final targetWord in targetWords) {
-          if (targetWord.isNotEmpty && 
-              recognizedWords.any((word) => word.contains(targetWord) || 
-              targetWord.contains(word))) {
-            matchedWords++;
-          }
-        }
-        
-        final matchPercentage = targetWords.isEmpty ? 
-            0 : (matchedWords / targetWords.length) * 100;
-        _itemStatus[_currentIndex] = matchPercentage >= 100;
-        _isProcessingDrawing = false;
-        
-        // Show appropriate feedback
-        if (_itemStatus[_currentIndex]) {
-          _showFeedbackPopup(FeedbackState.correct);
-        } else {
-          _showFeedbackPopup(FeedbackState.wrong);
-        }
-      });
-      
-    } catch (e) {
-      setState(() {
-        _recognizedText = 'Error: ${e.toString()}';
-        _isProcessingDrawing = false;
+      // Extra check for empty text after cleaning
+      if (cleanRecognized.isEmpty) {
         _itemStatus[_currentIndex] = false;
-      });
+        _isProcessingDrawing = false;
+        _showFeedbackPopup(FeedbackState.noText);
+        return;
+      }
+        
+      // For sentences, use more lenient comparison (75% match)
+      final targetWords = cleanTarget.split(' ');
+      final recognizedWords = cleanRecognized.split(' ');
       
-      _showFeedbackPopup(FeedbackState.noText);
+      int matchedWords = 0;
+      for (final targetWord in targetWords) {
+        if (targetWord.isNotEmpty && 
+            recognizedWords.any((word) => word.contains(targetWord) || 
+            targetWord.contains(word))) {
+          matchedWords++;
+        }
+      }
+      
+      final matchPercentage = targetWords.isEmpty ? 
+          0 : (matchedWords / targetWords.length) * 100;
+      isCorrect = matchPercentage >= 100;
+      _itemStatus[_currentIndex] = isCorrect;
+      _isProcessingDrawing = false;
+    });
+    
+    // Record the attempt in scoring system
+    _recordAttemptInScoring(isCorrect);
+    
+    // Show appropriate feedback
+    if (_itemStatus[_currentIndex]) {
+      _showFeedbackPopup(FeedbackState.correct);
+    } else {
+      _showFeedbackPopup(FeedbackState.wrong);
     }
+    
+  } catch (e) {
+    setState(() {
+      _recognizedText = 'Error: ${e.toString()}';
+      _isProcessingDrawing = false;
+      _itemStatus[_currentIndex] = false;
+    });
+    
+    // Record as incorrect attempt
+    await _recordAttemptInScoring(false);
+    
+    _showFeedbackPopup(FeedbackState.noText);
   }
+}
 
   // Pick image from gallery
   Future<void> _pickImage() async {
@@ -860,6 +908,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
       final recognizedText = await textRecognizer.processImage(inputImage);
       
       final extractedText = recognizedText.text.trim();
+      
+      bool isCorrect = false; // Declare isCorrect variable outside setState
       
       setState(() {
         _recognizedText = extractedText.isEmpty 
@@ -907,15 +957,16 @@ class _PracticeScreenState extends State<PracticeScreen> {
         final matchPercentage = targetWords.isEmpty ? 
             0 : (matchedWords / targetWords.length) * 100;
         _itemStatus[_currentIndex] = matchPercentage >= 75;
+        isCorrect = _itemStatus[_currentIndex];
         _isProcessingDrawing = false;
-        
-        // Show appropriate feedback
-        if (_itemStatus[_currentIndex]) {
-          _showFeedbackPopup(FeedbackState.correct);
-        } else {
-          _showFeedbackPopup(FeedbackState.wrong);
-        }
       });
+      
+      // Show appropriate feedback
+      if (_itemStatus[_currentIndex]) {
+        _showFeedbackPopup(FeedbackState.correct);
+      } else {
+        _showFeedbackPopup(FeedbackState.wrong);
+      }
       
     } catch (e) {
       setState(() {
@@ -936,6 +987,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
       
       final extractedText = recognizedText.text.trim();
       debugPrint('OCR extracted text: $extractedText');
+      
+      bool isCorrect = false;
       
       setState(() {
         _recognizedText = extractedText.isEmpty 
@@ -984,14 +1037,25 @@ class _PracticeScreenState extends State<PracticeScreen> {
         debugPrint('Extracted: $cleanExtracted');
         debugPrint('Match percentage: $matchPercentage%');
         
-        if (matchPercentage >= 75) {
+        isCorrect = matchPercentage >= 75;
+        
+        if (isCorrect) {
           _itemStatus[_currentIndex] = true;
-          _showFeedbackPopup(FeedbackState.correct);
         } else {
           _itemStatus[_currentIndex] = false;
-          _showFeedbackPopup(FeedbackState.wrong);
         }
       });
+      
+      // Record the attempt in scoring system
+      await _recordAttemptInScoring(isCorrect);
+      
+      // Show appropriate feedback
+      if (isCorrect) {
+        _showFeedbackPopup(FeedbackState.correct);
+      } else {
+        _showFeedbackPopup(FeedbackState.wrong);
+      }
+      
     } catch (e) {
       debugPrint('Error in OCR processing: ${e.toString()}');
       ScaffoldMessenger.of(context).showSnackBar(
