@@ -376,13 +376,15 @@ class DailyScoringService {
           
           // Process yesterday's data
           final yesterdayScore = DailyScore.fromMap(data);
-          final currentLevel = await getCurrentUserLevel();
+          
+          // Use the level at the start of yesterday, not current level
+          final yesterdayLevel = yesterdayScore.levelAtStart;
           
           // Determine new level based on yesterday's accuracy
-          DifficultyLevel newLevel = currentLevel;
+          DifficultyLevel newLevel = yesterdayLevel;
           
           if (yesterdayScore.accuracy >= LEVEL_UP_THRESHOLD) {
-            switch (currentLevel) {
+            switch (yesterdayLevel) {
               case DifficultyLevel.easy:
                 newLevel = DifficultyLevel.medium;
                 break;
@@ -394,7 +396,7 @@ class DailyScoringService {
                 break;
             }
           } else if (yesterdayScore.accuracy <= LEVEL_DOWN_THRESHOLD) {
-            switch (currentLevel) {
+            switch (yesterdayLevel) {
               case DifficultyLevel.easy:
                 newLevel = DifficultyLevel.easy;
                 break;
@@ -408,7 +410,7 @@ class DailyScoringService {
           }
 
           // Update level if changed
-          if (newLevel != currentLevel) {
+          if (newLevel != yesterdayLevel) {
             await _setUserLevel(newLevel);
           }
 
