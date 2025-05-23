@@ -129,6 +129,7 @@ class DailyScoringService {
     required bool isCorrect,
     required String practiceId,
     required String practiceType,
+    String? wordOrText,
   }) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -188,10 +189,11 @@ class DailyScoringService {
         isCorrect: isCorrect,
         practiceId: practiceId,
         practiceType: practiceType,
+        wordOrText: wordOrText,
         dateStr: dateStr,
       );
 
-      print('Recorded attempt: correct=$isCorrect, practice=$practiceId');
+      print('Recorded attempt: correct=$isCorrect, practice=$practiceId, word=${wordOrText ?? "N/A"}');
     } catch (e) {
       print('Error recording attempt: $e');
     }
@@ -202,6 +204,7 @@ class DailyScoringService {
     required bool isCorrect,
     required String practiceId,
     required String practiceType,
+    String? wordOrText,
     required String dateStr,
   }) async {
     try {
@@ -221,6 +224,7 @@ class DailyScoringService {
         'isCorrect': isCorrect,
         'practiceId': practiceId,
         'practiceType': practiceType,
+        'wordOrText': wordOrText,
         'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (e) {

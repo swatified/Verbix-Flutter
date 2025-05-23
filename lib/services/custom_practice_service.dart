@@ -9,7 +9,7 @@ import 'dart:convert';
 import 'dart:math';
 
 // Import the daily scoring service
-import 'daily_scoring_service.dart';
+import 'package:verbix/services/daily_scoring_service.dart';
 
 // Types of practices
 enum PracticeType {

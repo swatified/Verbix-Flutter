@@ -89,15 +89,20 @@ class _PracticeScreenState extends State<PracticeScreen> {
     }
   }
 
-  // Record attempt in the daily scoring system
-  Future<void> _recordAttemptInScoring(bool isCorrect) async {
+  // Wrapper method to ensure word or text is always passed
+  Future<void> _recordAttemptWithWord(bool isCorrect) async {
     try {
+      // Get the current word or text being practiced
+      final currentWord = widget.practice.content[_currentIndex];
+      
       await DailyScoringService.recordAttempt(
         isCorrect: isCorrect,
         practiceId: widget.practice.id,
         practiceType: widget.practice.type.toString().split('.').last,
+        wordOrText: currentWord,
       );
-      print('Recorded attempt in scoring system: $isCorrect');
+      
+      print('Recorded attempt in scoring system: $isCorrect, word=$currentWord');
     } catch (e) {
       print('Error recording attempt in scoring: $e');
     }
@@ -159,12 +164,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
       if (isCorrect) {
         _itemStatus[_currentIndex] = true;
         // Record the attempt in scoring system
-        _recordAttemptInScoring(true);
+        _recordAttemptWithWord(true);
         // Show feedback popup for correct answer
         _showFeedbackPopup(FeedbackState.correct);
       } else if (_speechText.isNotEmpty) {
         // Record the attempt in scoring system
-        _recordAttemptInScoring(false);
+        _recordAttemptWithWord(false);
         // Show feedback popup for wrong answer
         _showFeedbackPopup(FeedbackState.wrong);
       }
@@ -206,7 +211,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
   });
 
   // Record the attempt in scoring system
-  await _recordAttemptInScoring(isCorrect);
+  await _recordAttemptWithWord(isCorrect);
   
   // Show feedback popup based on result
   if (response.isEmpty) {
@@ -362,7 +367,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       
       // Record the attempt in scoring system
       if (extracted.isNotEmpty) {
-        await _recordAttemptInScoring(isCorrect);
+        await _recordAttemptWithWord(isCorrect);
       }
       
       // Show feedback popup based on result
@@ -381,7 +386,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
     
     // Record as incorrect attempt
-    await _recordAttemptInScoring(false);
+    await _recordAttemptWithWord(false);
     
     // Show no text detected popup
     _showFeedbackPopup(FeedbackState.noText);
@@ -863,7 +868,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
     });
     
     // Record the attempt in scoring system
-    _recordAttemptInScoring(isCorrect);
+    await _recordAttemptWithWord(isCorrect);
     
     // Show appropriate feedback
     if (_itemStatus[_currentIndex]) {
@@ -880,7 +885,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
     });
     
     // Record as incorrect attempt
-    await _recordAttemptInScoring(false);
+    await _recordAttemptWithWord(false);
     
     _showFeedbackPopup(FeedbackState.noText);
   }
@@ -1047,7 +1052,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       });
       
       // Record the attempt in scoring system
-      await _recordAttemptInScoring(isCorrect);
+      await _recordAttemptWithWord(isCorrect);
       
       // Show appropriate feedback
       if (isCorrect) {
@@ -1823,6 +1828,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
         ),
       ],
     );
+  }
+
+  // Record attempt in the daily scoring system - kept for compatibility
+  Future<void> _recordAttemptInScoring(bool isCorrect) async {
+    // Call the wrapper method to ensure word is always passed
+    await _recordAttemptWithWord(isCorrect);
   }
 }
 
