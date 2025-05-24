@@ -808,11 +808,15 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-        child: Center(
-          child: Lottie.asset(
-            'assets/gifs/loader-anim.json',
-            width: 400,
-            height: 400,
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: Transform.translate(
+            offset: const Offset(60, 0),
+            child: Lottie.asset(
+              'assets/gifs/loader-anim.json',
+              width: 600,
+              height: 600,
+            ),
           ),
         ),
       );
@@ -1031,11 +1035,17 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
         child: _isLoading
-            ? Center(child: Lottie.asset(
-                'assets/gifs/loader-anim.json',
-                width: 400,
-                height: 400,
-              ))
+       ? Align(
+           alignment: Alignment.centerRight,
+           child: Transform.translate(
+             offset: const Offset(60, 0),
+             child: Lottie.asset(
+               'assets/gifs/loader-anim.json',
+               width: 600,
+               height: 600,
+             ),
+           ),
+         )
             : Column(
                 children: [
                   // Top bar with search and profile
