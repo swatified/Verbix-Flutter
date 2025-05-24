@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'home_page.dart';
 import 'tests.dart';
 import 'practice_modules.dart';

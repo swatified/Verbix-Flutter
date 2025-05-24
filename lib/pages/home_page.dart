@@ -6,6 +6,7 @@ import 'package:verbix/services/custom_practice_service.dart' as practice_servic
 import 'package:verbix/services/practice_stats_service.dart';
 import 'package:verbix/services/practice_module_service.dart'; // Import new service
 import 'package:verbix/services/daily_scoring_service.dart';
+import 'package:lottie/lottie.dart'; // Add Lottie import
 import 'practice_screen.dart';
 import 'module_details.dart'; // Renamed from practice_modules.dart for clarity
 import 'user_settings.dart';  // Added import for UserSettingsScreen
@@ -807,8 +808,12 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-        child: const Center(
-          child: CircularProgressIndicator(),
+        child: Center(
+          child: Lottie.asset(
+            'assets/gifs/loader-anim.json',
+            width: 200,
+            height: 200,
+          ),
         ),
       );
     }
@@ -1026,7 +1031,11 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? Center(child: Lottie.asset(
+                'assets/gifs/loader-anim.json',
+                width: 300,
+                height: 300,
+              ))
             : Column(
                 children: [
                   // Top bar with search and profile
