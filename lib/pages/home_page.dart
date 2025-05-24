@@ -811,8 +811,8 @@ class _HomePageState extends State<HomePage> {
         child: Center(
           child: Lottie.asset(
             'assets/gifs/loader-anim.json',
-            width: 200,
-            height: 200,
+            width: 400,
+            height: 400,
           ),
         ),
       );
@@ -1033,8 +1033,8 @@ class _HomePageState extends State<HomePage> {
         child: _isLoading
             ? Center(child: Lottie.asset(
                 'assets/gifs/loader-anim.json',
-                width: 300,
-                height: 300,
+                width: 400,
+                height: 400,
               ))
             : Column(
                 children: [
