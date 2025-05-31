@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'wrong_word_details.dart';
 import 'parent_child_dashboard.dart';
 import '../services/gemini_service.dart';
+import '../services/daily_scoring_service.dart';
 import 'auth_screen.dart';
 
 class ParentDashboardScreen extends StatefulWidget {
@@ -262,13 +263,26 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   }
 
   Widget _buildLevelCard() {
+    // Get the level info based on the child's level
+    final levelString = _childLevel.toLowerCase();
+    DifficultyLevel childLevel = DifficultyLevel.easy; // Default to easy
+    
+    // Map the string level to DifficultyLevel enum
+    if (levelString.contains('medium')) {
+      childLevel = DifficultyLevel.medium;
+    } else if (levelString.contains('hard')) {
+      childLevel = DifficultyLevel.hard;
+    }
+    
+    final levelInfo = DailyScoringService.getLevelDisplayInfo(childLevel);
+    
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       elevation: 0,
-      color: const Color(0xFFFBE9E7),
+      color: (levelInfo['color'] as Color).withOpacity(0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: Color(0xFFFFCCBC), width: 1),
+        side: BorderSide(color: (levelInfo['color'] as Color).withOpacity(0.3), width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -276,7 +290,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
           children: [
             Expanded(
               child: Text(
-                'Your child\'s current level is "$_childLevel"',
+                'Your child\'s current level is "${levelInfo['name']}"',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -285,10 +299,14 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            const Icon(
-              Icons.menu_book,
-              size: 50,
-              color: Color(0xFFE64A19),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/images/books.webp',
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+              ),
             ),
           ],
         ),
