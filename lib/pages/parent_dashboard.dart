@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'wrong_word_details.dart';
 import 'parent_child_dashboard.dart';
 import '../services/gemini_service.dart';
+import 'auth_screen.dart';
 
 class ParentDashboardScreen extends StatefulWidget {
   const ParentDashboardScreen({super.key});
@@ -24,6 +26,17 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   void initState() {
     super.initState();
     _loadParentData();
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) {
+      return 'Good Morning';
+    } else if (hour < 17) {
+      return 'Good Afternoon';
+    } else {
+      return 'Good Evening';
+    }
   }
 
   Future<void> _loadParentData() async {
@@ -132,9 +145,17 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   void _logout() async {
     try {
       await FirebaseAuth.instance.signOut();
-      // Navigation will be handled by the auth state changes listener in main.dart
+      if (!mounted) return;
+      // Navigate to AuthScreen after signing out
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => const AuthScreen(),
+        ),
+        (route) => false,
+      );
     } catch (e) {
       print('Error signing out: $e');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error signing out: $e')),
       );
@@ -143,10 +164,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    String greeting = _getGreeting();
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.grey[100],
         elevation: 0,
         actions: [
           IconButton(
@@ -181,11 +203,20 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   }
 
   Widget _buildGreetingCard() {
-    return Card(
+    String greeting = _getGreeting();
+    return Container(
       margin: const EdgeInsets.all(16),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -194,19 +225,34 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.asset(
-                'assets/images/lexi_rest.webp',
-                height: 80,
-                width: 80,
+                'assets/images/parent_lexi.webp',
+                height: 120,
+                width: 120,
+                fit: BoxFit.cover,
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Text(
-                'Good Morning,\n$_parentName.',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$greeting,',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF324259),
+                    ),
+                  ),
+                  Text(
+                    _parentName,
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF324259),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -257,7 +303,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       color: Colors.grey[200],
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey[300]!, width: 1),
+        side: BorderSide(color: const Color.fromARGB(98, 154, 151, 151)!, width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -327,7 +373,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       color: const Color.fromARGB(182, 239, 239, 214), // Light beige
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey[300]!, width: 1),
+        side: BorderSide(color: const Color.fromARGB(100, 166, 155, 99)!, width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -364,7 +410,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       color: const Color.fromARGB(88, 197, 223, 214), // Darker green-gray as requested
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey[300]!, width: 1),
+        side: BorderSide(color: const Color.fromARGB(100, 86, 112, 104)!, width: 1),
       ),
       child: InkWell(
         onTap: () {
