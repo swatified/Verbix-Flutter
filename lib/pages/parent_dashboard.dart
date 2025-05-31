@@ -1,0 +1,403 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'wrong_word_details.dart';
+import 'parent_child_dashboard.dart';
+import '../services/gemini_service.dart';
+
+class ParentDashboardScreen extends StatefulWidget {
+  const ParentDashboardScreen({super.key});
+
+  @override
+  State<ParentDashboardScreen> createState() => _ParentDashboardScreenState();
+}
+
+class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
+  String _parentName = '';
+  String _childLevel = 'Loading...';
+  List<Map<String, dynamic>> _recentTroubles = [];
+  String _patternBreakdown = 'Loading pattern analysis...';
+  bool _isLoading = true;
+  String _childId = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadParentData();
+  }
+
+  Future<void> _loadParentData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Load parent profile
+        final parentDoc = await FirebaseFirestore.instance
+            .collection('parents')
+            .doc(user.uid)
+            .get();
+
+        if (parentDoc.exists) {
+          setState(() {
+            _parentName = parentDoc.data()?['name'] ?? 'Parent';
+          });
+
+          // Find child account with the same email
+          final email = user.email;
+          if (email != null) {
+            final childQuery = await FirebaseFirestore.instance
+                .collection('users')
+                .where('email', isEqualTo: email)
+                .limit(1)
+                .get();
+            
+            if (childQuery.docs.isNotEmpty) {
+              final childId = childQuery.docs.first.id;
+              await _loadChildData(childId);
+            }
+          }
+        }
+      }
+      
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading parent data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadChildData(String childId) async {
+    try {
+      // Load child profile
+      final childDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(childId)
+          .get();
+
+      if (childDoc.exists) {
+        // Get child's current level
+        setState(() {
+          _childLevel = childDoc.data()?['level'] ?? 'Beginner';
+        });
+
+        // Get child's recent troubles (wrong words)
+        final troubles = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(childId)
+            .collection('wrong_words')
+            .orderBy('timestamp', descending: true)
+            .limit(5)
+            .get();
+
+        final troublesList = troubles.docs.map((doc) {
+          return {
+            'id': doc.id,
+            'word': doc.data()['word'] ?? 'Unknown',
+            'practiceType': doc.data()['practiceType'] ?? 'Unknown',
+            'timestamp': doc.data()['timestamp'] ?? Timestamp.now(),
+          };
+        }).toList();
+
+        // Generate pattern breakdown using test data for now
+        // This would be replaced with a Gemini API call
+        final patternBreakdown = _generatePatternBreakdown(troublesList);
+
+        setState(() {
+          _recentTroubles = troublesList;
+          _patternBreakdown = patternBreakdown;
+          _childId = childId; // Store childId for navigating to word details
+        });
+      }
+    } catch (e) {
+      print('Error loading child data: $e');
+    }
+  }
+
+  String _generatePatternBreakdown(List<Map<String, dynamic>> troubles) {
+    // This is a placeholder - in production, call the Gemini API
+    if (troubles.isEmpty) {
+      return 'Not enough data to generate a pattern breakdown. Encourage your child to practice more.';
+    }
+    
+    // In a real implementation, this would call GeminiService.generatePatternBreakdown(troubles)
+    // For now, we return a static message to avoid API costs during development
+    return 'The child struggles to form b and d and often '
+        'confuses between similar sounding sounds like s and sh. '
+        'They repeatedly fail to speak "ay" end words correctly.';
+  }
+
+  void _logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      // Navigation will be handled by the auth state changes listener in main.dart
+    } catch (e) {
+      print('Error signing out: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error signing out: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Color(0xFF455A64)),
+            onPressed: _logout,
+            tooltip: 'Logout',
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildGreetingCard(),
+                    const SizedBox(height: 16),
+                    _buildLevelCard(),
+                    const SizedBox(height: 16),
+                    _buildRecentTroublesCard(),
+                    const SizedBox(height: 16),
+                    _buildPatternBreakdownCard(),
+                    const SizedBox(height: 16),
+                    _buildProgressDashboardCard(),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildGreetingCard() {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                'assets/images/lexi_rest.webp',
+                height: 80,
+                width: 80,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                'Good Morning,\n$_parentName.',
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLevelCard() {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      elevation: 0,
+      color: const Color(0xFFFBE9E7),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0xFFFFCCBC), width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Your child\'s current level is "$_childLevel"',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF455A64),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Icon(
+              Icons.menu_book,
+              size: 50,
+              color: Color(0xFFE64A19),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentTroublesCard() {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      elevation: 0,
+      color: Colors.grey[200],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey[300]!, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Recent Troubles:',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF455A64),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ..._recentTroubles.isEmpty
+                ? [const Text('No recent troubles recorded')]
+                : _recentTroubles.map((trouble) {
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        trouble['word'],
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Practice Type: ${trouble['practiceType']}',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      trailing: const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.grey,
+                      ),
+                      onTap: () {
+                        _navigateToWordDetails(trouble);
+                      },
+                    );
+                  }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToWordDetails(Map<String, dynamic> trouble) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WrongWordDetailsScreen(
+          childId: _childId,
+          wordId: trouble['id'],
+          word: trouble['word'],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPatternBreakdownCard() {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      elevation: 0,
+      color: const Color.fromARGB(182, 239, 239, 214), // Light beige
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey[300]!, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Pattern Breakdown:',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF455A64),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _patternBreakdown,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Color(0xFF455A64),
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressDashboardCard() {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      elevation: 0,
+      color: const Color.fromARGB(88, 197, 223, 214), // Darker green-gray as requested
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey[300]!, width: 1),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ParentChildDashboardScreen(childId: _childId),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              const Text(
+                'Progress Dashboard',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF455A64),
+                ),
+              ),
+              const Spacer(),
+              const Icon(
+                Icons.trending_up,
+                size: 40,
+                color: Color(0xFF324259), // Dark blue/gray color
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+} 

@@ -85,21 +85,9 @@ class _AuthScreenState extends State<AuthScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     
-    // Check if user document exists in Firestore
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
-    
+    // Redirect to user type selection screen
     if (!mounted) return;
-    
-    if (userDoc.exists) {
-      // User profile exists, go to main scaffold
-      Navigator.of(context).pushReplacementNamed('/main');
-    } else {
-      // New user, go to profile setup
-      Navigator.of(context).pushReplacementNamed('/user_details');
-    }
+    Navigator.of(context).pushReplacementNamed('/user_type_selection');
   }
 
   // Updated Firebase Email/Password Authentication with better error handling
@@ -124,9 +112,9 @@ class _AuthScreenState extends State<AuthScreen> {
           password: _passwordController.text.trim(),
         );
         
-        // New user, go to profile setup
+        // Redirect to user type selection
         if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed('/user_details');
+        Navigator.of(context).pushReplacementNamed('/user_type_selection');
       }
     } catch (e) {
       // Show user-friendly error message

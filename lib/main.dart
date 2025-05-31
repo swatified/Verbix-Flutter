@@ -15,6 +15,11 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:verbix/services/audio_service.dart';
+import 'pages/user_type_selection.dart';
+import 'pages/parent_dashboard.dart';
+import 'pages/parent_details.dart';
+import 'pages/wrong_word_details.dart';
+import 'pages/parent_child_dashboard.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -116,6 +121,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         '/auth': (context) => const AuthScreen(),
         '/main': (context) => const MainScaffold(),
         '/user_details': (context) => const UserDetailsScreen(),
+        '/user_type_selection': (context) => const UserTypeSelectionScreen(),
+        '/parent_dashboard': (context) => const ParentDashboardScreen(),
+        '/parent_details': (context) => const ParentDetailsScreen(),
       },
     );
   }

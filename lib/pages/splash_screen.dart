@@ -25,7 +25,20 @@ class _SplashScreenState extends State<SplashScreen> {
       final user = FirebaseAuth.instance.currentUser;
       
       if (user != null) {
-        // Check if user details are completed
+        // Check if user is a parent
+        final parentDoc = await FirebaseFirestore.instance
+            .collection('parents')
+            .doc(user.uid)
+            .get();
+            
+        if (parentDoc.exists) {
+          // User is a parent, navigate to parent dashboard
+          if (!mounted) return;
+          Navigator.of(context).pushReplacementNamed('/parent_dashboard');
+          return;
+        }
+        
+        // Check if user is a child with completed profile
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
@@ -37,8 +50,8 @@ class _SplashScreenState extends State<SplashScreen> {
           // User has completed profile - navigate to MainScaffold
           Navigator.of(context).pushReplacementNamed('/main');
         } else {
-          // User needs to complete profile
-          Navigator.of(context).pushReplacementNamed('/user_details');
+          // User needs to select account type
+          Navigator.of(context).pushReplacementNamed('/user_type_selection');
         }
       } else {
         // No logged-in user
