@@ -1,7 +1,65 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserTypeSelectionScreen extends StatelessWidget {
   const UserTypeSelectionScreen({super.key});
+
+  Future<void> _handleChildLogin(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in first')),
+      );
+      // Redirect to login screen
+      Navigator.of(context).pushReplacementNamed('/login');
+      return;
+    }
+    
+    try {
+      // Check if user details already exist
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        // User details already exist, redirect to main screen
+        Navigator.of(context).pushReplacementNamed('/main');
+      } else {
+        // User details don't exist, show details form
+        Navigator.of(context).pushReplacementNamed('/user_details');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _handleParentLogin(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in first')),
+      );
+      // Redirect to login screen
+      Navigator.of(context).pushReplacementNamed('/login');
+      return;
+    }
+    
+    try {
+      // Check if parent details already exist
+      final parentDoc = await FirebaseFirestore.instance.collection('parents').doc(user.uid).get();
+      if (parentDoc.exists) {
+        // Parent details already exist, redirect to dashboard
+        Navigator.of(context).pushReplacementNamed('/parent_dashboard');
+      } else {
+        // Parent details don't exist, show details form
+        Navigator.of(context).pushReplacementNamed('/parent_details');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +90,7 @@ class UserTypeSelectionScreen extends StatelessWidget {
                 context,
                 icon: Icons.face,
                 label: 'Login as a Child',
-                onPressed: () {
-                  Navigator.of(context).pushReplacementNamed('/user_details');
-                },
+                onPressed: () => _handleChildLogin(context),
                 color: const Color(0xFF324259),
               ),
               const SizedBox(height: 20),
@@ -42,9 +98,7 @@ class UserTypeSelectionScreen extends StatelessWidget {
                 context,
                 icon: Icons.supervisor_account,
                 label: 'Login as a Parent',
-                onPressed: () {
-                  Navigator.of(context).pushReplacementNamed('/parent_details');
-                },
+                onPressed: () => _handleParentLogin(context),
                 color: const Color(0xFF5D8AA8),
               ),
             ],
