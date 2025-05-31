@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class WrongWordDetailsScreen extends StatefulWidget {
   final String childId;
@@ -20,6 +21,7 @@ class WrongWordDetailsScreen extends StatefulWidget {
 class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _attempts = [];
+  int _wrongCount = 0;
 
   @override
   void initState() {
@@ -33,27 +35,54 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
     });
 
     try {
-      // Get all wrong attempts for this word
-      final attemptsQuery = await FirebaseFirestore.instance
+      // Get all daily_score collections
+      final dailyScoresSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.childId)
-          .collection('wrong_attempts')
-          .where('wordId', isEqualTo: widget.wordId)
-          .orderBy('timestamp', descending: true)
+          .collection('daily_score')
           .get();
 
-      final attemptsList = attemptsQuery.docs.map((doc) {
-        return {
-          'id': doc.id,
-          'attempt': doc.data()['attempt'] ?? 'Unknown',
-          'isCorrect': doc.data()['isCorrect'] ?? false,
-          'timestamp': doc.data()['timestamp'] ?? Timestamp.now(),
-          'practiceType': doc.data()['practiceType'] ?? 'Unknown',
-        };
-      }).toList();
+      List<Map<String, dynamic>> allAttempts = [];
+      int wrongCount = 0;
+
+      // For each daily score document, check attempts collection
+      for (var dailyScore in dailyScoresSnapshot.docs) {
+        final dateStr = dailyScore.id;
+        
+        // Get attempts from this date
+        final attemptsSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(widget.childId)
+            .collection('daily_score')
+            .doc(dateStr)
+            .collection('attempts')
+            .where('wordOrText', isEqualTo: widget.word)
+            .where('isCorrect', isEqualTo: false)
+            .get();
+
+        // Add attempts to our list
+        for (var doc in attemptsSnapshot.docs) {
+          allAttempts.add({
+            'id': doc.id,
+            'date': dateStr,
+            'practiceType': doc.data()['practiceType'] ?? 'Unknown',
+            'timestamp': doc.data()['timestamp'] ?? Timestamp.now(),
+            'isCorrect': false,
+          });
+          wrongCount++;
+        }
+      }
+
+      // Sort by timestamp descending
+      allAttempts.sort((a, b) {
+        final aTimestamp = a['timestamp'] as Timestamp;
+        final bTimestamp = b['timestamp'] as Timestamp;
+        return bTimestamp.compareTo(aTimestamp);
+      });
 
       setState(() {
-        _attempts = attemptsList;
+        _attempts = allAttempts;
+        _wrongCount = wrongCount;
         _isLoading = false;
       });
     } catch (e) {
@@ -68,82 +97,139 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Attempts for "${widget.word}"'),
+        title: Text('Details for "${widget.word}"'),
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: const Color(0xFF324259),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _attempts.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        size: 48,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No attempts found for "${widget.word}"',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _attempts.length,
-                  itemBuilder: (context, index) {
-                    final attempt = _attempts[index];
-                    final timestamp = attempt['timestamp'] as Timestamp;
-                    final date = timestamp.toDate();
-                    final formattedDate = '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
-                        title: Text(
-                          attempt['attempt'],
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+          : Column(
+              children: [
+                _buildSummaryCard(),
+                Expanded(
+                  child: _attempts.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 48,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No attempts found for "${widget.word}"',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 8),
-                            Text(
-                              'Practice Type: ${attempt['practiceType']}',
-                              style: TextStyle(
-                                color: Colors.grey[600],
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _attempts.length,
+                          itemBuilder: (context, index) {
+                            final attempt = _attempts[index];
+                            final timestamp = attempt['timestamp'] as Timestamp;
+                            final date = timestamp.toDate();
+                            final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(date);
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(16),
+                                title: Text(
+                                  widget.word,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Practice Type: ${attempt['practiceType']}',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Date: $formattedDate',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                trailing: const Icon(
+                                  Icons.cancel,
+                                  color: Colors.red,
+                                  size: 32,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Date: $formattedDate',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
+                            );
+                          },
                         ),
-                        trailing: Icon(
-                          attempt['isCorrect'] ? Icons.check_circle : Icons.cancel,
-                          color: attempt['isCorrect'] ? Colors.green : Colors.red,
-                          size: 32,
-                        ),
-                      ),
-                    );
-                  },
                 ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildSummaryCard() {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 2,
+      color: const Color(0xFFFFF3F3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0xFFFFCCCC), width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: Colors.red,
+              size: 40,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.word,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF324259),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Incorrect $_wrongCount times',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.red,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 } 

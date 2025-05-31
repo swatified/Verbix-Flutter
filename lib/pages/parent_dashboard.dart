@@ -95,21 +95,26 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         // Get child's current level
         setState(() {
           _childLevel = childDoc.data()?['level'] ?? 'Beginner';
+          _childId = childId;
         });
 
-        // Get child's recent troubles (wrong words)
-        final troubles = await FirebaseFirestore.instance
+        // Get today's date in the format used in Firestore
+        final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+        
+        // Get today's incorrect attempts
+        final attemptsSnapshot = await FirebaseFirestore.instance
             .collection('users')
             .doc(childId)
-            .collection('wrong_words')
-            .orderBy('timestamp', descending: true)
-            .limit(5)
+            .collection('daily_score')
+            .doc(dateStr)
+            .collection('attempts')
+            .where('isCorrect', isEqualTo: false)
             .get();
 
-        final troublesList = troubles.docs.map((doc) {
+        final troublesList = attemptsSnapshot.docs.map((doc) {
           return {
             'id': doc.id,
-            'word': doc.data()['word'] ?? 'Unknown',
+            'word': doc.data()['wordOrText'] ?? 'Unknown',
             'practiceType': doc.data()['practiceType'] ?? 'Unknown',
             'timestamp': doc.data()['timestamp'] ?? Timestamp.now(),
           };
@@ -122,7 +127,6 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         setState(() {
           _recentTroubles = troublesList;
           _patternBreakdown = patternBreakdown;
-          _childId = childId; // Store childId for navigating to word details
         });
       }
     } catch (e) {
@@ -321,7 +325,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       color: Colors.grey[200],
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: const Color.fromARGB(98, 154, 151, 151)!, width: 1),
+        side: BorderSide(color: const Color.fromARGB(98, 154, 151, 151), width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -329,7 +333,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Recent Troubles:',
+              'Today\'s Incorrect Attempts:',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -338,31 +342,38 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
             ),
             const SizedBox(height: 16),
             ..._recentTroubles.isEmpty
-                ? [const Text('No recent troubles recorded')]
+                ? [const Text('No incorrect attempts recorded today')]
                 : _recentTroubles.map((trouble) {
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        trouble['word'],
-                        style: const TextStyle(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      color: Colors.white,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        title: Text(
+                          trouble['word'],
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Practice Type: ${trouble['practiceType']}',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.arrow_forward_ios,
+                          color: Colors.grey,
+                        ),
+                        onTap: () {
+                          _navigateToWordDetails(trouble);
+                        },
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      subtitle: Text(
-                        'Practice Type: ${trouble['practiceType']}',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      trailing: const Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.grey,
-                      ),
-                      onTap: () {
-                        _navigateToWordDetails(trouble);
-                      },
                     );
                   }).toList(),
           ],
