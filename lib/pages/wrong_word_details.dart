@@ -21,15 +21,15 @@ class WrongWordDetailsScreen extends StatefulWidget {
 class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _attempts = [];
-  int _wrongCount = 0;
+  Map<String, int> _wordCounts = {};
 
   @override
   void initState() {
     super.initState();
-    _loadAttempts();
+    _loadAllIncorrectAttempts();
   }
 
-  Future<void> _loadAttempts() async {
+  Future<void> _loadAllIncorrectAttempts() async {
     setState(() {
       _isLoading = true;
     });
@@ -43,33 +43,37 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
           .get();
 
       List<Map<String, dynamic>> allAttempts = [];
-      int wrongCount = 0;
+      Map<String, int> wordCounts = {};
 
       // For each daily score document, check attempts collection
       for (var dailyScore in dailyScoresSnapshot.docs) {
         final dateStr = dailyScore.id;
         
-        // Get attempts from this date
+        // Get all incorrect attempts from this date
         final attemptsSnapshot = await FirebaseFirestore.instance
             .collection('users')
             .doc(widget.childId)
             .collection('daily_score')
             .doc(dateStr)
             .collection('attempts')
-            .where('wordOrText', isEqualTo: widget.word)
             .where('isCorrect', isEqualTo: false)
             .get();
 
         // Add attempts to our list
         for (var doc in attemptsSnapshot.docs) {
+          final word = doc.data()['wordOrText'] ?? 'Unknown';
+          
           allAttempts.add({
             'id': doc.id,
             'date': dateStr,
+            'word': word,
             'practiceType': doc.data()['practiceType'] ?? 'Unknown',
             'timestamp': doc.data()['timestamp'] ?? Timestamp.now(),
             'isCorrect': false,
           });
-          wrongCount++;
+          
+          // Update word counts
+          wordCounts[word] = (wordCounts[word] ?? 0) + 1;
         }
       }
 
@@ -82,7 +86,7 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
 
       setState(() {
         _attempts = allAttempts;
-        _wrongCount = wrongCount;
+        _wordCounts = wordCounts;
         _isLoading = false;
       });
     } catch (e) {
@@ -97,7 +101,7 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Details for "${widget.word}"'),
+        title: const Text('All Incorrect Words'),
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: const Color(0xFF324259),
@@ -120,7 +124,7 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'No attempts found for "${widget.word}"',
+                                'No incorrect attempts found',
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: Colors.grey[600],
@@ -137,13 +141,14 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
                             final timestamp = attempt['timestamp'] as Timestamp;
                             final date = timestamp.toDate();
                             final formattedDate = DateFormat('dd/MM/yyyy HH:mm').format(date);
+                            final word = attempt['word'] as String;
 
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
                               child: ListTile(
                                 contentPadding: const EdgeInsets.all(16),
                                 title: Text(
-                                  widget.word,
+                                  word,
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -169,10 +174,19 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
                                     ),
                                   ],
                                 ),
-                                trailing: const Icon(
-                                  Icons.cancel,
-                                  color: Colors.red,
-                                  size: 32,
+                                trailing: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${_wordCounts[word] ?? 1}',
+                                    style: TextStyle(
+                                      color: Colors.red[800],
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ),
                             );
@@ -207,9 +221,9 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    widget.word,
-                    style: const TextStyle(
+                  const Text(
+                    'Incorrect Words History',
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF324259),
@@ -217,7 +231,7 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Incorrect $_wrongCount times',
+                    '${_attempts.length} total incorrect attempts',
                     style: const TextStyle(
                       fontSize: 16,
                       color: Colors.red,

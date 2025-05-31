@@ -111,21 +111,34 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
             .where('isCorrect', isEqualTo: false)
             .get();
 
-        final troublesList = attemptsSnapshot.docs.map((doc) {
-          return {
-            'id': doc.id,
-            'word': doc.data()['wordOrText'] ?? 'Unknown',
-            'practiceType': doc.data()['practiceType'] ?? 'Unknown',
-            'timestamp': doc.data()['timestamp'] ?? Timestamp.now(),
-          };
-        }).toList();
+        // Create a map to track unique words and their count
+        final Map<String, Map<String, dynamic>> uniqueWords = {};
 
-        // Generate pattern breakdown using test data for now
-        // This would be replaced with a Gemini API call
+        for (var doc in attemptsSnapshot.docs) {
+          final word = doc.data()['wordOrText'] ?? 'Unknown';
+          if (!uniqueWords.containsKey(word)) {
+            uniqueWords[word] = {
+              'id': doc.id,
+              'word': word,
+              'practiceType': doc.data()['practiceType'] ?? 'Unknown',
+              'timestamp': doc.data()['timestamp'] ?? Timestamp.now(),
+              'count': 1,
+            };
+          } else {
+            // Increment count for repeated words
+            uniqueWords[word]?['count'] = (uniqueWords[word]?['count'] ?? 0) + 1;
+          }
+        }
+
+        // Convert to list and take only the first 3 unique words
+        final troublesList = uniqueWords.values.toList();
+        final limitedTroublesList = troublesList.take(3).toList();
+
+        // Generate pattern breakdown
         final patternBreakdown = _generatePatternBreakdown(troublesList);
 
         setState(() {
-          _recentTroubles = troublesList;
+          _recentTroubles = limitedTroublesList;
           _patternBreakdown = patternBreakdown;
         });
       }
@@ -332,13 +345,32 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Today\'s Incorrect Attempts:',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF455A64),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Today\'s Incorrect Attempts:',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF455A64),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (_recentTroubles.isNotEmpty) {
+                      _navigateToAllIncorrectWords(_recentTroubles.first);
+                    }
+                  },
+                  child: const Text(
+                    'See All',
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             ..._recentTroubles.isEmpty
@@ -349,13 +381,33 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       color: Colors.white,
                       child: ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        title: Text(
-                          trouble['word'],
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
+                        title: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                trouble['word'],
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.red[100],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${trouble['count']} ${trouble['count'] == 1 ? 'time' : 'times'}',
+                                style: TextStyle(
+                                  color: Colors.red[800],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         subtitle: Text(
                           'Practice Type: ${trouble['practiceType']}',
@@ -363,13 +415,6 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                             color: Colors.grey[600],
                           ),
                         ),
-                        trailing: const Icon(
-                          Icons.arrow_forward_ios,
-                          color: Colors.grey,
-                        ),
-                        onTap: () {
-                          _navigateToWordDetails(trouble);
-                        },
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -382,7 +427,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     );
   }
 
-  void _navigateToWordDetails(Map<String, dynamic> trouble) {
+  void _navigateToAllIncorrectWords(Map<String, dynamic> trouble) {
     Navigator.push(
       context,
       MaterialPageRoute(
