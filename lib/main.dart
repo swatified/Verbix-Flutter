@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'pages/splash_screen.dart';
 import 'pages/auth_screen.dart';
@@ -15,6 +14,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:verbix/services/audio_service.dart';
+import 'package:verbix/services/firebase_service.dart';
 import 'pages/user_type_selection.dart';
 import 'pages/parent_dashboard.dart';
 import 'pages/parent_details.dart';
@@ -27,10 +27,8 @@ void main() async {
   // Load environment variables
   await dotenv.load(fileName: ".env");
   
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // Initialize Firebase using our service
+  await FirebaseService.initializeFirebase();
   
   // Ensure the service account file is available
   await ensureServiceAccountExists();
