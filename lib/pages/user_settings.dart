@@ -539,14 +539,14 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                   ),
                                 ),
                         ),
-                        const SizedBox(height: 42),
+                        const SizedBox(height: 16),
                         
                         Stack(
                           alignment: Alignment.bottomRight,
                           children: [
                             // Sign Out Button (positioned at the bottom left)
                             Positioned(
-                              left: 34,
+                              left: 0,
                               bottom: 110,
                               child: ElevatedButton(
                                 onPressed: () async {
@@ -566,8 +566,8 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color.fromARGB(255, 167, 64, 57),
-                                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                                  backgroundColor: const Color.fromARGB(213, 186, 65, 57),
+                                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 68),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
