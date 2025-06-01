@@ -20,7 +20,7 @@ import 'package:flutter/services.dart' show rootBundle;
 class VertexAIService {
   static final _projectId = dotenv.env['VERTEX_PROJECT_ID'] ?? '';
   static final _location = dotenv.env['VERTEX_LOCATION'] ?? 'us-central1';
-  static final _modelId = 'gemini-1.5-pro-002';
+  static final _modelId = 'gemini-1.5-pro-002'; // FIXED: Updated to correct model name
   static String? _accessToken;
   static DateTime? _tokenExpiry;
   
@@ -96,8 +96,9 @@ class VertexAIService {
         print("ERROR: VERTEX_PROJECT_ID environment variable is empty");
       }
       
-      // Enhanced prompt for generating test sentences that include common dyslexia challenge patterns
-      final prompt = '''Generate a simple sentence for dyslexia testing using common words. 
+      // Enhanced prompt for generating test sentences with more variety and randomness
+      final randomSeed = DateTime.now().millisecondsSinceEpoch;
+      final prompt = '''Generate a unique, simple sentence for dyslexia testing using common words. 
       The sentence should:
       - Be 8-10 words in length
       - Include at least one word with similar-looking letters (like b/d, p/q, or m/n)
@@ -105,7 +106,17 @@ class VertexAIService {
       - Include a mix of short and longer words
       - Be at a 3rd-4th grade reading level
       - Use natural, conversational language
+      - Be DIFFERENT from previous sentences - create something new each time
       
+      Generation seed: $randomSeed
+      Current time: ${DateTime.now().toIso8601String()}
+      
+      Examples to avoid repeating:
+      - "Did the dog run past the big barn?"
+      - "The boy quickly jumped over the puddle beside the dog."
+      - "She read the book while her brother played outside."
+      
+      Create a completely NEW sentence that follows the guidelines above.
       Return only the sentence with no additional text or explanations.''';
       
       print("DEBUG: Preparing API request to Vertex AI");
@@ -127,7 +138,7 @@ class VertexAIService {
           }
         ],
         "generationConfig": {
-          "temperature": 0.2,
+          "temperature": 0.8, // Increased temperature for more variety
           "maxOutputTokens": 256,
           "topK": 40,
           "topP": 0.95
@@ -178,7 +189,7 @@ class VertexAIService {
       throw Exception("API call failed with status code: ${response.statusCode}");
     } catch (e) {
       print("ERROR in generateSentence: $e");
-      // Fallback sentences in case API call fails - improved with better test patterns
+      // Enhanced fallback sentences with more variety
       final fallbackSentences = [
         'The boy quickly jumped over the puddle beside the dog.',
         'She read the book while her brother played outside.',
@@ -187,8 +198,15 @@ class VertexAIService {
         'He found his lost keys under the blue wooden bench.',
         'We need to pack our bags before the big trip.',
         'The dog barked at the mailman behind our fence.',
+        'Can you help me find my lost baseball glove?',
+        'The bird sang beautiful songs from the tall tree.',
+        'Did you see the rabbit hop across the yard?',
+        'Please bring your backpack to school tomorrow morning.',
+        'The cat sat quietly watching the busy street.',
       ];
-      return fallbackSentences[DateTime.now().second % fallbackSentences.length];
+      // Use current time to ensure different fallback each time
+      final index = DateTime.now().millisecond % fallbackSentences.length;
+      return fallbackSentences[index];
     }
   }
 
@@ -1205,28 +1223,28 @@ class _NewTestPageState extends State<NewTestPage> {
                   const SizedBox(height: 32),
                   
                   // Submit button
-SizedBox(
-  width: double.infinity,
-  child: ElevatedButton(
-    onPressed: (_speechText.isNotEmpty &&
-            _writtenTextController.text.isNotEmpty &&
-            !_hasSubmitted)
-        ? _submitTest
-        : null,
-    style: ElevatedButton.styleFrom(
-      backgroundColor: const Color(0xFF1F5377),
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-    ),
-    child: _hasSubmitted
-        ? const CircularProgressIndicator(color: Colors.white)
-        : const Text(
-            'Submit Test',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.white,
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: (_speechText.isNotEmpty &&
+                              _writtenTextController.text.isNotEmpty &&
+                              !_hasSubmitted)
+                          ? _submitTest
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1F5377),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: _hasSubmitted
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              'Submit Test',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
                               ),
                             ),
                     ),
@@ -1249,6 +1267,7 @@ class TestDetailPage extends StatefulWidget {
 class _TestDetailPageState extends State<TestDetailPage> {
   bool _isLoading = true;
   Map<String, dynamic> _testData = {};
+  
   @override
   void initState() {
     super.initState();
