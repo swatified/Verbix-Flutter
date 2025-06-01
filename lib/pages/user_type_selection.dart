@@ -73,17 +73,8 @@ class UserTypeSelectionScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Image.asset(
-                'assets/images/lexi_rest.webp',
-                height: 130,
-              ),
-              const SizedBox(height: 30),
-              const Text(
-                'Who are you?',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
+                'assets/images/lexi_confused.webp',
+                height: 180,
               ),
               const SizedBox(height: 50),
               _buildSelectionButton(

@@ -41,14 +41,14 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
   
   // Music track options
   final List<Map<String, dynamic>> _musicTracks = [
-    {'id': 'desert', 'name': 'Desert Vibes', 'icon': Icons.beach_access},
-    {'id': 'lofi', 'name': 'Lo-Fi Study', 'icon': Icons.headphones},
-    {'id': 'funny', 'name': 'Funny Tunes', 'icon': Icons.mood},
-    {'id': 'funky', 'name': 'Funky Beats', 'icon': Icons.music_note},
-    {'id': 'chill-gaming', 'name': 'Chill Gaming', 'icon': Icons.sports_esports},
-    {'id': 'blue', 'name': 'Blue Mood', 'icon': Icons.nights_stay},
-    {'id': 'spring', 'name': 'Spring Morning', 'icon': Icons.eco},
+    {'id': 'desert', 'name': 'Desert', 'icon': Icons.beach_access},
+    {'id': 'lofi', 'name': 'Lo-Fi', 'icon': Icons.headphones},
+    {'id': 'blue', 'name': 'Blue', 'icon': Icons.nights_stay},
     {'id': 'coffee', 'name': 'Coffee Shop', 'icon': Icons.coffee},
+    {'id': 'spring', 'name': 'Spring Morning', 'icon': Icons.eco},
+    {'id': 'funky', 'name': 'Funky', 'icon': Icons.music_note},
+    {'id': 'funny', 'name': 'Funny Tunes', 'icon': Icons.mood},
+    {'id': 'chill-gaming', 'name': 'Chill Gaming', 'icon': Icons.sports_esports},
   ];
   
   @override
