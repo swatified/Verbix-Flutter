@@ -1,4 +1,6 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AudioService {
   // Singleton pattern with private constructor
@@ -12,27 +14,174 @@ class AudioService {
   // State tracking
   bool _isInitialized = false;
   bool _isMusicPlaying = false;
+  String _currentMusicTrack = 'desert';
+  bool _musicEnabled = true;
+  bool _soundEffectsEnabled = true;
+
+  // Available music tracks
+  static const Map<String, String> musicTracks = {
+    'desert': 'audio/desert.mp3',
+    'lofi': 'audio/lofi.mp3',
+    'funny': 'audio/funny.mp3',
+    'funky': 'audio/funky.mp3',
+    'chill-gaming': 'audio/chill-gaming.mp3',
+    'blue': 'audio/blue.mp3',
+    'spring': 'audio/spring.mp3',
+    'coffee': 'audio/coffee.mp3',
+  };
 
   // Initialize the service - make this safe to call multiple times
   Future<void> initialize() async {
     if (_isInitialized) return;
     
     try {
+      // Load user preferences
+      await _loadUserPreferences();
+      
       // Configure background music player
       await _backgroundMusicPlayer.setReleaseMode(ReleaseMode.loop);
-      await _backgroundMusicPlayer.setSourceAsset('audio/background_music.mp3');
+      await _updateMusicTrack();
       await _backgroundMusicPlayer.setVolume(0.5);
       
       _isInitialized = true;
       print('AudioService initialized successfully');
+      
+      // Start playing music if enabled
+      if (_musicEnabled) {
+        await playBackgroundMusic();
+      }
     } catch (e) {
       print('Error initializing AudioService: $e');
+    }
+  }
+
+  // Load user audio preferences from Firestore
+  Future<void> _loadUserPreferences() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final docSnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        
+        if (docSnapshot.exists) {
+          final userData = docSnapshot.data();
+          _currentMusicTrack = userData?['musicTrack'] ?? 'desert';
+          _musicEnabled = userData?['musicEnabled'] ?? true;
+          _soundEffectsEnabled = userData?['soundEffectsEnabled'] ?? true;
+          print('Loaded user audio preferences: track=$_currentMusicTrack, music=${_musicEnabled ? 'on' : 'off'}, sounds=${_soundEffectsEnabled ? 'on' : 'off'}');
+        }
+      }
+    } catch (e) {
+      print('Error loading user audio preferences: $e');
+      // Use defaults if there's an error
+      _currentMusicTrack = 'desert';
+      _musicEnabled = true;
+      _soundEffectsEnabled = true;
+    }
+  }
+
+  // Update music track based on current selection
+  Future<void> _updateMusicTrack() async {
+    try {
+      // Stop current playback
+      await _backgroundMusicPlayer.stop();
+      
+      // Set new source
+      await _backgroundMusicPlayer.setSourceAsset(musicTracks[_currentMusicTrack] ?? musicTracks['desert']!);
+      print('Music track updated to: $_currentMusicTrack');
+    } catch (e) {
+      print('Error updating music track: $e');
+    }
+  }
+
+  // Change music track
+  Future<void> changeMusicTrack(String trackName) async {
+    if (!musicTracks.containsKey(trackName)) {
+      print('Invalid track name: $trackName');
+      return;
+    }
+    
+    if (_currentMusicTrack == trackName) return;
+    
+    _currentMusicTrack = trackName;
+    
+    try {
+      // Remember if music was playing
+      bool wasPlaying = _isMusicPlaying;
+      
+      // Update the track
+      await _updateMusicTrack();
+      
+      // Resume playback if it was playing before and music is enabled
+      if (wasPlaying && _musicEnabled) {
+        await playBackgroundMusic();
+      }
+      
+      // Save preference to user's profile
+      await _saveUserPreferences();
+    } catch (e) {
+      print('Error changing music track: $e');
+    }
+  }
+
+  // Save user audio preferences to Firestore
+  Future<void> _saveUserPreferences() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+          'musicTrack': _currentMusicTrack,
+          'musicEnabled': _musicEnabled,
+          'soundEffectsEnabled': _soundEffectsEnabled,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        print('Saved user audio preferences');
+      }
+    } catch (e) {
+      print('Error saving user audio preferences: $e');
+    }
+  }
+
+  // Set music enabled/disabled
+  Future<void> setMusicEnabled(bool enabled) async {
+    if (_musicEnabled == enabled) return;
+    
+    _musicEnabled = enabled;
+    
+    try {
+      if (_musicEnabled) {
+        await playBackgroundMusic();
+      } else {
+        await pauseBackgroundMusic();
+      }
+      
+      // Save preference to user's profile
+      await _saveUserPreferences();
+    } catch (e) {
+      print('Error setting music enabled: $e');
+    }
+  }
+
+  // Set sound effects enabled/disabled
+  Future<void> setSoundEffectsEnabled(bool enabled) async {
+    if (_soundEffectsEnabled == enabled) return;
+    
+    _soundEffectsEnabled = enabled;
+    
+    try {
+      // Save preference to user's profile
+      await _saveUserPreferences();
+    } catch (e) {
+      print('Error setting sound effects enabled: $e');
     }
   }
 
   // Play background music - safe to call multiple times
   Future<void> playBackgroundMusic() async {
     if (!_isInitialized) await initialize();
+    if (!_musicEnabled) return;
     
     try {
       await _backgroundMusicPlayer.resume();
@@ -56,6 +205,8 @@ class AudioService {
 
   // Play correct answer sound
   Future<void> playCorrectSound() async {
+    if (!_soundEffectsEnabled) return;
+    
     try {
       print('Attempting to play correct sound effect');
       
@@ -80,8 +231,8 @@ class AudioService {
         effectPlayer.dispose();
         print('Correct sound effect completed');
         
-        // Restart background music if it was playing before
-        if (wasPlaying) {
+        // Restart background music if it was playing before and music is enabled
+        if (wasPlaying && _musicEnabled) {
           playBackgroundMusic();
         }
       });
@@ -90,7 +241,7 @@ class AudioService {
     } catch (e) {
       print('Error playing correct sound: $e');
       // Ensure music restarts if there was an error
-      if (_isMusicPlaying) {
+      if (_isMusicPlaying && _musicEnabled) {
         playBackgroundMusic();
       }
     }
@@ -98,6 +249,8 @@ class AudioService {
 
   // Play wrong answer sound
   Future<void> playWrongSound() async {
+    if (!_soundEffectsEnabled) return;
+    
     try {
       print('Attempting to play wrong sound effect');
       
@@ -122,8 +275,8 @@ class AudioService {
         effectPlayer.dispose();
         print('Wrong sound effect completed');
         
-        // Restart background music if it was playing before
-        if (wasPlaying) {
+        // Restart background music if it was playing before and music is enabled
+        if (wasPlaying && _musicEnabled) {
           playBackgroundMusic();
         }
       });
@@ -132,7 +285,7 @@ class AudioService {
     } catch (e) {
       print('Error playing wrong sound: $e');
       // Ensure music restarts if there was an error
-      if (_isMusicPlaying) {
+      if (_isMusicPlaying && _musicEnabled) {
         playBackgroundMusic();
       }
     }
@@ -150,6 +303,9 @@ class AudioService {
     }
   }
   
-  // Check if music is currently playing
+  // Getters for current state
   bool get isMusicPlaying => _isMusicPlaying;
+  bool get isMusicEnabled => _musicEnabled;
+  bool get isSoundEffectsEnabled => _soundEffectsEnabled;
+  String get currentMusicTrack => _currentMusicTrack;
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:verbix/services/audio_service.dart';
 import 'auth_screen.dart';
 
 class UserSettingsScreen extends StatefulWidget {
@@ -19,6 +20,12 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _userData;
   
+  // Audio settings
+  String _selectedMusicTrack = 'desert';
+  bool _musicEnabled = true;
+  bool _soundEffectsEnabled = true;
+  final AudioService _audioService = AudioService();
+  
   // List of avatar images to choose from
   final List<String> _avatarImages = [
     'assets/images/avatar1.webp',
@@ -30,6 +37,18 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
     'assets/images/avatar7.webp',
     'assets/images/avatar8.webp',
     'assets/images/avatar9.webp',
+  ];
+  
+  // Music track options
+  final List<Map<String, dynamic>> _musicTracks = [
+    {'id': 'desert', 'name': 'Desert Vibes', 'icon': Icons.beach_access},
+    {'id': 'lofi', 'name': 'Lo-Fi Study', 'icon': Icons.headphones},
+    {'id': 'funny', 'name': 'Funny Tunes', 'icon': Icons.mood},
+    {'id': 'funky', 'name': 'Funky Beats', 'icon': Icons.music_note},
+    {'id': 'chill-gaming', 'name': 'Chill Gaming', 'icon': Icons.sports_esports},
+    {'id': 'blue', 'name': 'Blue Mood', 'icon': Icons.nights_stay},
+    {'id': 'spring', 'name': 'Spring Morning', 'icon': Icons.eco},
+    {'id': 'coffee', 'name': 'Coffee Shop', 'icon': Icons.coffee},
   ];
   
   @override
@@ -69,6 +88,11 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
           _lastNameController.text = _userData?['lastName'] ?? '';
           _ageController.text = _userData?['age']?.toString() ?? '';
           _selectedAvatarIndex = _userData?['avatarIndex'] ?? 0;
+          
+          // Load audio settings
+          _selectedMusicTrack = _userData?['musicTrack'] ?? 'desert';
+          _musicEnabled = _userData?['musicEnabled'] ?? true;
+          _soundEffectsEnabled = _userData?['soundEffectsEnabled'] ?? true;
         });
       }
     } catch (e) {
@@ -123,8 +147,16 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
         'lastName': _lastNameController.text.trim(),
         'age': age,
         'avatarIndex': _selectedAvatarIndex,
+        'musicTrack': _selectedMusicTrack,
+        'musicEnabled': _musicEnabled,
+        'soundEffectsEnabled': _soundEffectsEnabled,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      
+      // Update audio service settings
+      await _audioService.changeMusicTrack(_selectedMusicTrack);
+      await _audioService.setMusicEnabled(_musicEnabled);
+      await _audioService.setSoundEffectsEnabled(_soundEffectsEnabled);
       
       if (!mounted) return;
       
@@ -362,6 +394,131 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                         ),
                         const SizedBox(height: 24),
                         
+                        // Music selection
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.grey.withOpacity(0.2),
+                                spreadRadius: 1,
+                                blurRadius: 3,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Music Settings',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF324259),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              
+                              // Music toggle
+                              SwitchListTile(
+                                title: const Text(
+                                  'Enable Background Music',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF324259),
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Play music while using the app',
+                                ),
+                                value: _musicEnabled,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _musicEnabled = value;
+                                  });
+                                  // Preview the change
+                                  if (_musicEnabled) {
+                                    _audioService.playBackgroundMusic();
+                                  } else {
+                                    _audioService.pauseBackgroundMusic();
+                                  }
+                                },
+                                activeColor: const Color(0xFF1F5377),
+                              ),
+                              
+                              // Sound effects toggle
+                              SwitchListTile(
+                                title: const Text(
+                                  'Enable Sound Effects',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF324259),
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Play sounds for correct/incorrect answers',
+                                ),
+                                value: _soundEffectsEnabled,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _soundEffectsEnabled = value;
+                                  });
+                                },
+                                activeColor: const Color(0xFF1F5377),
+                              ),
+                              
+                              const Divider(),
+                              const SizedBox(height: 8),
+                              
+                              // Music selection heading
+                              const Text(
+                                'Choose Music Track',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF324259),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              
+                              // Music tracks list
+                              ...List.generate(_musicTracks.length, (index) {
+                                final track = _musicTracks[index];
+                                return RadioListTile<String>(
+                                  title: Text(
+                                    track['name'],
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFF324259),
+                                    ),
+                                  ),
+                                  secondary: Icon(
+                                    track['icon'],
+                                    color: const Color(0xFF1F5377),
+                                  ),
+                                  value: track['id'],
+                                  groupValue: _selectedMusicTrack,
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _selectedMusicTrack = value;
+                                      });
+                                      // Preview the music change
+                                      _audioService.changeMusicTrack(value);
+                                    }
+                                  },
+                                  activeColor: const Color(0xFF1F5377),
+                                  selected: _selectedMusicTrack == track['id'],
+                                );
+                              }),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        
                         // Save Button
                         ElevatedButton(
                           onPressed: _isLoading ? null : _saveUserDetails,
@@ -391,7 +548,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                             Positioned(
                               left: 34,
                               bottom: 110,
-                              child: TextButton(
+                              child: ElevatedButton(
                                 onPressed: () async {
                                   try {
                                     await FirebaseAuth.instance.signOut();
@@ -408,17 +565,18 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                     );
                                   }
                                 },
-                                style: TextButton.styleFrom(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color.fromARGB(255, 167, 64, 57),
                                   padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-                                  splashFactory: NoSplash.splashFactory,
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                                 child: const Text(
                                   'Sign Out',
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: Colors.red,
+                                    color: Colors.white,
                                   ),
                                 ),
                               ),
