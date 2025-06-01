@@ -138,7 +138,7 @@ class ImageOption {
 class CustomPracticeService {
   static final _projectId = dotenv.env['VERTEX_PROJECT_ID'] ?? '';
   static final _location = dotenv.env['VERTEX_LOCATION'] ?? 'us-central1';
-  static final _modelId = 'gemini-1.5-pro-001';
+  static final _modelId = 'gemini-1.5-pro-002';
   static String? _accessToken;
   static DateTime? _tokenExpiry;
   

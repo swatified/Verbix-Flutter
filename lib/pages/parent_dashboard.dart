@@ -2,11 +2,302 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'package:googleapis_auth/auth_io.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter/services.dart' show rootBundle; // Add this import
+import 'dart:io';
+import 'dart:convert';
+import 'dart:math';
 import 'wrong_word_details.dart';
 import 'parent_child_dashboard.dart';
-import '../services/gemini_service.dart';
 import '../services/daily_scoring_service.dart';
 import 'auth_screen.dart';
+
+// Gemini service for pattern analysis (using correct Vertex AI model names)
+class GeminiPatternService {
+  static final _projectId = dotenv.env['VERTEX_PROJECT_ID'] ?? '';
+  static final _location = dotenv.env['VERTEX_LOCATION'] ?? 'us-central1';
+  static final _modelId = 'gemini-1.5-pro-002'; // Updated from 001
+  static String? _accessToken;
+  static DateTime? _tokenExpiry;
+  
+  // Get service account credentials from a file
+  static Future<ServiceAccountCredentials> _getCredentials() async {
+    final directory = await getApplicationDocumentsDirectory();
+    final credentialsPath = '${directory.path}/service-account.json';
+    final file = File(credentialsPath);
+    
+    if (!await file.exists()) {
+      throw Exception('Service account credentials file not found at: $credentialsPath');
+    }
+    
+    final jsonString = await file.readAsString();
+    final jsonMap = json.decode(jsonString);
+    return ServiceAccountCredentials.fromJson(jsonMap);
+  }
+
+  // Get OAuth2 access token
+  static Future<String> _getAccessToken() async {
+    if (_accessToken != null && _tokenExpiry != null && DateTime.now().isBefore(_tokenExpiry!)) {
+      return _accessToken!;
+    }
+    
+    try {
+      final credentials = await _getCredentials();
+      final scopes = ['https://www.googleapis.com/auth/cloud-platform'];
+      final client = await clientViaServiceAccount(credentials, scopes);
+      
+      _accessToken = client.credentials.accessToken.data;
+      _tokenExpiry = client.credentials.accessToken.expiry;
+      
+      return _accessToken!;
+    } catch (e) {
+      throw Exception('Failed to authenticate with Vertex AI: $e');
+    }
+  }
+
+  // Method to get authentication headers with token
+  static Future<Map<String, String>> _getAuthHeaders() async {
+    final token = await _getAccessToken();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+  }
+
+  // Get the Vertex AI endpoint for Gemini
+  static String get _endpoint {
+    return 'https://$_location-aiplatform.googleapis.com/v1/projects/$_projectId/locations/$_location/publishers/google/models/$_modelId:generateContent';
+  }
+
+  // Generate pattern breakdown based on test results and incorrect attempts
+  static Future<String> generatePatternBreakdown(
+    List<Map<String, dynamic>> testResults,
+    List<Map<String, dynamic>> todaysTroubles,
+  ) async {
+    try {
+      print("DEBUG: Starting dyslexia pattern breakdown generation");
+      print("DEBUG: Test results count: ${testResults.length}");
+      print("DEBUG: Today's troubles count: ${todaysTroubles.length}");
+      
+      // Check if we have any data to analyze
+      if (testResults.isEmpty && todaysTroubles.isEmpty) {
+        print("DEBUG: No data available for analysis");
+        return 'No test results or practice data available yet. Complete a dyslexia test to get personalized pattern analysis.';
+      }
+      
+      // Prepare detailed test results analysis
+      String testResultsAnalysis = '';
+      if (testResults.isNotEmpty) {
+        print("DEBUG: Processing ${testResults.length} test results");
+        testResultsAnalysis = testResults.map((test) {
+          final date = test['timestamp']?.toDate()?.toString() ?? 'Unknown date';
+          final heading = test['heading'] ?? 'No heading';
+          final originalSentence = test['originalSentence'] ?? '';
+          final writtenResponse = test['writtenResponse'] ?? '';
+          final speechResponse = test['speechResponse'] ?? '';
+          final writtenAnalysis = test['writtenAnalysis'] ?? '';
+          final speechAnalysis = test['speechAnalysis'] ?? '';
+          
+          print("DEBUG: Test - Heading: $heading, Original: $originalSentence");
+          print("DEBUG: Written: $writtenResponse, Speech: $speechResponse");
+          
+          return '''
+Test Date: $date
+Test Heading: "$heading"
+Original Sentence: "$originalSentence"
+Child's Written Response: "$writtenResponse"
+Child's Speech Response: "$speechResponse"
+
+Written Analysis:
+$writtenAnalysis
+
+Speech Analysis:
+$speechAnalysis
+''';
+        }).join('\n---\n\n');
+      }
+
+      // Prepare today's troubles summary
+      String troublesSummary = '';
+      if (todaysTroubles.isNotEmpty) {
+        print("DEBUG: Processing ${todaysTroubles.length} trouble items");
+        troublesSummary = todaysTroubles.map((trouble) {
+          return '- Word: "${trouble['word']}" (Practice Type: ${trouble['practiceType']}, Failed ${trouble['count']} time${trouble['count'] == 1 ? '' : 's'})';
+        }).join('\n');
+      }
+
+      final prompt = '''
+# Dyslexia Pattern Analysis for Parent Dashboard
+
+## Child's Test Results and Performance Data
+
+### Recent Dyslexia Test Results:
+${testResultsAnalysis.isNotEmpty ? testResultsAnalysis : 'No recent test results available.'}
+
+### Today's Practice Difficulties:
+${troublesSummary.isNotEmpty ? troublesSummary : 'No practice difficulties recorded today.'}
+
+## Task
+Analyze the dyslexia patterns from the test results and generate a detailed, custom parent-friendly summary that identifies:
+
+### Focus on Specific Details:
+1. **Exact letters/sounds the child confuses** (e.g., "often confuses 'b' and 'd'", "struggles with 'th' sounds")
+2. **Specific pattern examples** from their actual responses (e.g., "wrote 'Dib' instead of 'Did'")
+3. **Consistent error types** across multiple tests
+4. **Sound substitutions** they commonly make (e.g., "says 'dogs' for 'dog'")
+5. **Omission patterns** (e.g., "frequently omits word endings", "skips middle sounds")
+
+### Generate Custom Analysis Like:
+"Your child consistently confuses 'b' and 'd' letters, as seen when they wrote 'Dib' instead of 'Did'. They also tend to add extra sounds, saying 'dogs' instead of 'dog', and often omit parts of longer sentences. The pattern shows difficulty with letter orientation and auditory processing of word endings."
+
+## Requirements
+- BE VERY SPECIFIC about which letters, sounds, or words cause confusion
+- Use ACTUAL EXAMPLES from their test responses when possible
+- Identify 2-3 concrete patterns with specific details
+- Keep it under 100 words but be detailed
+- Use parent-friendly language
+- If insufficient data, ask for more test data to provide better analysis
+
+## Example Output:
+"Your child consistently confuses 'b' and 'd' letters, as seen when they wrote 'Dib' instead of 'Did'. They also tend to add extra sounds, saying 'dogs' instead of 'dog', and often omit parts of longer sentences. The pattern shows difficulty with letter orientation and auditory processing of word endings."
+
+Generate the dyslexia pattern analysis now:
+''';
+
+      print("DEBUG: Prompt length: ${prompt.length} characters");
+      print("DEBUG: Getting authentication headers");
+      
+      // Get headers with OAuth token
+      final headers = await _getAuthHeaders();
+      print("DEBUG: Successfully got auth headers");
+      
+      // Prepare request body for Gemini model
+      final requestBody = jsonEncode({
+        "contents": [
+          {
+            "role": "user",
+            "parts": [
+              {
+                "text": prompt
+              }
+            ]
+          }
+        ],
+        "generationConfig": {
+          "temperature": 0.3,
+          "maxOutputTokens": 200,
+          "topK": 40,
+          "topP": 0.95
+        }
+      });
+      
+      print("DEBUG: Request body prepared, making API call to: $_endpoint");
+      final response = await http.post(
+        Uri.parse(_endpoint),
+        headers: headers,
+        body: requestBody,
+      );
+      
+      print("DEBUG: Pattern breakdown response status: ${response.statusCode}");
+      print("DEBUG: Response body preview: ${response.body.substring(0, min(500, response.body.length))}");
+      
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        print("DEBUG: Successfully decoded JSON response");
+        
+        // Extract text from Gemini response
+        if (responseData.containsKey('candidates') && 
+            responseData['candidates'] is List && 
+            responseData['candidates'].isNotEmpty) {
+          
+          var candidate = responseData['candidates'][0];
+          if (candidate.containsKey('content') && 
+              candidate['content'].containsKey('parts') && 
+              candidate['content']['parts'] is List && 
+              candidate['content']['parts'].isNotEmpty) {
+            
+            final text = candidate['content']['parts'][0]['text'] ?? '';
+            print("DEBUG: Successfully extracted text: ${text.substring(0, min(100, text.length))}...");
+            return text.trim();
+          } else {
+            print("ERROR: Response structure unexpected - missing content/parts");
+            print("DEBUG: Candidate structure: $candidate");
+          }
+        } else {
+          print("ERROR: Response structure unexpected - missing candidates");
+          print("DEBUG: Response structure keys: ${responseData.keys}");
+        }
+      } else {
+        print("ERROR: API call failed with status ${response.statusCode}");
+        print("ERROR: Response body: ${response.body}");
+      }
+      
+      throw Exception("Failed to generate pattern breakdown: ${response.statusCode}");
+    } catch (e) {
+      print("ERROR in generatePatternBreakdown: $e");
+      print("ERROR: Stack trace: ${StackTrace.current}");
+      // Return a meaningful dyslexia-focused fallback
+      return _generateDyslexiaPatternFallback(testResults, todaysTroubles);
+    }
+  }
+
+  // Simple fallback when Gemini API fails
+  static String _generateDyslexiaPatternFallback(
+    List<Map<String, dynamic>> testResults,
+    List<Map<String, dynamic>> todaysTroubles,
+  ) {
+    print("DEBUG: Using fallback pattern analysis");
+    
+    // If we have test results, try to extract some basic patterns
+    if (testResults.isNotEmpty) {
+      List<String> patterns = [];
+      
+      for (var test in testResults) {
+        final heading = test['heading']?.toString() ?? '';
+        final originalSentence = test['originalSentence']?.toString() ?? '';
+        final writtenResponse = test['writtenResponse']?.toString() ?? '';
+        final speechResponse = test['speechResponse']?.toString() ?? '';
+        
+        print("DEBUG: Analyzing test - Original: '$originalSentence', Written: '$writtenResponse', Speech: '$speechResponse'");
+        
+        // Look for specific patterns in the actual responses
+        if (originalSentence.isNotEmpty && writtenResponse.isNotEmpty) {
+          // Check for b/d confusion
+          if (originalSentence.toLowerCase().contains('d') && writtenResponse.toLowerCase().contains('b')) {
+            patterns.add('confuses \'b\' and \'d\' letters');
+          }
+          
+          // Check for omissions
+          if (writtenResponse.length < originalSentence.length / 2) {
+            patterns.add('tends to omit large portions of sentences');
+          }
+          
+          // Check for specific letter reversals
+          if (writtenResponse.toLowerCase().contains('dib') && originalSentence.toLowerCase().contains('did')) {
+            patterns.add('wrote \'Dib\' instead of \'Did\'');
+          }
+        }
+        
+        if (speechResponse.isNotEmpty && originalSentence.isNotEmpty) {
+          // Check for sound substitutions
+          if (speechResponse.toLowerCase().contains('dogs') && originalSentence.toLowerCase().contains('dog') && !originalSentence.toLowerCase().contains('dogs')) {
+            patterns.add('adds plural sounds (\'dogs\' for \'dog\')');
+          }
+        }
+      }
+      
+      if (patterns.isNotEmpty) {
+        final uniquePatterns = patterns.toSet().take(3).toList();
+        return 'Based on recent tests, your child ${uniquePatterns.join(', ')}. These patterns indicate specific areas where targeted practice can help improve reading and writing skills.';
+      }
+    }
+    
+    return 'Unable to analyze patterns at this time. Check the app logs for technical details, or try completing a new dyslexia test to generate fresh analysis.';
+  }
+}
 
 class ParentDashboardScreen extends StatefulWidget {
   const ParentDashboardScreen({super.key});
@@ -134,8 +425,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         final troublesList = uniqueWords.values.toList();
         final limitedTroublesList = troublesList.take(3).toList();
 
-        // Generate pattern breakdown
-        final patternBreakdown = _generatePatternBreakdown(troublesList);
+        // Get recent test results for pattern analysis
+        final testResults = await _fetchRecentTestResults(childId);
+
+        // Generate pattern breakdown using Gemini
+        final patternBreakdown = await _generatePatternBreakdownWithGemini(testResults, troublesList);
 
         setState(() {
           _recentTroubles = limitedTroublesList;
@@ -144,20 +438,73 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       }
     } catch (e) {
       print('Error loading child data: $e');
+      // Set fallback pattern breakdown if error occurs
+      setState(() {
+        _patternBreakdown = 'Unable to analyze patterns at this time. Please check back later for updated dyslexia pattern insights.';
+      });
     }
   }
 
-  String _generatePatternBreakdown(List<Map<String, dynamic>> troubles) {
-    // This is a placeholder - in production, call the Gemini API
-    if (troubles.isEmpty) {
-      return 'Not enough data to generate a pattern breakdown. Encourage your child to practice more.';
+  // Fetch recent test results for pattern analysis
+  Future<List<Map<String, dynamic>>> _fetchRecentTestResults(String childId) async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(childId)
+          .collection('test_results')
+          .orderBy('timestamp', descending: true)
+          .limit(3)
+          .get();
+
+      return querySnapshot.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      print('Error fetching test results: $e');
+      return [];
     }
-    
-    // In a real implementation, this would call GeminiService.generatePatternBreakdown(troubles)
-    // For now, we return a static message to avoid API costs during development
-    return 'The child struggles to form b and d and often '
-        'confuses between similar sounding sounds like s and sh. '
-        'They repeatedly fail to speak "ay" end words correctly.';
+  }
+
+  // Generate pattern breakdown using Gemini service
+  Future<String> _generatePatternBreakdownWithGemini(
+    List<Map<String, dynamic>> testResults,
+    List<Map<String, dynamic>> troubles,
+  ) async {
+    try {
+      // Ensure service account file exists (you might want to add this helper)
+      await _ensureServiceAccountExists();
+      
+      return await GeminiPatternService.generatePatternBreakdown(testResults, troubles);
+    } catch (e) {
+      print('Error generating pattern breakdown with Gemini: $e');
+      return GeminiPatternService._generateDyslexiaPatternFallback(testResults, troubles);
+    }
+  }
+
+  // Ensure service account file exists (copy from CustomPracticeService)
+  Future<void> _ensureServiceAccountExists() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final credentialsPath = '${directory.path}/service-account.json';
+      final file = File(credentialsPath);
+      
+      if (!await file.exists()) {
+        print("DEBUG: Service account file doesn't exist, copying from assets");
+        // Copy from assets using rootBundle
+        final byteData = await rootBundle.load('assets/service-account.json');
+        final buffer = byteData.buffer;
+        await file.writeAsBytes(
+            buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
+        print("DEBUG: Service account file copied successfully");
+      } else {
+        print("DEBUG: Service account file already exists");
+      }
+    } catch (e) {
+      print("ERROR: Failed to setup service account file: $e");
+    }
+  }
+
+  // Simple fallback pattern breakdown method 
+  String _generateFallbackPatternBreakdown(List<Map<String, dynamic>> troubles) {
+    return 'Pattern analysis temporarily unavailable. Please try refreshing to get detailed insights about your child\'s learning patterns.';
   }
 
   void _logout() async {
@@ -454,13 +801,23 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Pattern Breakdown:',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF455A64),
-              ),
+            Row(
+              children: [
+                const Icon(
+                  Icons.psychology,
+                  color: Color(0xFF455A64),
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'AI Pattern Analysis:',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF455A64),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             Text(
@@ -520,4 +877,4 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       ),
     );
   }
-} 
+}

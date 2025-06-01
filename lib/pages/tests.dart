@@ -20,7 +20,7 @@ import 'package:flutter/services.dart' show rootBundle;
 class VertexAIService {
   static final _projectId = dotenv.env['VERTEX_PROJECT_ID'] ?? '';
   static final _location = dotenv.env['VERTEX_LOCATION'] ?? 'us-central1';
-  static final _modelId = 'gemini-1.5-pro'; // Vertex AI model ID
+  static final _modelId = 'gemini-1.5-pro-002';
   static String? _accessToken;
   static DateTime? _tokenExpiry;
   
