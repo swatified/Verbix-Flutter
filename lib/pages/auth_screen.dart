@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -15,7 +14,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _passwordController = TextEditingController();
   bool _isLogin = true;
   bool _isLoading = false;
-  
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -26,10 +25,11 @@ class _AuthScreenState extends State<AuthScreen> {
   // Helper method to convert errors to user-friendly messages
   String _getReadableErrorMessage(dynamic error) {
     // Check for empty fields first
-    if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
+    if (_emailController.text.trim().isEmpty ||
+        _passwordController.text.trim().isEmpty) {
       return 'Please enter both email and password';
     }
-    
+
     if (error is FirebaseAuthException) {
       switch (error.code) {
         case 'user-not-found':
@@ -60,14 +60,15 @@ class _AuthScreenState extends State<AuthScreen> {
     } else if (error.toString().contains('timeout')) {
       return 'Connection timeout. Please try again later';
     }
-    
+
     return 'An unexpected error occurred. Please try again later';
   }
 
   // Updated method with validation
   void _submitForm() {
     // Check for empty fields before even trying to authenticate
-    if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
+    if (_emailController.text.trim().isEmpty ||
+        _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter both email and password'),
@@ -76,7 +77,7 @@ class _AuthScreenState extends State<AuthScreen> {
       );
       return;
     }
-    
+
     _signInWithEmailPassword();
   }
 
@@ -84,7 +85,7 @@ class _AuthScreenState extends State<AuthScreen> {
   Future<void> _checkUserProfileAndRedirect() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    
+
     // Redirect to user type selection screen
     if (!mounted) return;
     Navigator.of(context).pushReplacementNamed('/user_type_selection');
@@ -102,7 +103,7 @@ class _AuthScreenState extends State<AuthScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
-        
+
         // Check if profile exists and redirect
         await _checkUserProfileAndRedirect();
       } else {
@@ -111,7 +112,7 @@ class _AuthScreenState extends State<AuthScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
-        
+
         // Redirect to user type selection
         if (!mounted) return;
         Navigator.of(context).pushReplacementNamed('/user_type_selection');
@@ -144,7 +145,7 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       // Begin interactive sign in process
       final GoogleSignInAccount? gUser = await GoogleSignIn().signIn();
-      
+
       if (gUser == null) {
         // User canceled the sign-in flow
         setState(() {
@@ -152,27 +153,28 @@ class _AuthScreenState extends State<AuthScreen> {
         });
         return;
       }
-      
+
       // Get auth details from request
       final GoogleSignInAuthentication gAuth = await gUser.authentication;
-      
+
       // Create new credential for user
       final credential = GoogleAuthProvider.credential(
         accessToken: gAuth.accessToken,
         idToken: gAuth.idToken,
       );
-      
+
       // Sign in with credential
       await FirebaseAuth.instance.signInWithCredential(credential);
-      
+
       // Check if profile exists and redirect
       await _checkUserProfileAndRedirect();
     } catch (e) {
       // Handle specific Google Sign In errors
       String errorMessage;
-      
+
       if (e.toString().contains('network')) {
-        errorMessage = 'A network error occurred. Please check your connection and try again.';
+        errorMessage =
+            'A network error occurred. Please check your connection and try again.';
       } else if (e.toString().contains('canceled')) {
         errorMessage = 'Sign in was canceled';
       } else if (e is FirebaseAuthException) {
@@ -180,7 +182,7 @@ class _AuthScreenState extends State<AuthScreen> {
       } else {
         errorMessage = 'Failed to sign in with Google. Please try again later.';
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -210,10 +212,7 @@ class _AuthScreenState extends State<AuthScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 40),
-                Image.asset(
-                  'assets/images/lexi_rest.webp',
-                  height: 130,
-                ),
+                Image.asset('assets/images/lexi_rest.webp', height: 130),
                 const SizedBox(height: 20),
                 Text(
                   _isLogin ? 'Welcome Back' : 'Create Account',
@@ -250,15 +249,16 @@ class _AuthScreenState extends State<AuthScreen> {
                     backgroundColor: const Color(0xFF324259),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: _isLoading 
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(
-                          _isLogin ? 'Sign In' : 'Sign Up',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
+                  child:
+                      _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                            _isLogin ? 'Sign In' : 'Sign Up',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -275,7 +275,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 OutlinedButton.icon(
                   onPressed: _isLoading ? null : _signInWithGoogle,
                   icon: Image.asset(
-                    'assets/images/google_logo.png', 
+                    'assets/images/google_logo.png',
                     height: 24,
                   ),
                   label: const Text('Sign in with Google'),
@@ -285,14 +285,17 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextButton(
-                  onPressed: _isLoading ? null : () {
-                    setState(() {
-                      _isLogin = !_isLogin;
-                    });
-                  },
+                  onPressed:
+                      _isLoading
+                          ? null
+                          : () {
+                            setState(() {
+                              _isLogin = !_isLogin;
+                            });
+                          },
                   child: Text(
-                    _isLogin 
-                        ? 'Don\'t have an account? Sign Up' 
+                    _isLogin
+                        ? 'Don\'t have an account? Sign Up'
                         : 'Already have an account? Sign In',
                   ),
                 ),
