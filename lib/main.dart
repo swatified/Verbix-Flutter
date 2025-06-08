@@ -1,42 +1,35 @@
-import 'package:flutter/material.dart';
-import 'firebase_options.dart';
-import 'pages/splash_screen.dart';
-import 'pages/auth_screen.dart';
-import 'pages/home_page.dart';
-import 'pages/user_details.dart';
-import 'pages/tests.dart';
-import 'pages/practice_modules.dart';
-import 'pages/dashboard.dart';
-import 'pages/user_settings.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'pages/main_scaffold.dart'; 
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:verbix/services/audio_service.dart';
 import 'package:verbix/services/firebase_service.dart';
-import 'pages/user_type_selection.dart';
+
+import 'firebase_options.dart';
+import 'pages/auth_screen.dart';
+import 'pages/main_scaffold.dart';
 import 'pages/parent_dashboard.dart';
 import 'pages/parent_details.dart';
-import 'pages/wrong_word_details.dart';
-import 'pages/parent_child_dashboard.dart';
+import 'pages/splash_screen.dart';
+import 'pages/user_details.dart';
+import 'pages/user_type_selection.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Load environment variables
   await dotenv.load(fileName: ".env");
-  
-  // Initialize Firebase using our service
   await FirebaseService.initializeFirebase();
-  
-  // Ensure the service account file is available
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+  );
   await ensureServiceAccountExists();
-  
-  // Initialize the AudioService
   final audioService = AudioService();
   await audioService.initialize();
-  
   runApp(const MyApp());
 }
 
@@ -44,16 +37,16 @@ Future<void> ensureServiceAccountExists() async {
   final directory = await getApplicationDocumentsDirectory();
   final credentialsPath = '${directory.path}/service-account.json';
   final file = File(credentialsPath);
-  
+
   if (!await file.exists()) {
     try {
-      print("DEBUG: Service account file doesn't exist, copying from assets");
-      // Load from assets
       final byteData = await rootBundle.load('assets/service-account.json');
-      // Write to app directory
       await file.writeAsBytes(
-          byteData.buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
-      print("DEBUG: Service account file copied successfully");
+        byteData.buffer.asUint8List(
+          byteData.offsetInBytes,
+          byteData.lengthInBytes,
+        ),
+      );
     } catch (e) {
       print("ERROR: Failed to setup service account file: $e");
     }
@@ -62,7 +55,6 @@ Future<void> ensureServiceAccountExists() async {
   }
 }
 
-// Convert to StatefulWidget to handle app lifecycle
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -76,15 +68,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    // Add observer to track app lifecycle changes
     WidgetsBinding.instance.addObserver(this);
-    // Start playing background music when app launches
     _audioService.playBackgroundMusic();
   }
 
   @override
   void dispose() {
-    // Clean up resources
     _audioService.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -92,14 +81,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Handle app lifecycle changes
-    if (state == AppLifecycleState.paused || 
-        state == AppLifecycleState.inactive || 
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
-      // App is not in foreground - pause music
       _audioService.pauseBackgroundMusic();
     } else if (state == AppLifecycleState.resumed) {
-      // App is in foreground again - resume music
       _audioService.playBackgroundMusic();
     }
   }
