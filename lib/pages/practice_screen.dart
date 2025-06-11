@@ -358,7 +358,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       _showingFeedback = true;
     });
     
-        String gifAsset;
+    String gifAsset;
     String heading;
     String message;
     Color headerColor;
@@ -371,13 +371,13 @@ class _PracticeScreenState extends State<PracticeScreen> {
         headerColor = Colors.green;
         _audioService.playCorrectSound();         break;
       case FeedbackState.wrong:
-        gifAsset = 'assets/gifs/wrong.gif';
+        gifAsset = 'assets/gifs/lexi_shocked.gif';
         heading = 'Oops!';
         message = 'Your answer is incorrect. Keep practicing!';
         headerColor = const Color.fromARGB(255, 194, 185, 18);
         _audioService.playWrongSound();         break;
       case FeedbackState.noText:
-        gifAsset = 'assets/gifs/confused.gif';
+        gifAsset = 'assets/gifs/lexi_confused.gif';
         heading = 'No Text Detected';
         message = 'I couldn\'t read your answer. Please try again.';
         headerColor = const Color.fromARGB(255, 114, 63, 151);
