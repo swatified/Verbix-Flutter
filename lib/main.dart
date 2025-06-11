@@ -1,7 +1,8 @@
-import 'dart:io';
+import 'dart:io' as io;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -34,9 +35,14 @@ void main() async {
 }
 
 Future<void> ensureServiceAccountExists() async {
+  if (kIsWeb) {
+    debugPrint("Web platform: Skipping service account setup.");
+    return;
+  }
+
   final directory = await getApplicationDocumentsDirectory();
   final credentialsPath = '${directory.path}/service-account.json';
-  final file = File(credentialsPath);
+  final file = io.File(credentialsPath);
 
   if (!await file.exists()) {
     try {
