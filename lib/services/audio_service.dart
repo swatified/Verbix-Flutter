@@ -40,9 +40,6 @@ class AudioService {
       _isInitialized = true;
       debugPrint('AudioService initialized successfully');
       
-            if (_musicEnabled) {
-        await playBackgroundMusic();
-      }
     } catch (e) {
       debugPrint('Error initializing AudioService: $e');
     }
