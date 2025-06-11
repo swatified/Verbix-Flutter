@@ -58,5 +58,12 @@ firebase_options.dart
 assets/service-account.json
 
 # Keystore files
-flutter-keystore.jks
 **/android/key.properties
+**/android/flutter-keystore.jks
+flutter-keystore.jks
+
+# Generated files
+macos/Flutter/GeneratedPluginRegistrant.swift
+macos/Flutter/GeneratedPluginRegistrant.swift
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugin_registrant.h
