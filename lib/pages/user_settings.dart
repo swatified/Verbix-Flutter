@@ -20,14 +20,12 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _userData;
   
-  // Audio settings
-  String _selectedMusicTrack = 'desert';
+    String _selectedMusicTrack = 'desert';
   bool _musicEnabled = true;
   bool _soundEffectsEnabled = true;
   final AudioService _audioService = AudioService();
   
-  // List of avatar images to choose from
-  final List<String> _avatarImages = [
+    final List<String> _avatarImages = [
     'assets/images/avatar1.webp',
     'assets/images/avatar2.webp',
     'assets/images/avatar3.webp',
@@ -39,8 +37,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
     'assets/images/avatar9.webp',
   ];
   
-  // Music track options
-  final List<Map<String, dynamic>> _musicTracks = [
+    final List<Map<String, dynamic>> _musicTracks = [
     {'id': 'desert', 'name': 'Desert', 'icon': Icons.beach_access},
     {'id': 'lofi', 'name': 'Lo-Fi', 'icon': Icons.headphones},
     {'id': 'blue', 'name': 'Blue', 'icon': Icons.nights_stay},
@@ -89,13 +86,13 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
           _ageController.text = _userData?['age']?.toString() ?? '';
           _selectedAvatarIndex = _userData?['avatarIndex'] ?? 0;
           
-          // Load audio settings
-          _selectedMusicTrack = _userData?['musicTrack'] ?? 'desert';
+                    _selectedMusicTrack = _userData?['musicTrack'] ?? 'desert';
           _musicEnabled = _userData?['musicEnabled'] ?? true;
           _soundEffectsEnabled = _userData?['soundEffectsEnabled'] ?? true;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading user data: ${e.toString()}')),
       );
@@ -107,8 +104,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
   }
   
   Future<void> _saveUserDetails() async {
-    // Validate inputs
-    if (_firstNameController.text.trim().isEmpty ||
+        if (_firstNameController.text.trim().isEmpty ||
         _lastNameController.text.trim().isEmpty ||
         _ageController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -117,8 +113,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
       return;
     }
     
-    // Parse age
-    int? age;
+        int? age;
     try {
       age = int.parse(_ageController.text.trim());
       if (age <= 0 || age > 120) {
@@ -141,8 +136,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
         throw Exception('No user signed in');
       }
       
-      // Update user details in Firestore
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+            await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'age': age,
@@ -153,8 +147,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       });
       
-      // Update audio service settings
-      await _audioService.changeMusicTrack(_selectedMusicTrack);
+            await _audioService.changeMusicTrack(_selectedMusicTrack);
       await _audioService.setMusicEnabled(_musicEnabled);
       await _audioService.setSoundEffectsEnabled(_soundEffectsEnabled);
       
@@ -164,9 +157,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
         const SnackBar(content: Text('Settings updated successfully')),
       );
       
-      // Return to previous screen
-      Navigator.pop(context, true); // Pass true to indicate changes were made
-    } catch (e) {
+            Navigator.pop(context, true);     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving details: ${e.toString()}')),
       );
@@ -206,15 +197,14 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                        // Profile header
-                        Container(
+                                                Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.grey.withOpacity(0.2),
+                                color: Colors.grey.withValues(alpha:0.2),
                                 spreadRadius: 1,
                                 blurRadius: 3,
                                 offset: const Offset(0, 2),
@@ -264,15 +254,14 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                         ),
                         const SizedBox(height: 24),
                         
-                        // Avatar selection
-                        Container(
+                                                Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.grey.withOpacity(0.2),
+                                color: Colors.grey.withValues(alpha:0.2),
                                 spreadRadius: 1,
                                 blurRadius: 3,
                                 offset: const Offset(0, 2),
@@ -333,15 +322,14 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                         ),
                         const SizedBox(height: 24),
                         
-                        // Personal information
-                        Container(
+                                                Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.grey.withOpacity(0.2),
+                                color: Colors.grey.withValues(alpha:0.2),
                                 spreadRadius: 1,
                                 blurRadius: 3,
                                 offset: const Offset(0, 2),
@@ -394,15 +382,14 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                         ),
                         const SizedBox(height: 24),
                         
-                        // Music selection
-                        Container(
+                                                Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.grey.withOpacity(0.2),
+                                color: Colors.grey.withValues(alpha:0.2),
                                 spreadRadius: 1,
                                 blurRadius: 3,
                                 offset: const Offset(0, 2),
@@ -422,8 +409,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                               ),
                               const SizedBox(height: 16),
                               
-                              // Music toggle
-                              SwitchListTile(
+                                                            SwitchListTile(
                                 title: const Text(
                                   'Enable Background Music',
                                   style: TextStyle(
@@ -439,8 +425,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                   setState(() {
                                     _musicEnabled = value;
                                   });
-                                  // Preview the change
-                                  if (_musicEnabled) {
+                                                                    if (_musicEnabled) {
                                     _audioService.playBackgroundMusic();
                                   } else {
                                     _audioService.pauseBackgroundMusic();
@@ -449,8 +434,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                 activeColor: const Color(0xFF1F5377),
                               ),
                               
-                              // Sound effects toggle
-                              SwitchListTile(
+                                                            SwitchListTile(
                                 title: const Text(
                                   'Enable Sound Effects',
                                   style: TextStyle(
@@ -473,8 +457,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                               const Divider(),
                               const SizedBox(height: 8),
                               
-                              // Music selection heading
-                              const Text(
+                                                            const Text(
                                 'Choose Music Track',
                                 style: TextStyle(
                                   fontSize: 16,
@@ -484,8 +467,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                               ),
                               const SizedBox(height: 12),
                               
-                              // Music tracks list
-                              ...List.generate(_musicTracks.length, (index) {
+                                                            ...List.generate(_musicTracks.length, (index) {
                                 final track = _musicTracks[index];
                                 return RadioListTile<String>(
                                   title: Text(
@@ -506,8 +488,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                       setState(() {
                                         _selectedMusicTrack = value;
                                       });
-                                      // Preview the music change
-                                      _audioService.changeMusicTrack(value);
+                                                                            _audioService.changeMusicTrack(value);
                                     }
                                   },
                                   activeColor: const Color(0xFF1F5377),
@@ -519,8 +500,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                         ),
                         const SizedBox(height: 24),
                         
-                        // Save Button
-                        ElevatedButton(
+                                                ElevatedButton(
                           onPressed: _isLoading ? null : _saveUserDetails,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1F5377),
@@ -544,26 +524,25 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                         Stack(
                           alignment: Alignment.bottomRight,
                           children: [
-                            // Sign Out Button (positioned at the bottom left)
                             Positioned(
                               left: 0,
                               bottom: 110,
                               child: ElevatedButton(
                                 onPressed: () async {
                                   try {
-                                    await FirebaseAuth.instance.signOut();
                                     if (!mounted) return;
                                     Navigator.of(context).pushAndRemoveUntil(
                                       MaterialPageRoute(
                                         builder: (context) => const AuthScreen(),
                                       ),
-                                        (route) => false,
+                                      (route) => false,
                                     );
                                   } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error signing out: ${e.toString()}')),
-                                    );
-                                  }
+                                      if (!mounted) return;
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Error signing out: ${e.toString()}')),
+                                      );
+                                    }
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color.fromARGB(213, 186, 65, 57),
@@ -582,8 +561,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                               ),
                             ),
                             
-                            // Lexi Mascot (overlapping from the right)
-                            Container(
+                            SizedBox(
                               width: 180,
                               height: 180,
                               child: Image.asset(

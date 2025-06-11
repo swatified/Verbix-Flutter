@@ -2,62 +2,74 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class UserTypeSelectionScreen extends StatelessWidget {
+class UserTypeSelectionScreen extends StatefulWidget {
   const UserTypeSelectionScreen({super.key});
 
-  Future<void> _handleChildLogin(BuildContext context) async {
+  @override
+  State<UserTypeSelectionScreen> createState() =>
+      _UserTypeSelectionScreenState();
+}
+
+class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
+  Future<void> _handleChildLogin() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please sign in first')),
-      );
-      // Redirect to login screen
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please sign in first')));
       Navigator.of(context).pushReplacementNamed('/login');
       return;
     }
-    
+
     try {
-      // Check if user details already exist
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+      if (!mounted) return;
       if (userDoc.exists) {
-        // User details already exist, redirect to main screen
         Navigator.of(context).pushReplacementNamed('/main');
       } else {
-        // User details don't exist, show details form
         Navigator.of(context).pushReplacementNamed('/user_details');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     }
   }
 
-  Future<void> _handleParentLogin(BuildContext context) async {
+  Future<void> _handleParentLogin() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please sign in first')),
-      );
-      // Redirect to login screen
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please sign in first')));
       Navigator.of(context).pushReplacementNamed('/login');
       return;
     }
-    
+
     try {
-      // Check if parent details already exist
-      final parentDoc = await FirebaseFirestore.instance.collection('parents').doc(user.uid).get();
+      final parentDoc =
+          await FirebaseFirestore.instance
+              .collection('parents')
+              .doc(user.uid)
+              .get();
+      if (!mounted) return;
       if (parentDoc.exists) {
-        // Parent details already exist, redirect to dashboard
         Navigator.of(context).pushReplacementNamed('/parent_dashboard');
       } else {
-        // Parent details don't exist, show details form
         Navigator.of(context).pushReplacementNamed('/parent_details');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     }
   }
 
@@ -72,24 +84,19 @@ class UserTypeSelectionScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Image.asset(
-                'assets/images/lexi_confused.webp',
-                height: 180,
-              ),
+              Image.asset('assets/images/lexi_confused.webp', height: 180),
               const SizedBox(height: 50),
               _buildSelectionButton(
-                context,
                 icon: Icons.face,
                 label: 'Login as a Child',
-                onPressed: () => _handleChildLogin(context),
+                onPressed: _handleChildLogin,
                 color: const Color(0xFF324259),
               ),
               const SizedBox(height: 20),
               _buildSelectionButton(
-                context,
                 icon: Icons.supervisor_account,
                 label: 'Login as a Parent',
-                onPressed: () => _handleParentLogin(context),
+                onPressed: _handleParentLogin,
                 color: const Color(0xFF5D8AA8),
               ),
             ],
@@ -99,8 +106,7 @@ class UserTypeSelectionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSelectionButton(
-    BuildContext context, {
+  Widget _buildSelectionButton({
     required IconData icon,
     required String label,
     required VoidCallback onPressed,
@@ -111,18 +117,13 @@ class UserTypeSelectionScreen extends StatelessWidget {
       icon: Icon(icon, color: Colors.white),
       label: Text(
         label,
-        style: const TextStyle(
-          fontSize: 18,
-          color: Colors.white,
-        ),
+        style: const TextStyle(fontSize: 18, color: Colors.white),
       ),
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
-} 
+}

@@ -6,12 +6,10 @@ import 'package:googleapis_auth/auth_io.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:convert';
-import 'dart:math';
+import 'package:flutter/material.dart';
 
-// Import the daily scoring service
 import 'package:verbix/services/daily_scoring_service.dart';
 
-// Types of practices
 enum PracticeType {
   letterWriting,
   sentenceWriting,
@@ -20,7 +18,6 @@ enum PracticeType {
   vowelSounds
 }
 
-// Model for a practice module
 class PracticeModule {
   final String id;
   final String title;
@@ -28,9 +25,7 @@ class PracticeModule {
   final List<String> content;
   final bool completed;
   final DateTime createdAt;
-  final int difficulty; // 1-5 scale
-  final DifficultyLevel difficultyLevel; // New field for easy/medium/hard
-  List<ImageOption>? imageOptions;
+  final int difficulty;   final DifficultyLevel difficultyLevel;   List<ImageOption>? imageOptions;
 
   PracticeModule({
     required this.id,
@@ -83,8 +78,7 @@ class PracticeModule {
     );
   }
 
-  // Create a copy of this practice with updated fields
-  PracticeModule copyWith({
+    PracticeModule copyWith({
     String? id,
     String? title,
     PracticeType? type,
@@ -142,8 +136,7 @@ class CustomPracticeService {
   static String? _accessToken;
   static DateTime? _tokenExpiry;
   
-  // Get service account credentials from a file
-  static Future<ServiceAccountCredentials> _getCredentials() async {
+    static Future<ServiceAccountCredentials> _getCredentials() async {
     final directory = await getApplicationDocumentsDirectory();
     final credentialsPath = '${directory.path}/service-account.json';
     final file = File(credentialsPath);
@@ -157,8 +150,7 @@ class CustomPracticeService {
     return ServiceAccountCredentials.fromJson(jsonMap);
   }
 
-  // Get OAuth2 access token
-  static Future<String> _getAccessToken() async {
+    static Future<String> _getAccessToken() async {
     if (_accessToken != null && _tokenExpiry != null && DateTime.now().isBefore(_tokenExpiry!)) {
       return _accessToken!;
     }
@@ -177,8 +169,7 @@ class CustomPracticeService {
     }
   }
 
-  // Method to get authentication headers with token
-  static Future<Map<String, String>> _getAuthHeaders() async {
+    static Future<Map<String, String>> _getAuthHeaders() async {
     final token = await _getAccessToken();
     return {
       'Content-Type': 'application/json',
@@ -186,13 +177,11 @@ class CustomPracticeService {
     };
   }
 
-  // Get the Vertex AI endpoint for Gemini
-  static String get _endpoint {
+    static String get _endpoint {
     return 'https://$_location-aiplatform.googleapis.com/v1/projects/$_projectId/locations/$_location/publishers/google/models/$_modelId:generateContent';
   }
   
-  // Fetch user's recent test results
-  static Future<List<Map<String, dynamic>>> _fetchRecentTestResults() async {
+    static Future<List<Map<String, dynamic>>> _fetchRecentTestResults() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -209,28 +198,23 @@ class CustomPracticeService {
 
       return querySnapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
-      print('Error fetching test results: $e');
+      debugPrint('Error fetching test results: $e');
       return [];
     }
   }
 
-  // Generate custom practice modules based on test results and difficulty level
-  static Future<List<PracticeModule>> generateCustomPractices() async {
+    static Future<List<PracticeModule>> generateCustomPractices() async {
     try {
-      // Check day transition first
-      await DailyScoringService.checkAndProcessDayTransition();
+            await DailyScoringService.checkAndProcessDayTransition();
       
-      // Get user's current difficulty level
-      final userLevel = await DailyScoringService.getCurrentUserLevel();
+            final userLevel = await DailyScoringService.getCurrentUserLevel();
       
-      // Fetch recent test results
-      final testResults = await _fetchRecentTestResults();
+            final testResults = await _fetchRecentTestResults();
       if (testResults.isEmpty) {
         return _createDefaultPractices(userLevel);
       }
 
-      // Extract patterns from test results
-      List<String> writtenAnalyses = [];
+            List<String> writtenAnalyses = [];
       List<String> speechAnalyses = [];
       List<String> recommendations = [];
 
@@ -240,33 +224,28 @@ class CustomPracticeService {
         recommendations.add(test['recommendations'] ?? '');
       }
 
-      // Combine analyses for prompt
-      final combinedAnalyses = {
+            final combinedAnalyses = {
         'writtenAnalysis': writtenAnalyses.join('\n\n'),
         'speechAnalysis': speechAnalyses.join('\n\n'),
         'recommendations': recommendations.join('\n\n'),
       };
 
-      // Generate personalized practices using Vertex AI
-      return await _generatePracticesWithGemini(combinedAnalyses, userLevel);
+            return await _generatePracticesWithGemini(combinedAnalyses, userLevel);
     } catch (e) {
-      print('Error generating custom practices: $e');
+      debugPrint('Error generating custom practices: $e');
       final userLevel = await DailyScoringService.getCurrentUserLevel();
       return _createDefaultPractices(userLevel);
     }
   }
 
-  // Generate practices using Vertex AI API with difficulty level
-  static Future<List<PracticeModule>> _generatePracticesWithGemini(
+    static Future<List<PracticeModule>> _generatePracticesWithGemini(
       Map<String, String> analyses, DifficultyLevel userLevel) async {
     try {
       final randomSeed = DateTime.now().millisecondsSinceEpoch;
       
-      // Get difficulty-specific instructions
-      final difficultyInstructions = _getDifficultyInstructions(userLevel);
+            final difficultyInstructions = _getDifficultyInstructions(userLevel);
       
-      // Create the prompt for Vertex AI
-      final prompt = '''
+            final prompt = '''
       # Dyslexia Practice Module Generation
 
       ## User's Current Level: ${userLevel.toString().split('.').last.toUpperCase()}
@@ -317,11 +296,9 @@ class CustomPracticeService {
       Generation ID: $randomSeed
       ''';
 
-      // Get headers with OAuth token
-      final headers = await _getAuthHeaders();
+            final headers = await _getAuthHeaders();
       
-      // Prepare request body for Gemini model
-      final requestBody = jsonEncode({
+            final requestBody = jsonEncode({
         "contents": [
           {
             "role": "user",
@@ -352,8 +329,7 @@ class CustomPracticeService {
       
       final responseData = jsonDecode(response.body);
       
-      // Extract text from Gemini response
-      String responseText = "";
+            String responseText = "";
       if (responseData.containsKey('candidates') && 
           responseData['candidates'] is List && 
           responseData['candidates'].isNotEmpty) {
@@ -368,8 +344,7 @@ class CustomPracticeService {
         }
       }
 
-      // Extract JSON from the response
-      final jsonRegex = RegExp(r'\[\s*\{.*?\}\s*\]', dotAll: true);
+            final jsonRegex = RegExp(r'\[\s*\{.*?\}\s*\]', dotAll: true);
       final match = jsonRegex.firstMatch(responseText);
       
       if (match == null) {
@@ -393,13 +368,12 @@ class CustomPracticeService {
       
       return _createPracticesFromJsonData(jsonData, userLevel);
     } catch (e) {
-      print('Error with Vertex AI API: $e');
+      debugPrint('Error with Vertex AI API: $e');
       return _createDefaultPractices(userLevel);
     }
   }
 
-  // Get difficulty-specific instructions
-  static String _getDifficultyInstructions(DifficultyLevel level) {
+    static String _getDifficultyInstructions(DifficultyLevel level) {
     switch (level) {
       case DifficultyLevel.easy:
         return '''
@@ -435,8 +409,7 @@ class CustomPracticeService {
     }
   }
 
-  // Get specific content guidelines for each practice type
-  static String _getSpecificContentGuidelines(DifficultyLevel level) {
+    static String _getSpecificContentGuidelines(DifficultyLevel level) {
     switch (level) {
       case DifficultyLevel.easy:
         return '''
@@ -468,8 +441,7 @@ class CustomPracticeService {
     }
   }
   
-  // Helper method to create practice modules from JSON data
-  static List<PracticeModule> _createPracticesFromJsonData(List<dynamic> jsonData, DifficultyLevel userLevel) {
+    static List<PracticeModule> _createPracticesFromJsonData(List<dynamic> jsonData, DifficultyLevel userLevel) {
     List<PracticeModule> practices = [];
     
     for (var item in jsonData) {
@@ -488,8 +460,7 @@ class CustomPracticeService {
           completed: false,
           createdAt: DateTime.now(),
           difficulty: item['difficulty'] ?? 1,
-          difficultyLevel: userLevel, // Set the user's current level
-        );
+          difficultyLevel: userLevel,         );
 
         if (practice.type == PracticeType.sentenceWriting) {
           practice.imageOptions = [
@@ -503,15 +474,14 @@ class CustomPracticeService {
 
         practices.add(practice);
       } catch (e) {
-        print("Error creating practice module: $e");
+        debugPrint("Error creating practice module: $e");
       }
     }
     
     return practices.take(5).toList();
   }
 
-  // Save practices to Firestore
-  static Future<void> savePractices(List<PracticeModule> practices) async {
+    static Future<void> savePractices(List<PracticeModule> practices) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -520,8 +490,7 @@ class CustomPracticeService {
       
       final batch = FirebaseFirestore.instance.batch();
       
-      // Delete existing practices
-      final existingPractices = await FirebaseFirestore.instance
+            final existingPractices = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('practice_modules')
@@ -531,8 +500,7 @@ class CustomPracticeService {
         batch.delete(doc.reference);
       }
       
-      // Add new practices
-      for (var practice in practices) {
+            for (var practice in practices) {
         final docRef = FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
@@ -544,12 +512,11 @@ class CustomPracticeService {
       
       await batch.commit();
     } catch (e) {
-      print('Error saving practices: $e');
+      debugPrint('Error saving practices: $e');
     }
   }
 
-  // Fetch practices from Firestore
-  static Future<List<PracticeModule>> fetchPractices() async {
+    static Future<List<PracticeModule>> fetchPractices() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -574,14 +541,13 @@ class CustomPracticeService {
           .map((doc) => PracticeModule.fromMap(doc.data()))
           .toList();
     } catch (e) {
-      print('Error fetching practices: $e');
+      debugPrint('Error fetching practices: $e');
       final userLevel = await DailyScoringService.getCurrentUserLevel();
       return _createDefaultPractices(userLevel);
     }
   }
 
-  // Mark a practice as completed
-  static Future<void> markPracticeCompleted(String practiceId) async {
+    static Future<void> markPracticeCompleted(String practiceId) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -595,12 +561,11 @@ class CustomPracticeService {
           .doc(practiceId)
           .update({'completed': true});
     } catch (e) {
-      print('Error marking practice as completed: $e');
+      debugPrint('Error marking practice as completed: $e');
     }
   }
 
-  // Create default practices based on difficulty level
-  static List<PracticeModule> _createDefaultPractices(DifficultyLevel level) {
+    static List<PracticeModule> _createDefaultPractices(DifficultyLevel level) {
     switch (level) {
       case DifficultyLevel.easy:
         return [

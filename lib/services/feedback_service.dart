@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:verbix/widgets/feedback_popup.dart';
 
 class FeedbackService {
-  /// Shows a feedback popup based on the provided state
   static void showFeedbackPopup({
     required BuildContext context,
     required FeedbackState state,
@@ -10,7 +9,6 @@ class FeedbackService {
     String? customHeading,
     String? customMessage,
   }) {
-    // Define content based on the state
     String heading;
     String message;
 
@@ -25,22 +23,22 @@ class FeedbackService {
         break;
       case FeedbackState.noText:
         heading = customHeading ?? 'No Text Detected';
-        message = customMessage ?? 'I couldn\'t read your answer. Please try again.';
+        message =
+            customMessage ?? 'I couldn\'t read your answer. Please try again.';
         break;
     }
 
-    // Show the dialog
     showDialog(
       context: context,
-      barrierDismissible: false, // User must tap button to close dialog
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return FeedbackPopup(
           state: state,
           heading: heading,
           message: message,
           onContinue: () {
-            Navigator.of(context).pop(); // Close the dialog
-            onContinue(); // Execute the callback function
+            Navigator.of(context).pop();
+            onContinue();
           },
         );
       },

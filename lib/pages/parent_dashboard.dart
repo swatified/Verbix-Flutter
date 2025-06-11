@@ -1,64 +1,66 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
-import 'package:googleapis_auth/auth_io.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:flutter/services.dart' show rootBundle; // Add this import
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
-import 'wrong_word_details.dart';
-import 'parent_child_dashboard.dart';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:googleapis_auth/auth_io.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+
 import '../services/daily_scoring_service.dart';
 import 'auth_screen.dart';
+import 'parent_child_dashboard.dart';
+import 'wrong_word_details.dart';
 
-// Gemini service for pattern analysis (using correct Vertex AI model names)
 class GeminiPatternService {
   static final _projectId = dotenv.env['VERTEX_PROJECT_ID'] ?? '';
   static final _location = dotenv.env['VERTEX_LOCATION'] ?? 'us-central1';
-  static final _modelId = 'gemini-1.5-pro-002'; // Updated from 001
+  static final _modelId = 'gemini-1.5-pro-002';
   static String? _accessToken;
   static DateTime? _tokenExpiry;
-  
-  // Get service account credentials from a file
+
   static Future<ServiceAccountCredentials> _getCredentials() async {
     final directory = await getApplicationDocumentsDirectory();
     final credentialsPath = '${directory.path}/service-account.json';
     final file = File(credentialsPath);
-    
+
     if (!await file.exists()) {
-      throw Exception('Service account credentials file not found at: $credentialsPath');
+      throw Exception(
+        'Service account credentials file not found at: $credentialsPath',
+      );
     }
-    
+
     final jsonString = await file.readAsString();
     final jsonMap = json.decode(jsonString);
     return ServiceAccountCredentials.fromJson(jsonMap);
   }
 
-  // Get OAuth2 access token
   static Future<String> _getAccessToken() async {
-    if (_accessToken != null && _tokenExpiry != null && DateTime.now().isBefore(_tokenExpiry!)) {
+    if (_accessToken != null &&
+        _tokenExpiry != null &&
+        DateTime.now().isBefore(_tokenExpiry!)) {
       return _accessToken!;
     }
-    
+
     try {
       final credentials = await _getCredentials();
       final scopes = ['https://www.googleapis.com/auth/cloud-platform'];
       final client = await clientViaServiceAccount(credentials, scopes);
-      
+
       _accessToken = client.credentials.accessToken.data;
       _tokenExpiry = client.credentials.accessToken.expiry;
-      
+
       return _accessToken!;
     } catch (e) {
       throw Exception('Failed to authenticate with Vertex AI: $e');
     }
   }
 
-  // Method to get authentication headers with token
   static Future<Map<String, String>> _getAuthHeaders() async {
     final token = await _getAccessToken();
     return {
@@ -67,44 +69,46 @@ class GeminiPatternService {
     };
   }
 
-  // Get the Vertex AI endpoint for Gemini
   static String get _endpoint {
     return 'https://$_location-aiplatform.googleapis.com/v1/projects/$_projectId/locations/$_location/publishers/google/models/$_modelId:generateContent';
   }
 
-  // Generate pattern breakdown based on test results and incorrect attempts
   static Future<String> generatePatternBreakdown(
     List<Map<String, dynamic>> testResults,
     List<Map<String, dynamic>> todaysTroubles,
   ) async {
     try {
-      print("DEBUG: Starting dyslexia pattern breakdown generation");
-      print("DEBUG: Test results count: ${testResults.length}");
-      print("DEBUG: Today's troubles count: ${todaysTroubles.length}");
-      
-      // Check if we have any data to analyze
+      debugPrint("DEBUG: Starting dyslexia pattern breakdown generation");
+      debugPrint("DEBUG: Test results count: ${testResults.length}");
+      debugPrint("DEBUG: Today's troubles count: ${todaysTroubles.length}");
+
       if (testResults.isEmpty && todaysTroubles.isEmpty) {
-        print("DEBUG: No data available for analysis");
+        debugPrint("DEBUG: No data available for analysis");
         return 'No test results or practice data available yet. Complete a dyslexia test to get personalized pattern analysis.';
       }
-      
-      // Prepare detailed test results analysis
+
       String testResultsAnalysis = '';
       if (testResults.isNotEmpty) {
-        print("DEBUG: Processing ${testResults.length} test results");
-        testResultsAnalysis = testResults.map((test) {
-          final date = test['timestamp']?.toDate()?.toString() ?? 'Unknown date';
-          final heading = test['heading'] ?? 'No heading';
-          final originalSentence = test['originalSentence'] ?? '';
-          final writtenResponse = test['writtenResponse'] ?? '';
-          final speechResponse = test['speechResponse'] ?? '';
-          final writtenAnalysis = test['writtenAnalysis'] ?? '';
-          final speechAnalysis = test['speechAnalysis'] ?? '';
-          
-          print("DEBUG: Test - Heading: $heading, Original: $originalSentence");
-          print("DEBUG: Written: $writtenResponse, Speech: $speechResponse");
-          
-          return '''
+        debugPrint("DEBUG: Processing ${testResults.length} test results");
+        testResultsAnalysis = testResults
+            .map((test) {
+              final date =
+                  test['timestamp']?.toDate()?.toString() ?? 'Unknown date';
+              final heading = test['heading'] ?? 'No heading';
+              final originalSentence = test['originalSentence'] ?? '';
+              final writtenResponse = test['writtenResponse'] ?? '';
+              final speechResponse = test['speechResponse'] ?? '';
+              final writtenAnalysis = test['writtenAnalysis'] ?? '';
+              final speechAnalysis = test['speechAnalysis'] ?? '';
+
+              debugPrint(
+                "DEBUG: Test - Heading: $heading, Original: $originalSentence",
+              );
+              debugPrint(
+                "DEBUG: Written: $writtenResponse, Speech: $speechResponse",
+              );
+
+              return '''
 Test Date: $date
 Test Heading: "$heading"
 Original Sentence: "$originalSentence"
@@ -117,16 +121,18 @@ $writtenAnalysis
 Speech Analysis:
 $speechAnalysis
 ''';
-        }).join('\n---\n\n');
+            })
+            .join('\n---\n\n');
       }
 
-      // Prepare today's troubles summary
       String troublesSummary = '';
       if (todaysTroubles.isNotEmpty) {
-        print("DEBUG: Processing ${todaysTroubles.length} trouble items");
-        troublesSummary = todaysTroubles.map((trouble) {
-          return '- Word: "${trouble['word']}" (Practice Type: ${trouble['practiceType']}, Failed ${trouble['count']} time${trouble['count'] == 1 ? '' : 's'})';
-        }).join('\n');
+        debugPrint("DEBUG: Processing ${todaysTroubles.length} trouble items");
+        troublesSummary = todaysTroubles
+            .map((trouble) {
+              return '- Word: "${trouble['word']}" (Practice Type: ${trouble['practiceType']}, Failed ${trouble['count']} time${trouble['count'] == 1 ? '' : 's'})';
+            })
+            .join('\n');
       }
 
       final prompt = '''
@@ -167,134 +173,147 @@ Analyze the dyslexia patterns from the test results and generate a detailed, cus
 Generate the dyslexia pattern analysis now:
 ''';
 
-      print("DEBUG: Prompt length: ${prompt.length} characters");
-      print("DEBUG: Getting authentication headers");
-      
-      // Get headers with OAuth token
+      debugPrint("DEBUG: Prompt length: ${prompt.length} characters");
+      debugPrint("DEBUG: Getting authentication headers");
+
       final headers = await _getAuthHeaders();
-      print("DEBUG: Successfully got auth headers");
-      
-      // Prepare request body for Gemini model
+      debugPrint("DEBUG: Successfully got auth headers");
+
       final requestBody = jsonEncode({
         "contents": [
           {
             "role": "user",
             "parts": [
-              {
-                "text": prompt
-              }
-            ]
-          }
+              {"text": prompt},
+            ],
+          },
         ],
         "generationConfig": {
           "temperature": 0.3,
           "maxOutputTokens": 200,
           "topK": 40,
-          "topP": 0.95
-        }
+          "topP": 0.95,
+        },
       });
-      
-      print("DEBUG: Request body prepared, making API call to: $_endpoint");
+
+      debugPrint(
+        "DEBUG: Request body prepared, making API call to: $_endpoint",
+      );
       final response = await http.post(
         Uri.parse(_endpoint),
         headers: headers,
         body: requestBody,
       );
-      
-      print("DEBUG: Pattern breakdown response status: ${response.statusCode}");
-      print("DEBUG: Response body preview: ${response.body.substring(0, min(500, response.body.length))}");
-      
+
+      debugPrint(
+        "DEBUG: Pattern breakdown response status: ${response.statusCode}",
+      );
+      debugPrint(
+        "DEBUG: Response body preview: ${response.body.substring(0, min(500, response.body.length))}",
+      );
+
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        print("DEBUG: Successfully decoded JSON response");
+        debugPrint("DEBUG: Successfully decoded JSON response");
+
         
-        // Extract text from Gemini response
-        if (responseData.containsKey('candidates') && 
-            responseData['candidates'] is List && 
+        if (responseData.containsKey('candidates') &&
+            responseData['candidates'] is List &&
             responseData['candidates'].isNotEmpty) {
-          
           var candidate = responseData['candidates'][0];
-          if (candidate.containsKey('content') && 
-              candidate['content'].containsKey('parts') && 
-              candidate['content']['parts'] is List && 
+          if (candidate.containsKey('content') &&
+              candidate['content'].containsKey('parts') &&
+              candidate['content']['parts'] is List &&
               candidate['content']['parts'].isNotEmpty) {
-            
             final text = candidate['content']['parts'][0]['text'] ?? '';
-            print("DEBUG: Successfully extracted text: ${text.substring(0, min(100, text.length))}...");
+            debugPrint(
+              "DEBUG: Successfully extracted text: ${text.substring(0, min(100, text.length))}...",
+            );
             return text.trim();
           } else {
-            print("ERROR: Response structure unexpected - missing content/parts");
-            print("DEBUG: Candidate structure: $candidate");
+            debugPrint(
+              "ERROR: Response structure unexpected - missing content/parts",
+            );
+            debugPrint("DEBUG: Candidate structure: $candidate");
           }
         } else {
-          print("ERROR: Response structure unexpected - missing candidates");
-          print("DEBUG: Response structure keys: ${responseData.keys}");
+          debugPrint(
+            "ERROR: Response structure unexpected - missing candidates",
+          );
+          debugPrint("DEBUG: Response structure keys: ${responseData.keys}");
         }
       } else {
-        print("ERROR: API call failed with status ${response.statusCode}");
-        print("ERROR: Response body: ${response.body}");
+        debugPrint("ERROR: API call failed with status ${response.statusCode}");
+        debugPrint("ERROR: Response body: ${response.body}");
       }
-      
-      throw Exception("Failed to generate pattern breakdown: ${response.statusCode}");
+
+      throw Exception(
+        "Failed to generate pattern breakdown: ${response.statusCode}",
+      );
     } catch (e) {
-      print("ERROR in generatePatternBreakdown: $e");
-      print("ERROR: Stack trace: ${StackTrace.current}");
-      // Return a meaningful dyslexia-focused fallback
+      debugPrint("ERROR in generatePatternBreakdown: $e");
+      debugPrint("ERROR: Stack trace: ${StackTrace.current}");
+      
       return _generateDyslexiaPatternFallback(testResults, todaysTroubles);
     }
   }
 
-  // Simple fallback when Gemini API fails
+  
   static String _generateDyslexiaPatternFallback(
     List<Map<String, dynamic>> testResults,
     List<Map<String, dynamic>> todaysTroubles,
   ) {
-    print("DEBUG: Using fallback pattern analysis");
+    debugPrint("DEBUG: Using fallback pattern analysis");
+
     
-    // If we have test results, try to extract some basic patterns
     if (testResults.isNotEmpty) {
       List<String> patterns = [];
-      
+
       for (var test in testResults) {
-        final heading = test['heading']?.toString() ?? '';
         final originalSentence = test['originalSentence']?.toString() ?? '';
         final writtenResponse = test['writtenResponse']?.toString() ?? '';
         final speechResponse = test['speechResponse']?.toString() ?? '';
+
+        debugPrint(
+          "DEBUG: Analyzing test - Original: '$originalSentence', Written: '$writtenResponse', Speech: '$speechResponse'",
+        );
+
         
-        print("DEBUG: Analyzing test - Original: '$originalSentence', Written: '$writtenResponse', Speech: '$speechResponse'");
-        
-        // Look for specific patterns in the actual responses
         if (originalSentence.isNotEmpty && writtenResponse.isNotEmpty) {
-          // Check for b/d confusion
-          if (originalSentence.toLowerCase().contains('d') && writtenResponse.toLowerCase().contains('b')) {
+          
+          if (originalSentence.toLowerCase().contains('d') &&
+              writtenResponse.toLowerCase().contains('b')) {
             patterns.add('confuses \'b\' and \'d\' letters');
           }
+
           
-          // Check for omissions
           if (writtenResponse.length < originalSentence.length / 2) {
             patterns.add('tends to omit large portions of sentences');
           }
+
           
-          // Check for specific letter reversals
-          if (writtenResponse.toLowerCase().contains('dib') && originalSentence.toLowerCase().contains('did')) {
+          if (writtenResponse.toLowerCase().contains('dib') &&
+              originalSentence.toLowerCase().contains('did')) {
             patterns.add('wrote \'Dib\' instead of \'Did\'');
           }
         }
-        
+
         if (speechResponse.isNotEmpty && originalSentence.isNotEmpty) {
-          // Check for sound substitutions
-          if (speechResponse.toLowerCase().contains('dogs') && originalSentence.toLowerCase().contains('dog') && !originalSentence.toLowerCase().contains('dogs')) {
+          
+          if (speechResponse.toLowerCase().contains('dogs') &&
+              originalSentence.toLowerCase().contains('dog') &&
+              !originalSentence.toLowerCase().contains('dogs')) {
             patterns.add('adds plural sounds (\'dogs\' for \'dog\')');
           }
         }
       }
-      
+
       if (patterns.isNotEmpty) {
         final uniquePatterns = patterns.toSet().take(3).toList();
         return 'Based on recent tests, your child ${uniquePatterns.join(', ')}. These patterns indicate specific areas where targeted practice can help improve reading and writing skills.';
       }
     }
-    
+
     return 'Unable to analyze patterns at this time. Check the app logs for technical details, or try completing a new dyslexia test to generate fresh analysis.';
   }
 }
@@ -335,26 +354,28 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Load parent profile
-        final parentDoc = await FirebaseFirestore.instance
-            .collection('parents')
-            .doc(user.uid)
-            .get();
+        
+        final parentDoc =
+            await FirebaseFirestore.instance
+                .collection('parents')
+                .doc(user.uid)
+                .get();
 
         if (parentDoc.exists) {
           setState(() {
             _parentName = parentDoc.data()?['name'] ?? 'Parent';
           });
 
-          // Find child account with the same email
+          
           final email = user.email;
           if (email != null) {
-            final childQuery = await FirebaseFirestore.instance
-                .collection('users')
-                .where('email', isEqualTo: email)
-                .limit(1)
-                .get();
-            
+            final childQuery =
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .where('email', isEqualTo: email)
+                    .limit(1)
+                    .get();
+
             if (childQuery.docs.isNotEmpty) {
               final childId = childQuery.docs.first.id;
               await _loadChildData(childId);
@@ -362,12 +383,12 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
           }
         }
       }
-      
+
       setState(() {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading parent data: $e');
+      debugPrint('Error loading parent data: $e');
       setState(() {
         _isLoading = false;
       });
@@ -376,33 +397,35 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
 
   Future<void> _loadChildData(String childId) async {
     try {
-      // Load child profile
-      final childDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(childId)
-          .get();
+      
+      final childDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(childId)
+              .get();
 
       if (childDoc.exists) {
-        // Get child's current level
+        
         setState(() {
           _childLevel = childDoc.data()?['level'] ?? 'Beginner';
           _childId = childId;
         });
 
-        // Get today's date in the format used in Firestore
-        final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
         
-        // Get today's incorrect attempts
-        final attemptsSnapshot = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(childId)
-            .collection('daily_score')
-            .doc(dateStr)
-            .collection('attempts')
-            .where('isCorrect', isEqualTo: false)
-            .get();
+        final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-        // Create a map to track unique words and their count
+        
+        final attemptsSnapshot =
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(childId)
+                .collection('daily_score')
+                .doc(dateStr)
+                .collection('attempts')
+                .where('isCorrect', isEqualTo: false)
+                .get();
+
+        
         final Map<String, Map<String, dynamic>> uniqueWords = {};
 
         for (var doc in attemptsSnapshot.docs) {
@@ -416,20 +439,24 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               'count': 1,
             };
           } else {
-            // Increment count for repeated words
-            uniqueWords[word]?['count'] = (uniqueWords[word]?['count'] ?? 0) + 1;
+            
+            uniqueWords[word]?['count'] =
+                (uniqueWords[word]?['count'] ?? 0) + 1;
           }
         }
 
-        // Convert to list and take only the first 3 unique words
+        
         final troublesList = uniqueWords.values.toList();
         final limitedTroublesList = troublesList.take(3).toList();
 
-        // Get recent test results for pattern analysis
+        
         final testResults = await _fetchRecentTestResults(childId);
 
-        // Generate pattern breakdown using Gemini
-        final patternBreakdown = await _generatePatternBreakdownWithGemini(testResults, troublesList);
+        
+        final patternBreakdown = await _generatePatternBreakdownWithGemini(
+          testResults,
+          troublesList,
+        );
 
         setState(() {
           _recentTroubles = limitedTroublesList;
@@ -437,99 +464,105 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         });
       }
     } catch (e) {
-      print('Error loading child data: $e');
-      // Set fallback pattern breakdown if error occurs
+      debugPrint('Error loading child data: $e');
+      
       setState(() {
-        _patternBreakdown = 'Unable to analyze patterns at this time. Please check back later for updated dyslexia pattern insights.';
+        _patternBreakdown =
+            'Unable to analyze patterns at this time. Please check back later for updated dyslexia pattern insights.';
       });
     }
   }
 
-  // Fetch recent test results for pattern analysis
-  Future<List<Map<String, dynamic>>> _fetchRecentTestResults(String childId) async {
+  
+  Future<List<Map<String, dynamic>>> _fetchRecentTestResults(
+    String childId,
+  ) async {
     try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(childId)
-          .collection('test_results')
-          .orderBy('timestamp', descending: true)
-          .limit(3)
-          .get();
+      final querySnapshot =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(childId)
+              .collection('test_results')
+              .orderBy('timestamp', descending: true)
+              .limit(3)
+              .get();
 
       return querySnapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
-      print('Error fetching test results: $e');
+      debugPrint('Error fetching test results: $e');
       return [];
     }
   }
 
-  // Generate pattern breakdown using Gemini service
+  
   Future<String> _generatePatternBreakdownWithGemini(
     List<Map<String, dynamic>> testResults,
     List<Map<String, dynamic>> troubles,
   ) async {
     try {
-      // Ensure service account file exists (you might want to add this helper)
-      await _ensureServiceAccountExists();
       
-      return await GeminiPatternService.generatePatternBreakdown(testResults, troubles);
+      await _ensureServiceAccountExists();
+
+      return await GeminiPatternService.generatePatternBreakdown(
+        testResults,
+        troubles,
+      );
     } catch (e) {
-      print('Error generating pattern breakdown with Gemini: $e');
-      return GeminiPatternService._generateDyslexiaPatternFallback(testResults, troubles);
+      debugPrint('Error generating pattern breakdown with Gemini: $e');
+      return GeminiPatternService._generateDyslexiaPatternFallback(
+        testResults,
+        troubles,
+      );
     }
   }
 
-  // Ensure service account file exists (copy from CustomPracticeService)
+  
   Future<void> _ensureServiceAccountExists() async {
     try {
       final directory = await getApplicationDocumentsDirectory();
       final credentialsPath = '${directory.path}/service-account.json';
       final file = File(credentialsPath);
-      
+
       if (!await file.exists()) {
-        print("DEBUG: Service account file doesn't exist, copying from assets");
-        // Copy from assets using rootBundle
+        debugPrint(
+          "DEBUG: Service account file doesn't exist, copying from assets",
+        );
+        
         final byteData = await rootBundle.load('assets/service-account.json');
         final buffer = byteData.buffer;
         await file.writeAsBytes(
-            buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
-        print("DEBUG: Service account file copied successfully");
+          buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
+        );
+        debugPrint("DEBUG: Service account file copied successfully");
       } else {
-        print("DEBUG: Service account file already exists");
+        debugPrint("DEBUG: Service account file already exists");
       }
     } catch (e) {
-      print("ERROR: Failed to setup service account file: $e");
+      debugPrint("ERROR: Failed to setup service account file: $e");
     }
-  }
-
-  // Simple fallback pattern breakdown method 
-  String _generateFallbackPatternBreakdown(List<Map<String, dynamic>> troubles) {
-    return 'Pattern analysis temporarily unavailable. Please try refreshing to get detailed insights about your child\'s learning patterns.';
   }
 
   void _logout() async {
     try {
       await FirebaseAuth.instance.signOut();
       if (!mounted) return;
-      // Navigate to AuthScreen after signing out
+      
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (context) => const AuthScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const AuthScreen()),
         (route) => false,
       );
     } catch (e) {
-      print('Error signing out: $e');
+      debugPrint('Error signing out: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error signing out: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error signing out: $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    String greeting = _getGreeting();
+    _getGreeting();
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -543,27 +576,28 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SafeArea(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildGreetingCard(),
-                    const SizedBox(height: 16),
-                    _buildLevelCard(),
-                    const SizedBox(height: 16),
-                    _buildRecentTroublesCard(),
-                    const SizedBox(height: 16),
-                    _buildPatternBreakdownCard(),
-                    const SizedBox(height: 16),
-                    _buildProgressDashboardCard(),
-                    const SizedBox(height: 24),
-                  ],
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SafeArea(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildGreetingCard(),
+                      const SizedBox(height: 16),
+                      _buildLevelCard(),
+                      const SizedBox(height: 16),
+                      _buildRecentTroublesCard(),
+                      const SizedBox(height: 16),
+                      _buildPatternBreakdownCard(),
+                      const SizedBox(height: 16),
+                      _buildProgressDashboardCard(),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
-            ),
     );
   }
 
@@ -576,7 +610,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -627,26 +661,29 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   }
 
   Widget _buildLevelCard() {
-    // Get the level info based on the child's level
-    final levelString = _childLevel.toLowerCase();
-    DifficultyLevel childLevel = DifficultyLevel.easy; // Default to easy
     
-    // Map the string level to DifficultyLevel enum
+    final levelString = _childLevel.toLowerCase();
+    DifficultyLevel childLevel = DifficultyLevel.easy; 
+
+    
     if (levelString.contains('medium')) {
       childLevel = DifficultyLevel.medium;
     } else if (levelString.contains('hard')) {
       childLevel = DifficultyLevel.hard;
     }
-    
+
     final levelInfo = DailyScoringService.getLevelDisplayInfo(childLevel);
-    
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       elevation: 0,
-      color: (levelInfo['color'] as Color).withOpacity(0.1),
+      color: (levelInfo['color'] as Color).withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: (levelInfo['color'] as Color).withOpacity(0.3), width: 1),
+        side: BorderSide(
+          color: (levelInfo['color'] as Color).withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -685,7 +722,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
       color: Colors.grey[200],
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: const Color.fromARGB(98, 154, 151, 151), width: 1),
+        side: BorderSide(
+          color: const Color.fromARGB(98, 154, 151, 151),
+          width: 1,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -723,51 +763,55 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
             ..._recentTroubles.isEmpty
                 ? [const Text('No incorrect attempts recorded today')]
                 : _recentTroubles.map((trouble) {
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      color: Colors.white,
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        title: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                trouble['word'],
-                                style: const TextStyle(
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.red[100],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${trouble['count']} ${trouble['count'] == 1 ? 'time' : 'times'}',
-                                style: TextStyle(
-                                  color: Colors.red[800],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        subtitle: Text(
-                          'Practice Type: ${trouble['practiceType']}',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    color: Colors.white,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
                       ),
-                    );
-                  }).toList(),
+                      title: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              trouble['word'],
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red[100],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${trouble['count']} ${trouble['count'] == 1 ? 'time' : 'times'}',
+                              style: TextStyle(
+                                color: Colors.red[800],
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      subtitle: Text(
+                        'Practice Type: ${trouble['practiceType']}',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  );
+                }).toList(),
           ],
         ),
       ),
@@ -778,11 +822,12 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => WrongWordDetailsScreen(
-          childId: _childId,
-          wordId: trouble['id'],
-          word: trouble['word'],
-        ),
+        builder:
+            (context) => WrongWordDetailsScreen(
+              childId: _childId,
+              wordId: trouble['id'],
+              word: trouble['word'],
+            ),
       ),
     );
   }
@@ -791,10 +836,13 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       elevation: 0,
-      color: const Color.fromARGB(182, 239, 239, 214), // Light beige
+      color: const Color.fromARGB(182, 239, 239, 214), 
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: const Color.fromARGB(100, 166, 155, 99)!, width: 1),
+        side: BorderSide(
+          color: const Color.fromARGB(100, 166, 155, 99),
+          width: 1,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -838,17 +886,26 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       elevation: 0,
-      color: const Color.fromARGB(88, 197, 223, 214), // Darker green-gray as requested
+      color: const Color.fromARGB(
+        88,
+        197,
+        223,
+        214,
+      ), 
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: const Color.fromARGB(100, 86, 112, 104)!, width: 1),
+        side: BorderSide(
+          color: const Color.fromARGB(100, 86, 112, 104),
+          width: 1,
+        ),
       ),
       child: InkWell(
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ParentChildDashboardScreen(childId: _childId),
+              builder:
+                  (context) => ParentChildDashboardScreen(childId: _childId),
             ),
           );
         },
@@ -869,7 +926,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               const Icon(
                 Icons.trending_up,
                 size: 40,
-                color: Color(0xFF324259), // Dark blue/gray color
+                color: Color(0xFF324259), 
               ),
             ],
           ),

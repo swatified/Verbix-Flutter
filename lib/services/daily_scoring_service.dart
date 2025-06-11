@@ -1,4 +1,3 @@
-import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,8 +11,7 @@ enum DifficultyLevel {
 
 class DailyScore {
   final String userId;
-  final String date; // YYYY-MM-DD format
-  final int correctAnswers;
+  final String date;   final int correctAnswers;
   final int totalAttempts;
   final double accuracy;
   final DifficultyLevel levelAtStart;
@@ -67,17 +65,13 @@ class DailyScore {
 }
 
 class DailyScoringService {
-  static const double LEVEL_UP_THRESHOLD = 0.85; // 85%
-  static const double LEVEL_DOWN_THRESHOLD = 0.25; // 25%
-
-  // Get today's date string
-  static String _getTodayDateString() {
+  static const double levelUpThreshold = 0.85;   static const double levelDownThreshold = 0.25; 
+    static String _getTodayDateString() {
     final now = DateTime.now();
     return "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
   }
 
-  // Get user's current difficulty level
-  static Future<DifficultyLevel> getCurrentUserLevel() async {
+    static Future<DifficultyLevel> getCurrentUserLevel() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return DifficultyLevel.easy;
@@ -95,17 +89,15 @@ class DailyScoringService {
         );
       }
 
-      // If no level set, initialize to easy
-      await _setUserLevel(DifficultyLevel.easy);
+            await _setUserLevel(DifficultyLevel.easy);
       return DifficultyLevel.easy;
     } catch (e) {
-      print('Error getting user level: $e');
+      debugPrint('Error getting user level: $e');
       return DifficultyLevel.easy;
     }
   }
 
-  // Set user's difficulty level
-  static Future<void> _setUserLevel(DifficultyLevel level) async {
+    static Future<void> _setUserLevel(DifficultyLevel level) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
@@ -118,14 +110,13 @@ class DailyScoringService {
         'levelUpdatedAt': FieldValue.serverTimestamp(),
       });
 
-      print('User level updated to: ${level.toString().split('.').last}');
+      debugPrint('User level updated to: ${level.toString().split('.').last}');
     } catch (e) {
-      print('Error setting user level: $e');
+      debugPrint('Error setting user level: $e');
     }
   }
 
-  // Record a single attempt (question-wise)
-  static Future<void> recordAttempt({
+    static Future<void> recordAttempt({
     required bool isCorrect,
     required String practiceId,
     required String practiceType,
@@ -138,8 +129,7 @@ class DailyScoringService {
       final dateStr = _getTodayDateString();
       final userLevel = await getCurrentUserLevel();
       
-      // Reference to today's daily score document
-      final dailyScoreRef = FirebaseFirestore.instance
+            final dailyScoreRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('daily_score')
@@ -149,8 +139,7 @@ class DailyScoringService {
         final doc = await transaction.get(dailyScoreRef);
         
         if (doc.exists) {
-          // Update existing document
-          final data = doc.data()!;
+                    final data = doc.data()!;
           final currentCorrect = data['correctAnswers'] as int;
           final currentTotal = data['totalAttempts'] as int;
           
@@ -165,8 +154,7 @@ class DailyScoringService {
             'lastUpdated': FieldValue.serverTimestamp(),
           });
         } else {
-          // Create new document
-          final newCorrect = isCorrect ? 1 : 0;
+                    final newCorrect = isCorrect ? 1 : 0;
           const newTotal = 1;
           final newAccuracy = newCorrect / newTotal;
           
@@ -184,8 +172,7 @@ class DailyScoringService {
         }
       });
 
-      // Also record detailed attempt info
-      await _recordDetailedAttempt(
+            await _recordDetailedAttempt(
         isCorrect: isCorrect,
         practiceId: practiceId,
         practiceType: practiceType,
@@ -193,14 +180,13 @@ class DailyScoringService {
         dateStr: dateStr,
       );
 
-      print('Recorded attempt: correct=$isCorrect, practice=$practiceId, word=${wordOrText ?? "N/A"}');
+      debugPrint('Recorded attempt: correct=$isCorrect, practice=$practiceId, word=${wordOrText ?? "N/A"}');
     } catch (e) {
-      print('Error recording attempt: $e');
+      debugPrint('Error recording attempt: $e');
     }
   }
 
-  // Record detailed attempt information
-  static Future<void> _recordDetailedAttempt({
+    static Future<void> _recordDetailedAttempt({
     required bool isCorrect,
     required String practiceId,
     required String practiceType,
@@ -228,12 +214,11 @@ class DailyScoringService {
         'timestamp': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      print('Error recording detailed attempt: $e');
+      debugPrint('Error recording detailed attempt: $e');
     }
   }
 
-  // Get today's daily score
-  static Future<DailyScore?> getTodayScore() async {
+    static Future<DailyScore?> getTodayScore() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return null;
@@ -251,13 +236,12 @@ class DailyScoringService {
       }
       return null;
     } catch (e) {
-      print('Error getting today score: $e');
+      debugPrint('Error getting today score: $e');
       return null;
     }
   }
 
-  // Process end of day scoring and level adjustment
-  static Future<DifficultyLevel?> processEndOfDay() async {
+    static Future<DifficultyLevel?> processEndOfDay() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return null;
@@ -265,19 +249,16 @@ class DailyScoringService {
       final dateStr = _getTodayDateString();
       final currentLevel = await getCurrentUserLevel();
       
-      // Get today's score
-      final dailyScore = await getTodayScore();
+            final dailyScore = await getTodayScore();
       if (dailyScore == null || dailyScore.totalAttempts == 0) {
-        print('No attempts today, keeping current level');
+        debugPrint('No attempts today, keeping current level');
         return currentLevel;
       }
 
-      // Determine new level based on accuracy
-      DifficultyLevel newLevel = currentLevel;
+            DifficultyLevel newLevel = currentLevel;
       
-      if (dailyScore.accuracy >= LEVEL_UP_THRESHOLD) {
-        // Level up (if not already at max)
-        switch (currentLevel) {
+      if (dailyScore.accuracy >= levelUpThreshold) {
+                switch (currentLevel) {
           case DifficultyLevel.easy:
             newLevel = DifficultyLevel.medium;
             break;
@@ -285,15 +266,12 @@ class DailyScoringService {
             newLevel = DifficultyLevel.hard;
             break;
           case DifficultyLevel.hard:
-            newLevel = DifficultyLevel.hard; // Stay at hard
-            break;
+            newLevel = DifficultyLevel.hard;             break;
         }
-      } else if (dailyScore.accuracy <= LEVEL_DOWN_THRESHOLD) {
-        // Level down (if not already at min)
-        switch (currentLevel) {
+      } else if (dailyScore.accuracy <= levelDownThreshold) {
+                switch (currentLevel) {
           case DifficultyLevel.easy:
-            newLevel = DifficultyLevel.easy; // Stay at easy
-            break;
+            newLevel = DifficultyLevel.easy;             break;
           case DifficultyLevel.medium:
             newLevel = DifficultyLevel.easy;
             break;
@@ -302,14 +280,11 @@ class DailyScoringService {
             break;
         }
       }
-      // If 25% < accuracy < 85%, stay at same level
-
-      // Update level if changed
-      if (newLevel != currentLevel) {
+      
+            if (newLevel != currentLevel) {
         await _setUserLevel(newLevel);
         
-        // Update the daily score with the new level
-        await FirebaseFirestore.instance
+                await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .collection('daily_score')
@@ -318,22 +293,21 @@ class DailyScoringService {
           'levelAtEnd': newLevel.toString().split('.').last,
         });
 
-        print('Level changed from ${currentLevel.toString().split('.').last} to ${newLevel.toString().split('.').last}');
-        print('Based on accuracy: ${(dailyScore.accuracy * 100).toStringAsFixed(1)}%');
+        debugPrint('Level changed from ${currentLevel.toString().split('.').last} to ${newLevel.toString().split('.').last}');
+        debugPrint('Based on accuracy: ${(dailyScore.accuracy * 100).toStringAsFixed(1)}%');
       } else {
-        print('Level unchanged: ${currentLevel.toString().split('.').last}');
-        print('Based on accuracy: ${(dailyScore.accuracy * 100).toStringAsFixed(1)}%');
+        debugPrint('Level unchanged: ${currentLevel.toString().split('.').last}');
+        debugPrint('Based on accuracy: ${(dailyScore.accuracy * 100).toStringAsFixed(1)}%');
       }
 
       return newLevel;
     } catch (e) {
-      print('Error processing end of day: $e');
+      debugPrint('Error processing end of day: $e');
       return null;
     }
   }
 
-  // Get user's performance history
-  static Future<List<DailyScore>> getPerformanceHistory({int days = 7}) async {
+    static Future<List<DailyScore>> getPerformanceHistory({int days = 7}) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return [];
@@ -350,19 +324,17 @@ class DailyScoringService {
           .map((doc) => DailyScore.fromMap(doc.data()))
           .toList();
     } catch (e) {
-      print('Error getting performance history: $e');
+      debugPrint('Error getting performance history: $e');
       return [];
     }
   }
 
-  // Check if we need to process end of day (call this when user opens app)
-  static Future<void> checkAndProcessDayTransition() async {
+    static Future<void> checkAndProcessDayTransition() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
-      // Check if we have yesterday's unprocessed data
-      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+            final yesterday = DateTime.now().subtract(const Duration(days: 1));
       final yesterdayStr = "${yesterday.year}-${yesterday.month.toString().padLeft(2, '0')}-${yesterday.day.toString().padLeft(2, '0')}";
       
       final yesterdayDoc = await FirebaseFirestore.instance
@@ -374,20 +346,16 @@ class DailyScoringService {
 
       if (yesterdayDoc.exists) {
         final data = yesterdayDoc.data()!;
-        // If levelAtEnd is null, it means we haven't processed this day yet
-        if (data['levelAtEnd'] == null && data['totalAttempts'] > 0) {
-          print('Processing yesterday\'s data...');
+                if (data['levelAtEnd'] == null && data['totalAttempts'] > 0) {
+          debugPrint('Processing yesterday\'s data...');
           
-          // Process yesterday's data
-          final yesterdayScore = DailyScore.fromMap(data);
+                    final yesterdayScore = DailyScore.fromMap(data);
           
-          // Use the level at the start of yesterday, not current level
-          final yesterdayLevel = yesterdayScore.levelAtStart;
+                    final yesterdayLevel = yesterdayScore.levelAtStart;
           
-          // Determine new level based on yesterday's accuracy
-          DifficultyLevel newLevel = yesterdayLevel;
+                    DifficultyLevel newLevel = yesterdayLevel;
           
-          if (yesterdayScore.accuracy >= LEVEL_UP_THRESHOLD) {
+          if (yesterdayScore.accuracy >= levelUpThreshold) {
             switch (yesterdayLevel) {
               case DifficultyLevel.easy:
                 newLevel = DifficultyLevel.medium;
@@ -399,7 +367,7 @@ class DailyScoringService {
                 newLevel = DifficultyLevel.hard;
                 break;
             }
-          } else if (yesterdayScore.accuracy <= LEVEL_DOWN_THRESHOLD) {
+          } else if (yesterdayScore.accuracy <= levelDownThreshold) {
             switch (yesterdayLevel) {
               case DifficultyLevel.easy:
                 newLevel = DifficultyLevel.easy;
@@ -413,19 +381,17 @@ class DailyScoringService {
             }
           }
 
-          // Update level if changed
-          if (newLevel != yesterdayLevel) {
+                    if (newLevel != yesterdayLevel) {
             await _setUserLevel(newLevel);
           }
 
-          // Mark yesterday as processed
-          await yesterdayDoc.reference.update({
+                    await yesterdayDoc.reference.update({
             'levelAtEnd': newLevel.toString().split('.').last,
           });
         }
       }
     } catch (e) {
-      print('Error checking day transition: $e');
+      debugPrint('Error checking day transition: $e');
     }
   }
 
@@ -434,23 +400,17 @@ class DailyScoringService {
     case DifficultyLevel.easy:
       return {
         'name': 'Easy',
-        'color': const Color(0xFF4CAF50), // Green
-        'icon': const IconData(0xe86c, fontFamily: 'MaterialIcons'), // sentiment_satisfied
-        'description': 'Building confidence with simpler exercises',
+        'color': const Color(0xFF4CAF50),         'icon': const IconData(0xe86c, fontFamily: 'MaterialIcons'),         'description': 'Building confidence with simpler exercises',
       };
     case DifficultyLevel.medium:
       return {
         'name': 'Medium',
-        'color': const Color(0xFFFF9800), // Orange
-        'icon': const IconData(0xe86a, fontFamily: 'MaterialIcons'), // sentiment_neutral
-        'description': 'Progressing with moderate challenges',
+        'color': const Color(0xFFFF9800),         'icon': const IconData(0xe86a, fontFamily: 'MaterialIcons'),         'description': 'Progressing with moderate challenges',
       };
     case DifficultyLevel.hard:
       return {
         'name': 'Hard',
-        'color': const Color(0xFFF44336), // Red
-        'icon': const IconData(0xe86d, fontFamily: 'MaterialIcons'), // sentiment_very_satisfied
-        'description': 'Mastering advanced exercises',
+        'color': const Color(0xFFF44336),         'icon': const IconData(0xe86d, fontFamily: 'MaterialIcons'),         'description': 'Mastering advanced exercises',
       };
   }
 }

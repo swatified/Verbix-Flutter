@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class PracticeStats {
   final int totalCompleted;
-  final int streak; // Days in a row with completed practices
-  final DateTime lastPracticeDate;
+  final int streak;   final DateTime lastPracticeDate;
   final Map<String, int> practiceTypeBreakdown;
   
   PracticeStats({
@@ -49,8 +49,7 @@ class PracticeStatsService {
           .get();
           
       if (!docSnapshot.exists) {
-        // Create default stats if none exist
-        final defaultStats = PracticeStats(
+                final defaultStats = PracticeStats(
           totalCompleted: 0,
           streak: 0,
           lastPracticeDate: DateTime.now().subtract(const Duration(days: 1)),
@@ -69,9 +68,8 @@ class PracticeStatsService {
       
       return PracticeStats.fromMap(docSnapshot.data()!);
     } catch (e) {
-      print('Error getting user stats: $e');
-      // Return default stats if there's an error
-      return PracticeStats(
+      debugPrint('Error getting user stats: $e');
+            return PracticeStats(
         totalCompleted: 0,
         streak: 0,
         lastPracticeDate: DateTime.now().subtract(const Duration(days: 1)),
@@ -87,78 +85,64 @@ class PracticeStatsService {
         throw Exception('No user signed in');
       }
       
-      // Get current stats
-      final currentStats = await getUserStats();
+            final currentStats = await getUserStats();
       
-      // Today's date with time set to midnight for proper date comparison
-      final today = DateTime(
+            final today = DateTime(
         DateTime.now().year,
         DateTime.now().month,
         DateTime.now().day,
       );
       
-      // Last practice date with time set to midnight
-      final lastDate = DateTime(
+            final lastDate = DateTime(
         currentStats.lastPracticeDate.year,
         currentStats.lastPracticeDate.month,
         currentStats.lastPracticeDate.day,
       );
       
-      // Calculate difference in days
-      final difference = today.difference(lastDate).inDays;
+            final difference = today.difference(lastDate).inDays;
       
-      // Update streak based on last practice date
-      int newStreak = currentStats.streak;
+            int newStreak = currentStats.streak;
       if (difference == 0) {
-        // Already practiced today, streak doesn't change
-        newStreak = currentStats.streak;
+                newStreak = currentStats.streak;
       } else if (difference == 1) {
-        // Practiced yesterday, streak increases
-        newStreak = currentStats.streak + 1;
+                newStreak = currentStats.streak + 1;
       } else {
-        // Missed a day, streak resets to 1
-        newStreak = 1;
+                newStreak = 1;
       }
       
-      // Update practice type breakdown
-      final typeBreakdown = Map<String, int>.from(currentStats.practiceTypeBreakdown);
+            final typeBreakdown = Map<String, int>.from(currentStats.practiceTypeBreakdown);
       typeBreakdown[practiceType] = (typeBreakdown[practiceType] ?? 0) + 1;
       
-      // Create updated stats
-      final updatedStats = PracticeStats(
+            final updatedStats = PracticeStats(
         totalCompleted: currentStats.totalCompleted + 1,
         streak: newStreak,
         lastPracticeDate: today,
         practiceTypeBreakdown: typeBreakdown,
       );
       
-      // Save to Firestore
-      await FirebaseFirestore.instance
+            await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('stats')
           .doc('practice_stats')
           .set(updatedStats.toMap());
     } catch (e) {
-      print('Error updating stats: $e');
+      debugPrint('Error updating stats: $e');
     }
   }
   
-  // Get practices completed today
-  static Future<int> getPracticesCompletedToday() async {
+    static Future<int> getPracticesCompletedToday() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('No user signed in');
       }
       
-      // Get today's date range
-      final now = DateTime.now();
+            final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
       final endOfDay = startOfDay.add(const Duration(days: 1));
       
-      // Query completed practices within today's date range
-      final querySnapshot = await FirebaseFirestore.instance
+            final querySnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('practice_modules')
@@ -169,7 +153,7 @@ class PracticeStatsService {
           
       return querySnapshot.docs.length;
     } catch (e) {
-      print('Error getting practices completed today: $e');
+      debugPrint('Error getting practices completed today: $e');
       return 0;
     }
   }

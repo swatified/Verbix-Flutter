@@ -16,19 +16,18 @@ class FeedbackPopup extends StatelessWidget {
   final bool showCloseButton;
 
   const FeedbackPopup({
-    Key? key,
+    super.key,
     required this.state,
     required this.heading,
     required this.message,
     required this.onContinue,
     this.showContinueButton = true,
     this.showCloseButton = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    // Map the state to the appropriate GIF and colors
-    String gifAsset;
+        String gifAsset;
     Color headerColor;
 
     switch (state) {
@@ -59,7 +58,7 @@ class FeedbackPopup extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha:0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -68,8 +67,7 @@ class FeedbackPopup extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Close button at the top right if needed
-            if (showCloseButton)
+                        if (showCloseButton)
               Align(
                 alignment: Alignment.topRight,
                 child: GestureDetector(
@@ -82,8 +80,7 @@ class FeedbackPopup extends StatelessWidget {
                 ),
               ),
 
-            // GIF animation
-            SizedBox(
+                        SizedBox(
               height: 120,
               width: 120,
               child: Image.asset(
@@ -93,8 +90,7 @@ class FeedbackPopup extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Heading
-            Text(
+                        Text(
               heading,
               style: TextStyle(
                 fontSize: 20,
@@ -105,8 +101,7 @@ class FeedbackPopup extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // Message
-            Text(
+                        Text(
               message,
               style: const TextStyle(
                 fontSize: 16,
@@ -116,8 +111,7 @@ class FeedbackPopup extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Continue button
-            if (showContinueButton)
+                        if (showContinueButton)
               ElevatedButton(
                 onPressed: onContinue,
                 style: ElevatedButton.styleFrom(

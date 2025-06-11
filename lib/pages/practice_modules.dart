@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:verbix/services/practice_module_service.dart'; // Import the central service
-import 'module_details.dart'; // Assuming ModuleDetailScreen is moved to its own file
+import 'package:verbix/services/practice_module_service.dart';
+
+import 'module_details.dart';
 
 class PracticeModulesScreen extends StatefulWidget {
-  const PracticeModulesScreen({Key? key}) : super(key: key);
+  const PracticeModulesScreen({super.key});
 
   @override
-  _PracticeModulesScreenState createState() => _PracticeModulesScreenState();
+  PracticeModulesScreenState createState() => PracticeModulesScreenState();
 }
 
-class _PracticeModulesScreenState extends State<PracticeModulesScreen> {
+class PracticeModulesScreenState extends State<PracticeModulesScreen> {
   List<PracticeModule> modules = [];
   bool isLoading = true;
-  
+
   @override
   void initState() {
     super.initState();
     _loadModules();
-    
-    // Subscribe to module updates
+
     PracticeModuleService.moduleStream.listen((updatedModules) {
       setState(() {
         modules = updatedModules;
@@ -30,14 +30,14 @@ class _PracticeModulesScreenState extends State<PracticeModulesScreen> {
     setState(() {
       isLoading = true;
     });
-    
+
     try {
-      // Load modules from the central service
       final loadedModules = await PracticeModuleService.getModules();
       setState(() {
         modules = loadedModules;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading modules: ${e.toString()}')),
       );
@@ -63,36 +63,36 @@ class _PracticeModulesScreenState extends State<PracticeModulesScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: modules.length,
-              itemBuilder: (context, index) {
-                final module = modules[index];
-                return ModuleCard(
-                  module: module,
-                  onTap: () {
-                    // Navigate to the module detail screen
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ModuleDetailScreen(
-                          module: module,
-                          onProgressUpdate: (completed) {
-                            // Update progress using the central service
-                            PracticeModuleService.updateModuleProgress(
-                              module.id, 
-                              completed
-                            );
-                          },
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: modules.length,
+                itemBuilder: (context, index) {
+                  final module = modules[index];
+                  return ModuleCard(
+                    module: module,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => ModuleDetailScreen(
+                                module: module,
+                                onProgressUpdate: (completed) {
+                                  PracticeModuleService.updateModuleProgress(
+                                    module.id,
+                                    completed,
+                                  );
+                                },
+                              ),
                         ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+                      );
+                    },
+                  );
+                },
+              ),
     );
   }
 }
@@ -101,11 +101,7 @@ class ModuleCard extends StatelessWidget {
   final PracticeModule module;
   final VoidCallback onTap;
 
-  const ModuleCard({
-    Key? key,
-    required this.module,
-    required this.onTap,
-  }) : super(key: key);
+  const ModuleCard({super.key, required this.module, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -139,9 +135,10 @@ class ModuleCard extends StatelessWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: module.type == ModuleType.written
-                          ? Colors.blue.withOpacity(0.2)
-                          : Colors.green.withOpacity(0.2),
+                      color:
+                          module.type == ModuleType.written
+                              ? Colors.blue.withValues(alpha: 0.2)
+                              : Colors.green.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -149,9 +146,10 @@ class ModuleCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: module.type == ModuleType.written
-                            ? Colors.blue
-                            : Colors.green,
+                        color:
+                            module.type == ModuleType.written
+                                ? Colors.blue
+                                : Colors.green,
                       ),
                     ),
                   ),
@@ -160,10 +158,7 @@ class ModuleCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 module.description,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
               ),
               const SizedBox(height: 16),
               Column(

@@ -19,8 +19,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
   bool _isLoading = true;
   String _childName = '';
   
-  // Statistics data
-  List<Map<String, dynamic>> _weeklyData = [];
+    List<Map<String, dynamic>> _weeklyData = [];
   List<Map<String, dynamic>> _monthlyData = [];
   List<Map<String, dynamic>> _yearlyData = [];
   
@@ -36,8 +35,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         _isLoading = true;
       });
       
-      // Load child profile
-      final childDoc = await FirebaseFirestore.instance
+            final childDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.childId)
           .get();
@@ -48,8 +46,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         });
       }
       
-      // Load all statistics data concurrently
-      await Future.wait([
+            await Future.wait([
         _loadWeeklyData(),
         _loadMonthlyData(),
         _loadYearlyData(),
@@ -59,7 +56,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading dashboard data: $e');
+      debugPrint('Error loading dashboard data: $e');
       setState(() {
         _isLoading = false;
       });
@@ -69,8 +66,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
   Future<void> _loadWeeklyData() async {
     final List<Map<String, dynamic>> weekData = [];
     
-    // Get dates for the last 7 days
-    final now = DateTime.now();
+        final now = DateTime.now();
     
     for (int i = 6; i >= 0; i--) {
       final date = now.subtract(Duration(days: i));
@@ -100,7 +96,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
           });
         }
       } catch (e) {
-        print('Error loading data for $dateStr: $e');
+        debugPrint('Error loading data for $dateStr: $e');
         final String dayName = DateFormat('E').format(date);
         weekData.add({
           'date': date,
@@ -118,8 +114,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
   Future<void> _loadMonthlyData() async {
     final List<Map<String, dynamic>> monthData = [];
     
-    // Get dates for the last 30 days
-    final now = DateTime.now();
+        final now = DateTime.now();
     
     for (int i = 29; i >= 0; i--) {
       final date = now.subtract(Duration(days: i));
@@ -136,8 +131,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         if (docSnapshot.exists) {
           monthData.add({
             'date': date,
-            'label': DateFormat('MMM d').format(date), // Format as "Mar 15"
-            'value': docSnapshot.data()?['practice_done'] ?? 0,
+            'label': DateFormat('MMM d').format(date),             'value': docSnapshot.data()?['practice_done'] ?? 0,
           });
         } else {
           monthData.add({
@@ -147,7 +141,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
           });
         }
       } catch (e) {
-        print('Error loading data for $dateStr: $e');
+        debugPrint('Error loading data for $dateStr: $e');
         monthData.add({
           'date': date,
           'label': DateFormat('MMM d').format(date),
@@ -164,8 +158,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
   Future<void> _loadYearlyData() async {
     final List<Map<String, dynamic>> yearData = [];
     
-    // Get all progress documents for this user
-    try {
+        try {
       final querySnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.childId)
@@ -196,7 +189,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         _yearlyData = yearData;
       });
     } catch (e) {
-      print('Error loading yearly data: $e');
+      debugPrint('Error loading yearly data: $e');
     }
   }
 
@@ -237,10 +230,9 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
   }
 
   Widget _buildStatisticsSummary() {
-    // Calculate statistics
-    final int totalWeeklyPractices = _weeklyData.fold(0, (sum, item) => sum + (item['value'] as int));
-    final int totalMonthlyPractices = _monthlyData.fold(0, (sum, item) => sum + (item['value'] as int));
-    final int totalYearlyPractices = _yearlyData.fold(0, (sum, item) => sum + (item['value'] as int));
+        final int totalWeeklyPractices = _weeklyData.fold(0, (total, item) => total + (item['value'] as int));
+    final int totalMonthlyPractices = _monthlyData.fold(0, (total, item) => total + (item['value'] as int));
+    final int totalYearlyPractices = _yearlyData.fold(0, (total, item) => total + (item['value'] as int));
     
     return Container(
       padding: const EdgeInsets.all(16),
@@ -249,7 +241,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha:0.2),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -302,7 +294,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha:0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -340,7 +332,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha:0.2),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -366,8 +358,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
                 : BarChart(
                     BarChartData(
                       alignment: BarChartAlignment.spaceAround,
-                      maxY: 10, // Adjust based on your expected max value
-                      barTouchData: BarTouchData(
+                      maxY: 10,                       barTouchData: BarTouchData(
                         enabled: true,
                         touchTooltipData: BarTouchTooltipData(
                           getTooltipItem: (group, groupIndex, rod, rodIndex) {
@@ -478,7 +469,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha:0.2),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -538,7 +529,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
                           ),
                           belowBarData: BarAreaData(
                             show: true,
-                            color: const Color(0xFF1F5377).withOpacity(0.2),
+                            color: const Color(0xFF1F5377).withValues(alpha:0.2),
                           ),
                         ),
                       ],
@@ -608,8 +599,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
                       ),
                       minX: 0,
                       maxX: _monthlyData.length.toDouble() - 1,
-                      maxY: 10, // Adjust based on your expected max value
-                    ),
+                      maxY: 10,                     ),
                   ),
           ),
         ],
@@ -618,8 +608,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
   }
 
   Widget _buildYearlyContributionChart() {
-    // GitHub-style contribution chart
-    if (_yearlyData.isEmpty) {
+        if (_yearlyData.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -627,7 +616,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withValues(alpha:0.2),
               spreadRadius: 1,
               blurRadius: 3,
               offset: const Offset(0, 2),
@@ -638,21 +627,17 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
       );
     }
     
-    // Calculate number of weeks to display (up to 52 weeks - 1 year)
-    final int daysInYear = 365;
-    final int cellsPerRow = 7; // 7 days per week
-    final int numWeeks = (daysInYear / cellsPerRow).ceil();
+        final int daysInYear = 365;
+    final int cellsPerRow = 7;     final int numWeeks = (daysInYear / cellsPerRow).ceil();
     
-    // Map dates to values for quick lookup
-    final Map<String, int> dateValueMap = {};
+        final Map<String, int> dateValueMap = {};
     for (var data in _yearlyData) {
       final date = data['date'] as DateTime;
       final dateStr = DateFormat('yyyy-MM-dd').format(date);
       dateValueMap[dateStr] = data['value'] as int;
     }
     
-    // Create a list of all dates for the year
-    final List<DateTime> allDates = [];
+        final List<DateTime> allDates = [];
     final now = DateTime.now();
     final yearStart = DateTime(now.year, 1, 1);
     
@@ -670,7 +655,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha:0.2),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -691,10 +676,8 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
           ),
           const SizedBox(height: 12),
           
-          // Use a constrained box with aspect ratio instead of fixed height
-          AspectRatio(
-            aspectRatio: 3.5, // Width:Height ratio
-            child: SingleChildScrollView(
+                    AspectRatio(
+            aspectRatio: 3.5,             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -715,8 +698,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
                       final dateStr = DateFormat('yyyy-MM-dd').format(date);
                       final value = dateValueMap[dateStr] ?? 0;
                       
-                      // Determine contribution color based on value
-                      Color cellColor;
+                                            Color cellColor;
                       if (value == 0) {
                         cellColor = const Color(0xFFEEEEEE);
                       } else if (value <= 2) {
@@ -749,11 +731,8 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
           
           const SizedBox(height: 12),
           
-          // Use Wrap widget for the color legend
-          Wrap(
-            spacing: 12.0, // Space between legend items
-            runSpacing: 8.0, // Space between rows when wrapped
-            children: [
+                    Wrap(
+            spacing: 12.0,             runSpacing: 8.0,             children: [
               _buildColorLegendItem('None', const Color(0xFFEEEEEE)),
               _buildColorLegendItem('1-2', const Color(0xFFAED6F1)),
               _buildColorLegendItem('3-5', const Color(0xFF5DADE2)),
@@ -766,15 +745,12 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
     );
   }
 
-  // Make legend item responsive
-  Widget _buildColorLegendItem(String label, Color color) {
+    Widget _buildColorLegendItem(String label, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 8,  // Smaller fixed size
-          height: 8,  // Smaller fixed size
-          decoration: BoxDecoration(
+          width: 8,            height: 8,            decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(2),
           ),
