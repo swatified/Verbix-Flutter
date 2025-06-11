@@ -8,7 +8,7 @@
 [![Firebase](https://img.shields.io/badge/Firebase-Auth_&_Firestore-FFCA28.svg)](https://firebase.google.com)
 [![OCR](https://img.shields.io/badge/OCR-Google_ML_Kit-4285F4.svg)](https://developers.google.com/ml-kit)
 
-> <br/> Dyslexia is a learning disability which affects [5-10% of children worldwide](https://pmc.ncbi.nlm.nih.gov/articles/PMC6099274/#:~:text=Given%20that%20an%20estimated%205,and%20informed%20understandings%20of%20dyslexia.). Verbix is a cross-platform app that uses OCR and speech recognition to help children with dyslexia improve their reading and writing skills through personalized exercises and real-time feedback. 
+> <br/> Dyslexia is a learning disability which affects [5-10% of children worldwide](https://pmc.ncbi.nlm.nih.gov/articles/PMC6099274/#:~:text=Given%20that%20an%20estimated%205,and%20informed%20understandings%20of%20dyslexia.). Verbix is a cross-platform app that uses OCR and speech recognition to help children with dyslexia improve their reading and writing skills through personalized exercises and real-time feedback. Built with Flutter, it runs seamlessly on Android, iOS, and Web while maintaining an optimized APK despite rich multimedia features and advanced AI capabilities.
 
 <br/>
 
@@ -20,29 +20,47 @@
 ### *Advanced Handwriting Analysis*
 
 - Real-time OCR detects dyslexia-specific letter confusions and patterns
-- Interactive doodling and paper-written sentence analysis with instant feedback
+- Interactive doodling and paper analysis with animated mascot feedback
 
 ### *Comprehensive Speech Pattern Recognition*
 
-- Speech-to-text analysis identifies pronunciation challenges and sound confusions
-- Targeted vocal exercises with word-by-word accuracy breakdown
+- Speech-to-text identifies pronunciation challenges and sound confusions
+- Targeted vocal exercises with fun sound effects and animations
+
+### *Gamified Learning Experience*
+
+- Progressive level system with character interactions and audio feedback
+- Multiple background music options for immersive learning environment
 
 ### *Personalized Learning Journey*
 
 - 5 daily AI-generated exercises based on individual performance
-- Visual progress tracking through intuitive dashboard analytics
+- Visual progress tracking with adaptive difficulty adjustment
 
-### *Vertex AI & Gemini-Powered Insights*
+### *Custom-Tuned Vertex AI & Gemini Integration*
 
-- Gemini models provide adaptive recommendations that evolve with user progress
-- Cross-modal analysis compares speech and writing patterns for comprehensive support
+- Specialized Gemini model optimized for dyslexia patterns
+- Cross-modal analysis comparing speech and writing with adaptive recommendations
+
+### *Parent Dashboard & Monitoring*
+
+- Comprehensive analytics tracking child's progress and improvement areas
+- Real-time activity monitoring with recurring mistake analysis and reports
 
 <br/>
 
 ## App Flow
 
 ![image](https://github.com/user-attachments/assets/601fcb33-ca7e-4d12-bb32-56b6c22d7cbd)
-<br/><br/><br/>
+
+**Process Flow at a Glance:**
+- **Dual Authentication**: Separate flows for children and parents
+- **Personalized Onboarding**: Custom setup based on user type and needs
+- **Integrated Monitoring**: Parents can track child progress in real-time
+- **Adaptive Learning Path**: AI-driven exercise selection based on performance data
+- **Multi-Modal Practice**: Speech, writing, and combined exercise formats
+
+<br/>
 
 <h3 style="text-decoration: underline;">🛠️ Technical Architecture</h3>
 
@@ -108,28 +126,37 @@
 verbix/
 ├── lib/
 │   ├── pages/
-│   │   ├── auth_screen.dart       # Authentication interface
-│   │   ├── dashboard.dart         # Analytics and progress overview
-│   │   ├── home_page.dart         # Main landing page after login
-│   │   ├── main_scaffold.dart     # App structure wrapper
-│   │   ├── module_details.dart    # Specific module information
-│   │   ├── practice_modules.dart  # Exercise collection interface
-│   │   ├── practice_screen.dart   # Active practice environment
-│   │   ├── splash_screen.dart     # App initialization screen
-│   │   ├── tests.dart             # Assessment tools
-│   │   ├── user_details.dart      # Profile and settings
-│   │   └── user_settings.dart     # Configuration options
+│   │   ├── auth_screen.dart              # Authentication interface
+│   │   ├── dashboard.dart                # Analytics and progress overview
+│   │   ├── home_page.dart                # Main landing page with level system
+│   │   ├── main_scaffold.dart            # App structure wrapper
+│   │   ├── module_details.dart           # Specific module information
+│   │   ├── parent_child_dashboard.dart   # Child monitoring from parent view
+│   │   ├── parent_dashboard.dart         # Parent monitoring interface
+│   │   ├── parent_details.dart           # Parent profile and settings
+│   │   ├── practice_modules.dart         # Exercise collection interface
+│   │   ├── practice_screen.dart          # Active practice environment
+│   │   ├── splash_screen.dart            # App initialization screen
+│   │   ├── tests.dart                    # Assessment tools
+│   │   ├── user_details.dart             # Profile and settings
+│   │   ├── user_settings.dart            # Configuration options
+│   │   ├── user_type_selection.dart      # Child/Parent selection screen
+│   │   └── wrong_word_details.dart       # Mistake analysis interface
 │   ├── services/
+│   │   ├── audio_service.dart            # Background music & SFX manager
 │   │   ├── custom_practice_service.dart  # Personalized exercise generation
+│   │   ├── daily_scoring_service.dart    # Daily progress tracking
 │   │   ├── drawing_utils.dart            # Handwriting capture utilities
+│   │   ├── firebase_service.dart         # Firebase integration
 │   │   ├── practice_module_service.dart  # Module management
 │   │   └── practice_stats_service.dart   # Progress tracking analytics
-│   ├── theme/
-│   │   ├── firebase_options.dart         # Firebase configuration
-│   │   └── main.dart                     # App entry point
+│   ├── main.dart                         # App entry point
+│   ├── firebase_options.dart             # Firebase configuration
 │   └── linux/                            # Platform-specific code
 ├── assets/
 │   ├── images/
+│   ├── gifs/                             # Mascot animation files
+│   ├── audio/                            # Background music & sound effects
 │   └── vertex-credentials.json           # Vertex AI authentication
 └── .env                                  # Environment configuration
 ```
@@ -164,6 +191,7 @@ verbix/
    VERTEX_LOCATION=us-central1  # or your preferred region
    VERTEX_CREDENTIALS_PATH=assets/vertex-credentials.json
    VERTEX_API_KEY=your_vertex_api_key
+   CUSTOM_MODEL_ID=your_tuned_gemini_model_id
    ```
 
 4. Firebase Setup:
@@ -208,27 +236,31 @@ verbix/
 <table>
   <tr>
     <td width="20%"><b>Setup</b></td>
-    <td>Authenticate, create profile</td>
+    <td>Authenticate, create profile with avatar and preferences</td>
   </tr>
   <tr>
     <td><b>Home Page</b></td>
-    <td>Access personalized exercises, practice modules, tests, and profile settings</td>
+    <td>Access personalized exercises with level progression, practice modules, tests, and profile settings</td>
   </tr>
   <tr>
     <td><b>Navigation</b></td>
-    <td>Four sections: Home, Tests, Practice Modules, and Dashboard</td>
+    <td>Four sections: Home, Tests, Practice Modules, and Dashboard with animated mascot guide</td>
   </tr>
   <tr>
     <td><b>Testing</b></td>
-    <td>Complete written and spoken tests for Vertex AI analysis and personalized recommendations</td>
+    <td>Complete written and spoken tests for custom-tuned Vertex AI analysis and personalized recommendations</td>
   </tr>
   <tr>
     <td><b>Exercises</b></td>
-    <td>Interactive formats including doodle writing, paper analysis, speech practice, and combined modules</td>
+    <td>Interactive formats with background music, sound effects, and animations for doodle writing, paper analysis, speech practice, and combined modules</td>
   </tr>
   <tr>
     <td><b>Profile</b></td>
-    <td>Manage personal details, avatar, view statistics, and account settings</td>
+    <td>Manage personal details, avatar, view statistics, and account settings with audio preferences</td>
+  </tr>
+  <tr>
+    <td><b>Parent Dashboard</b></td>
+    <td>Monitor child's activity through comprehensive visualizations, track recurring mistakes, and view detailed progress reports</td>
   </tr>
 </table>
 
