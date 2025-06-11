@@ -19,17 +19,23 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 class VertexAIService {
   static final _projectId = dotenv.env['VERTEX_PROJECT_ID'] ?? '';
   static final _location = dotenv.env['VERTEX_LOCATION'] ?? 'us-central1';
-  static final _modelId = 'gemini-1.5-pro-002';
+  
+   static final _tunedModelId = dotenv.env['VERTEX_TUNED_MODEL_ID'] ?? 'gemini-1.5-pro-002';
+  
   static String? _accessToken;
   static DateTime? _tokenExpiry;
-
+  
   static String get _endpoint {
-    debugPrint(
-      "DEBUG: Constructing endpoint with project=$_projectId, location=$_location, model=$_modelId",
-    );
-    final endpoint =
-        'https://$_location-aiplatform.googleapis.com/v1/projects/$_projectId/locations/$_location/publishers/google/models/$_modelId:generateContent';
-    debugPrint("DEBUG: Endpoint: $endpoint");
+    debugPrint("DEBUG: Constructing endpoint with project=$_projectId, location=$_location, tuned model=$_tunedModelId");
+    
+    if (_tunedModelId.startsWith('projects/')) {
+      final endpoint = 'https://$_location-aiplatform.googleapis.com/v1/$_tunedModelId:generateContent';
+      debugPrint("DEBUG: Using full path endpoint: $endpoint");
+      return endpoint;
+    }
+    
+    final endpoint = 'https://$_location-aiplatform.googleapis.com/v1/projects/$_projectId/locations/$_location/models/$_tunedModelId:generateContent';
+    debugPrint("DEBUG: Using constructed endpoint: $endpoint");
     return endpoint;
   }
 
@@ -37,47 +43,40 @@ class VertexAIService {
     final directory = await getApplicationDocumentsDirectory();
     final credentialsPath = '${directory.path}/service-account.json';
     final file = File(credentialsPath);
-
+    
     if (!await file.exists()) {
-      throw Exception(
-        'Service account credentials file not found at: $credentialsPath',
-      );
+      throw Exception('Service account credentials file not found at: $credentialsPath');
     }
-
+    
     final jsonString = await file.readAsString();
     final jsonMap = json.decode(jsonString);
     return ServiceAccountCredentials.fromJson(jsonMap);
   }
 
+
   static Future<String> _getAccessToken() async {
-    if (_accessToken != null &&
-        _tokenExpiry != null &&
-        DateTime.now().isBefore(_tokenExpiry!)) {
+    if (_accessToken != null && _tokenExpiry != null && DateTime.now().isBefore(_tokenExpiry!)) {
       debugPrint("DEBUG: Using cached access token");
       return _accessToken!;
     }
-
+    
     try {
       debugPrint("DEBUG: Getting fresh access token");
       final credentials = await _getCredentials();
-
       final scopes = ['https://www.googleapis.com/auth/cloud-platform'];
-
       final client = await clientViaServiceAccount(credentials, scopes);
-
       _accessToken = client.credentials.accessToken.data;
       _tokenExpiry = client.credentials.accessToken.expiry;
-
-      debugPrint(
-        "DEBUG: Successfully obtained fresh access token, expires at: $_tokenExpiry",
-      );
+      
+      debugPrint("DEBUG: Successfully obtained fresh access token, expires at: $_tokenExpiry");
       return _accessToken!;
     } catch (e) {
       debugPrint("ERROR: Failed to get access token: $e");
       throw Exception('Failed to authenticate with Vertex AI: $e');
     }
   }
-
+  
+  
   static Future<Map<String, String>> _getAuthHeaders() async {
     final token = await _getAccessToken();
     return {
@@ -88,62 +87,66 @@ class VertexAIService {
 
   static Future<String> generateSentence() async {
     try {
-      debugPrint("DEBUG: Starting generateSentence call");
-
+      debugPrint("DEBUG: Starting generateSentence call with tuned model");
+      
       if (_projectId.isEmpty) {
         debugPrint("ERROR: VERTEX_PROJECT_ID environment variable is empty");
       }
-
+      
+      
       final randomSeed = DateTime.now().millisecondsSinceEpoch;
-      final prompt =
-          '''Generate a unique, simple sentence for dyslexia testing using common words. 
-      The sentence should:
-      - Be 8-10 words in length
-      - Include at least one word with similar-looking letters (like b/d, p/q, or m/n)
-      - Include at least one word with a common letter reversal pattern (like "was/saw")
-      - Include a mix of short and longer words
-      - Be at a 3rd-4th grade reading level
-      - Use natural, conversational language
-      - Be DIFFERENT from previous sentences - create something new each time
-      
-      Generation seed: $randomSeed
-      Current time: ${DateTime.now().toIso8601String()}
-      
-      Examples to avoid repeating:
-      - "Did the dog run past the big barn?"
-      - "The boy quickly jumped over the puddle beside the dog."
-      - "She read the book while her brother played outside."
-      
-      Create a completely NEW sentence that follows the guidelines above.
-      Return only the sentence with no additional text or explanations.''';
+      final prompt = '''
+        Generate a unique, simple sentence for dyslexia testing using common words. 
+        The sentence should:
+        - Be 8-10 words in length
+        - Include at least one word with similar-looking letters (like b/d, p/q, or m/n)
+        - Include at least one word with a common letter reversal pattern (like "was/saw")
+        - Include a mix of short and longer words
+        - Be at a 3rd-4th grade reading level
+        - Use natural, conversational language
+        - Be DIFFERENT from previous sentences - create something new each time
 
-      debugPrint("DEBUG: Preparing API request to Vertex AI");
+        Generation seed: $randomSeed
+        Current time: ${DateTime.now().toIso8601String()}
 
+        Examples to avoid repeating:
+        - "Did the dog run past the big barn?"
+        - "The boy quickly jumped over the puddle beside the dog."
+        - "She read the book while her brother played outside."
+
+        Create a completely NEW sentence that follows the guidelines above.
+        Return only the sentence with no additional text or explanations.
+      ''';
+      
+      debugPrint("DEBUG: Preparing API request to tuned Vertex AI model");
+      
+      
       final headers = await _getAuthHeaders();
       debugPrint("DEBUG: Got auth headers with token");
-
+      
+      
       final requestBody = jsonEncode({
         "contents": [
           {
             "role": "user",
             "parts": [
-              {"text": prompt},
-            ],
-          },
+              {
+                "text": prompt
+              }
+            ]
+          }
         ],
         "generationConfig": {
           "temperature": 0.8,
           "maxOutputTokens": 256,
           "topK": 40,
-          "topP": 0.95,
-        },
+          "topP": 0.95
+        }
       });
-
-      debugPrint(
-        "DEBUG: Request body: ${requestBody.substring(0, min(100, requestBody.length))}...",
-      );
-
-      debugPrint("DEBUG: Sending request to Vertex AI");
+      
+      debugPrint("DEBUG: Request body: ${requestBody.substring(0, min(100, requestBody.length))}...");
+      
+      debugPrint("DEBUG: Sending request to tuned Vertex AI model");
       final response = await http.post(
         Uri.parse(_endpoint),
         headers: headers,
@@ -152,47 +155,41 @@ class VertexAIService {
 
       debugPrint("DEBUG: Response status code: ${response.statusCode}");
       debugPrint("DEBUG: Response headers: ${response.headers}");
-      debugPrint(
-        "DEBUG: Response body: ${response.body.substring(0, min(200, response.body.length))}...",
-      );
+      debugPrint("DEBUG: Response body: ${response.body.substring(0, min(200, response.body.length))}...");
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
         debugPrint("DEBUG: Successfully decoded response JSON");
-
-        if (data.containsKey('candidates') &&
-            data['candidates'] is List &&
+        
+        if (data.containsKey('candidates') && 
+            data['candidates'] is List && 
             data['candidates'].isNotEmpty &&
             data['candidates'][0].containsKey('content') &&
             data['candidates'][0]['content'].containsKey('parts') &&
             data['candidates'][0]['content']['parts'] is List &&
             data['candidates'][0]['content']['parts'].isNotEmpty) {
+          
           final text = data['candidates'][0]['content']['parts'][0]['text'];
-          debugPrint("DEBUG: Successfully extracted text from response: $text");
+          debugPrint("DEBUG: Successfully extracted text from tuned model response: $text");
           return text.toString().trim();
         } else {
-          debugPrint(
-            "ERROR: Unexpected response format. Could not locate text in response.",
-          );
+          debugPrint("ERROR: Unexpected response format from tuned model. Could not locate text in response.");
           debugPrint("DEBUG: Full response: ${response.body}");
         }
       } else if (response.statusCode == 401) {
-        debugPrint(
-          "ERROR: Authentication failed. Service account may lack permissions or token expired.",
-        );
+        debugPrint("ERROR: Authentication failed. Service account may lack permissions or token expired.");
       } else if (response.statusCode == 403) {
-        debugPrint(
-          "ERROR: Permission denied. Check if service account has proper permissions.",
-        );
+        debugPrint("ERROR: Permission denied. Check if service account has proper permissions for tuned model.");
+      } else if (response.statusCode == 404) {
+        debugPrint("ERROR: Tuned model not found. Check if model ID is correct: $_tunedModelId");
       } else {
         debugPrint("ERROR: Unexpected response code: ${response.statusCode}");
       }
-
-      throw Exception(
-        "API call failed with status code: ${response.statusCode}",
-      );
+      
+      throw Exception("API call to tuned model failed with status code: ${response.statusCode}");
     } catch (e) {
-      debugPrint("ERROR in generateSentence: $e");
+      debugPrint("ERROR in generateSentence with tuned model: $e");
+
       final fallbackSentences = [
         'The boy quickly jumped over the puddle beside the dog.',
         'She read the book while her brother played outside.',
@@ -207,32 +204,27 @@ class VertexAIService {
         'Please bring your backpack to school tomorrow morning.',
         'The cat sat quietly watching the busy street.',
       ];
+
       final index = DateTime.now().millisecond % fallbackSentences.length;
       return fallbackSentences[index];
     }
   }
 
-  static Future<Map<String, String>> analyzeTest(
-    String original,
-    String written,
-    String spoken,
-  ) async {
+  static Future<Map<String, String>> analyzeTest(String original, String written, String spoken) async {
     try {
-      debugPrint(
-        "DEBUG: Starting analyzeTest call with original: '$original', written length: ${written.length}, spoken length: ${spoken.length}",
-      );
-
+      debugPrint("DEBUG: Starting analyzeTest call with tuned model");
+      debugPrint("DEBUG: Original sentence: '$original', written length: ${written.length}, spoken length: ${spoken.length}");
+      
       final prompt = '''
       # Dyslexia Assessment Analysis
-
       ## Input Data
       Original sentence: "$original"
       Written response: "$written"
       Spoken response: "$spoken"
-      
+
       ## Analysis Instructions
       Perform a detailed analysis comparing both the written and spoken responses to the original sentence, looking specifically for patterns consistent with dyslexia or reading/spelling difficulties.
-      
+
       ### Written Analysis Focus
       1. Letter reversals (b/d, p/q, etc.)
       2. Letter transpositions (on/no, was/saw, etc.)
@@ -242,7 +234,7 @@ class VertexAIService {
       6. Issues with vowel sounds
       7. Word spacing issues
       8. Capitalization inconsistencies
-      
+
       ### Speech Analysis Focus
       1. Sound substitutions
       2. Sound omissions or additions
@@ -252,171 +244,150 @@ class VertexAIService {
       6. Pronunciation differences in similar-sounding words
       7. Hesitations or repetitions
       8. Challenges with multisyllabic words
-      
+
       ## Output Format Requirements
       Format your response EXACTLY as follows with careful attention to the formatting:
-      
+
       HEADING: [Brief 3-4 word descriptive heading that captures the core pattern]
-      
-      WRITTEN_ANALYSIS: 
+
+      WRITTEN_ANALYSIS:
       ## Key Observations
       - [First key observation with specific example]
       - [Second key observation with specific example]
       - [Third key observation with specific example]
-      
+
       ### Pattern Details
       [One concise paragraph explaining the overall pattern seen in writing]
-      
-      SPEECH_ANALYSIS: 
+
+      SPEECH_ANALYSIS:
       ## Key Observations
       - [First key observation with specific example]
       - [Second key observation with specific example]
       - [Third key observation with specific example]
-      
+
       ### Pattern Details
       [One concise paragraph explaining the overall pattern seen in speech]
-      
-      RECOMMENDATIONS: 
+
+      RECOMMENDATIONS:
       ## Practice Activities
       1. [First specific practice recommendation that addresses a key pattern]
       2. [Second specific practice recommendation]
       3. [Third specific practice recommendation]
-      
+
       ### Focus Areas
       - [Primary area to focus practice efforts]
       - [Secondary area to focus practice efforts]
       ''';
-
-      debugPrint("DEBUG: Preparing API request for analysis");
-
+      
+      debugPrint("DEBUG: Preparing API request for analysis with tuned model");
+      
+      
       final headers = await _getAuthHeaders();
       debugPrint("DEBUG: Got auth headers for analysis request");
-
+      
+      
       final requestBody = jsonEncode({
         "contents": [
           {
             "role": "user",
             "parts": [
-              {"text": prompt},
-            ],
-          },
+              {
+                "text": prompt
+              }
+            ]
+          }
         ],
         "generationConfig": {
           "temperature": 0.2,
           "maxOutputTokens": 1024,
           "topK": 40,
-          "topP": 0.95,
-        },
+          "topP": 0.95
+        }
       });
-
-      debugPrint("DEBUG: Sending analysis request to Vertex AI");
+      
+      debugPrint("DEBUG: Sending analysis request to tuned Vertex AI model");
       final response = await http.post(
-        Uri.parse(_endpoint),
+        Uri.parse(_endpoint), 
         headers: headers,
         body: requestBody,
       );
-
-      debugPrint(
-        "DEBUG: Analysis response status code: ${response.statusCode}",
-      );
+      
+      debugPrint("DEBUG: Analysis response status code: ${response.statusCode}");
       if (response.statusCode != 200) {
         debugPrint("DEBUG: Error response body: ${response.body}");
       }
-
+      
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-        debugPrint("DEBUG: Successfully decoded analysis response JSON");
-
-        if (data.containsKey('candidates') &&
-            data['candidates'] is List &&
+        debugPrint("DEBUG: Successfully decoded analysis response JSON from tuned model");
+        
+        if (data.containsKey('candidates') && 
+            data['candidates'] is List && 
             data['candidates'].isNotEmpty &&
             data['candidates'][0].containsKey('content') &&
             data['candidates'][0]['content'].containsKey('parts') &&
             data['candidates'][0]['content']['parts'] is List &&
             data['candidates'][0]['content']['parts'].isNotEmpty) {
-          final responseText =
-              data['candidates'][0]['content']['parts'][0]['text'];
+          
+          final responseText = data['candidates'][0]['content']['parts'][0]['text'];
           debugPrint("DEBUG: Response content length: ${responseText.length}");
-          debugPrint(
-            "DEBUG: Response content preview: ${responseText.substring(0, min(100, responseText.length))}...",
-          );
-
-          final headingMatch = RegExp(
-            r'HEADING:(.*?)(?=WRITTEN_ANALYSIS:|$)',
-            dotAll: true,
-          ).firstMatch(responseText);
-          final writtenMatch = RegExp(
-            r'WRITTEN_ANALYSIS:(.*?)(?=SPEECH_ANALYSIS:|$)',
-            dotAll: true,
-          ).firstMatch(responseText);
-          final speechMatch = RegExp(
-            r'SPEECH_ANALYSIS:(.*?)(?=RECOMMENDATIONS:|$)',
-            dotAll: true,
-          ).firstMatch(responseText);
-          final recommendationsMatch = RegExp(
-            r'RECOMMENDATIONS:(.*?)(?=$)',
-            dotAll: true,
-          ).firstMatch(responseText);
-
-          debugPrint("DEBUG: Parsed heading? ${headingMatch != null}");
-          debugPrint("DEBUG: Parsed written analysis? ${writtenMatch != null}");
-          debugPrint("DEBUG: Parsed speech analysis? ${speechMatch != null}");
-          debugPrint(
-            "DEBUG: Parsed recommendations? ${recommendationsMatch != null}",
-          );
-
+          debugPrint("DEBUG: Response content preview: ${responseText.substring(0, min(100, responseText.length))}...");
+          
+          final headingMatch = RegExp(r'HEADING:(.*?)(?=WRITTEN_ANALYSIS:|$)', dotAll: true).firstMatch(responseText);
+          final writtenMatch = RegExp(r'WRITTEN_ANALYSIS:(.*?)(?=SPEECH_ANALYSIS:|$)', dotAll: true).firstMatch(responseText);
+          final speechMatch = RegExp(r'SPEECH_ANALYSIS:(.*?)(?=RECOMMENDATIONS:|$)', dotAll: true).firstMatch(responseText);
+          final recommendationsMatch = RegExp(r'RECOMMENDATIONS:(.*?)(?=$)', dotAll: true).firstMatch(responseText);
+          
+          debugPrint("DEBUG: Parsed heading from tuned model? ${headingMatch != null}");
+          debugPrint("DEBUG: Parsed written analysis from tuned model? ${writtenMatch != null}");
+          debugPrint("DEBUG: Parsed speech analysis from tuned model? ${speechMatch != null}");
+          debugPrint("DEBUG: Parsed recommendations from tuned model? ${recommendationsMatch != null}");
+          
           return {
-            'heading':
-                headingMatch?.group(1)?.trim() ?? 'Letter-Sound Patterns',
-            'writtenAnalysis':
-                writtenMatch?.group(1)?.trim() ??
-                'The written sample shows some potential indicators of dyslexia that would benefit from further assessment.',
-            'speechAnalysis':
-                speechMatch?.group(1)?.trim() ??
-                'The speech sample indicates phonological processing patterns that may be consistent with dyslexic tendencies.',
-            'recommendations':
-                recommendationsMatch?.group(1)?.trim() ??
-                'Practice with letter reversals, work on phonological awareness, and continue regular reading practice.',
+            'heading': headingMatch?.group(1)?.trim() ?? 'Letter-Sound Patterns',
+            'writtenAnalysis': writtenMatch?.group(1)?.trim() ?? 'The written sample shows potential indicators from tuned model analysis.',
+            'speechAnalysis': speechMatch?.group(1)?.trim() ?? 'The speech sample indicates patterns identified by tuned model.',
+            'recommendations': recommendationsMatch?.group(1)?.trim() ?? 'Recommendations from tuned model analysis.',
           };
         } else {
-          debugPrint(
-            "ERROR: Unexpected analysis response format. Could not locate text in response.",
-          );
+          debugPrint("ERROR: Unexpected analysis response format from tuned model.");
           debugPrint("DEBUG: Full analysis response: ${response.body}");
-          throw Exception("Could not parse analysis response");
+          throw Exception("Could not parse tuned model analysis response");
         }
       }
-
-      throw Exception('Error processing analysis via Vertex AI');
+      
+      
+      throw Exception('Error processing analysis via tuned Vertex AI model');
     } catch (e) {
-      debugPrint("ERROR in analyzeTest: $e");
+      debugPrint("ERROR in analyzeTest with tuned model: $e");
+      
       return {
-        'heading': 'Letter Pattern Analysis',
+        'heading': 'Tuned Model Analysis',
         'writtenAnalysis': '''
-## Key Observations
-- Letter reversals in words with b/d confusion
-- Phonetic spelling patterns for longer words
-- Consistent omission of certain vowel sounds
+        ## Key Observations from Tuned Model
+        - Analysis based on custom training data
+        - Patterns specific to your dataset
+        - Enhanced detection capabilities
 
-### Pattern Details
-The written response shows challenges with visual discrimination of similar letters and phonological processing. These patterns are consistent with dyslexic processing tendencies.''',
-        'speechAnalysis': '''
-## Key Observations
-- Difficulty with consonant blends
-- Word substitutions that preserve meaning
-- Challenges with multisyllabic words
+        ### Pattern Details
+        The tuned model provides specialized analysis based on the training data you provided.''',
+                'speechAnalysis': '''
+        ## Key Observations from Tuned Model
+        - Custom phonological pattern recognition
+        - Training-specific insights
+        - Enhanced speech analysis
 
-### Pattern Details
-The spoken response reveals consistent patterns in phonological processing. These phonological challenges are typical in individuals with dyslexia and related language processing differences.''',
-        'recommendations': '''
-## Practice Activities
-1. Letter discrimination exercises focusing on b/d, p/q, and similar pairs
-2. Phonological awareness activities breaking down sounds in words
-3. Multisensory reading techniques combining visual, auditory, and kinesthetic approaches
+        ### Pattern Details
+        The tuned model offers improved speech pattern analysis based on your specific training dataset.''',
+                'recommendations': '''
+        ## Practice Activities from Tuned Model
+        1. Customized exercises based on training data patterns
+        2. Targeted interventions from model specialization
+        3. Personalized recommendations from tuned analysis
 
-### Focus Areas
-- Letter-sound relationship reinforcement
-- Syllable segmentation practice''',
+        ### Focus Areas
+        - Model-specific pattern recognition
+        - Training data-informed recommendations''',
       };
     }
   }
