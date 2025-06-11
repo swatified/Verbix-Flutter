@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/material.dart';
 
 class GeminiService {
   static String? apiKey = dotenv.env['GEMINI_API_KEY'];
@@ -16,13 +17,11 @@ class GeminiService {
     }
     
     try {
-      // Format the wrong words data for the prompt
-      final formattedData = wrongWords.map((word) {
+            final formattedData = wrongWords.map((word) {
         return '- Word: ${word['word']}, Practice Type: ${word['practiceType']}';
       }).join('\n');
       
-      // Create the prompt for Gemini API
-      final prompt = '''
+            final prompt = '''
       You are an expert speech therapist analyzing a child's speech patterns based on their incorrect words.
       Here is a list of words the child has had trouble with:
       
@@ -33,8 +32,7 @@ class GeminiService {
       Write your response as if you're explaining this to the child's parent, using clear, non-technical language.
       ''';
       
-      // Prepare the request body
-      final requestBody = {
+            final requestBody = {
         'contents': [
           {
             'parts': [
@@ -48,8 +46,7 @@ class GeminiService {
         }
       };
       
-      // Make the API call
-      final response = await http.post(
+            final response = await http.post(
         Uri.parse('$apiUrl?key=$apiKey'),
         headers: {
           'Content-Type': 'application/json',
@@ -69,11 +66,11 @@ class GeminiService {
         }
         return 'Failed to generate pattern breakdown.';
       } else {
-        print('API error: ${response.statusCode}: ${response.body}');
+        debugPrint('API error: ${response.statusCode}: ${response.body}');
         return 'Error generating pattern breakdown. Please try again later.';
       }
     } catch (e) {
-      print('Error calling Gemini API: $e');
+      debugPrint('Error calling Gemini API: $e');
       return 'The child appears to be struggling with certain speech patterns. Please consult with a speech therapist for a professional assessment.';
     }
   }

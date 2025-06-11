@@ -17,8 +17,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   int _selectedAvatarIndex = 0;
   bool _isLoading = false;
   
-  // List of avatar images to choose from
-  final List<String> _avatarImages = [
+    final List<String> _avatarImages = [
     'assets/images/avatar1.webp',
     'assets/images/avatar2.webp',
     'assets/images/avatar3.webp',
@@ -39,8 +38,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   }
   
   Future<void> _saveUserDetails() async {
-    // Validate inputs
-    if (_firstNameController.text.trim().isEmpty ||
+        if (_firstNameController.text.trim().isEmpty ||
         _lastNameController.text.trim().isEmpty ||
         _ageController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -49,8 +47,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
       return;
     }
     
-    // Parse age
-    int? age;
+        int? age;
     try {
       age = int.parse(_ageController.text.trim());
       if (age <= 0 || age > 120) {
@@ -73,20 +70,17 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         throw Exception('No user signed in');
       }
       
-      // Save user details to Firestore with initial level
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+            await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'age': age,
         'avatarIndex': _selectedAvatarIndex,
         'email': user.email,
-        'level': 'easy', // Initialize all users at easy level
-        'levelUpdatedAt': FieldValue.serverTimestamp(),
+        'level': 'easy',         'levelUpdatedAt': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
       });
       
-      // Navigate to main scaffold instead of home
-      if (!mounted) return;
+            if (!mounted) return;
       Navigator.of(context).pushReplacementNamed('/main');
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -132,8 +126,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
               ),
               const SizedBox(height: 50),
               
-              // Avatar selection
-              const Text(
+                            const Text(
                 'Choose your avatar',
                 style: TextStyle(
                   fontSize: 18,
@@ -180,8 +173,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
               ),
               const SizedBox(height: 32),
               
-              // User details form
-              TextField(
+                            TextField(
                 controller: _firstNameController,
                 decoration: const InputDecoration(
                   labelText: 'First Name',
@@ -212,8 +204,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
               ),
               const SizedBox(height: 32),
               
-              // Continue button
-              ElevatedButton(
+                            ElevatedButton(
                 onPressed: _isLoading ? null : _saveUserDetails,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF324259),

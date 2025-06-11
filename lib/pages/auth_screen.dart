@@ -22,9 +22,7 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  // Helper method to convert errors to user-friendly messages
   String _getReadableErrorMessage(dynamic error) {
-    // Check for empty fields first
     if (_emailController.text.trim().isEmpty ||
         _passwordController.text.trim().isEmpty) {
       return 'Please enter both email and password';
@@ -64,15 +62,14 @@ class _AuthScreenState extends State<AuthScreen> {
     return 'An unexpected error occurred. Please try again later';
   }
 
-  // Updated method with validation
   void _submitForm() {
-    // Check for empty fields before even trying to authenticate
+
     if (_emailController.text.trim().isEmpty ||
         _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter both email and password'),
-          // Using default color instead of bright red
+
         ),
       );
       return;
@@ -81,49 +78,44 @@ class _AuthScreenState extends State<AuthScreen> {
     _signInWithEmailPassword();
   }
 
-  // Check if user profile exists and redirect accordingly
   Future<void> _checkUserProfileAndRedirect() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Redirect to user type selection screen
     if (!mounted) return;
     Navigator.of(context).pushReplacementNamed('/user_type_selection');
   }
 
-  // Updated Firebase Email/Password Authentication with better error handling
   Future<void> _signInWithEmailPassword() async {
     setState(() {
       _isLoading = true;
     });
     try {
       if (_isLogin) {
-        // Sign In
+
         await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
 
-        // Check if profile exists and redirect
         await _checkUserProfileAndRedirect();
       } else {
-        // Sign Up
+
         await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
 
-        // Redirect to user type selection
         if (!mounted) return;
         Navigator.of(context).pushReplacementNamed('/user_type_selection');
       }
     } catch (e) {
-      // Show user-friendly error message
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_getReadableErrorMessage(e)),
-            // Using default color instead of bright red
+
             duration: const Duration(seconds: 4),
           ),
         );
@@ -137,39 +129,34 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  // Updated Google Sign In with better error handling
   Future<void> _signInWithGoogle() async {
     setState(() {
       _isLoading = true;
     });
     try {
-      // Begin interactive sign in process
+
       final GoogleSignInAccount? gUser = await GoogleSignIn().signIn();
 
       if (gUser == null) {
-        // User canceled the sign-in flow
+
         setState(() {
           _isLoading = false;
         });
         return;
       }
 
-      // Get auth details from request
       final GoogleSignInAuthentication gAuth = await gUser.authentication;
 
-      // Create new credential for user
       final credential = GoogleAuthProvider.credential(
         accessToken: gAuth.accessToken,
         idToken: gAuth.idToken,
       );
 
-      // Sign in with credential
       await FirebaseAuth.instance.signInWithCredential(credential);
 
-      // Check if profile exists and redirect
       await _checkUserProfileAndRedirect();
     } catch (e) {
-      // Handle specific Google Sign In errors
+
       String errorMessage;
 
       if (e.toString().contains('network')) {

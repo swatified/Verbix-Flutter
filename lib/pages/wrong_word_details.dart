@@ -35,8 +35,7 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
     });
 
     try {
-      // Get all daily_score collections
-      final dailyScoresSnapshot = await FirebaseFirestore.instance
+            final dailyScoresSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.childId)
           .collection('daily_score')
@@ -45,12 +44,10 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
       List<Map<String, dynamic>> allAttempts = [];
       Map<String, int> wordCounts = {};
 
-      // For each daily score document, check attempts collection
-      for (var dailyScore in dailyScoresSnapshot.docs) {
+            for (var dailyScore in dailyScoresSnapshot.docs) {
         final dateStr = dailyScore.id;
         
-        // Get all incorrect attempts from this date
-        final attemptsSnapshot = await FirebaseFirestore.instance
+                final attemptsSnapshot = await FirebaseFirestore.instance
             .collection('users')
             .doc(widget.childId)
             .collection('daily_score')
@@ -59,8 +56,7 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
             .where('isCorrect', isEqualTo: false)
             .get();
 
-        // Add attempts to our list
-        for (var doc in attemptsSnapshot.docs) {
+                for (var doc in attemptsSnapshot.docs) {
           final word = doc.data()['wordOrText'] ?? 'Unknown';
           
           allAttempts.add({
@@ -72,13 +68,11 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
             'isCorrect': false,
           });
           
-          // Update word counts
-          wordCounts[word] = (wordCounts[word] ?? 0) + 1;
+                    wordCounts[word] = (wordCounts[word] ?? 0) + 1;
         }
       }
 
-      // Sort by timestamp descending
-      allAttempts.sort((a, b) {
+            allAttempts.sort((a, b) {
         final aTimestamp = a['timestamp'] as Timestamp;
         final bTimestamp = b['timestamp'] as Timestamp;
         return bTimestamp.compareTo(aTimestamp);
@@ -90,7 +84,7 @@ class _WrongWordDetailsScreenState extends State<WrongWordDetailsScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading attempts: $e');
+      debugPrint('Error loading attempts: $e');
       setState(() {
         _isLoading = false;
       });

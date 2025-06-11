@@ -48,10 +48,10 @@ Future<void> ensureServiceAccountExists() async {
         ),
       );
     } catch (e) {
-      print("ERROR: Failed to setup service account file: $e");
+      debugPrint("ERROR: Failed to setup service account file: $e");
     }
   } else {
-    print("DEBUG: Service account file already exists");
+    debugPrint("DEBUG: Service account file already exists");
   }
 }
 

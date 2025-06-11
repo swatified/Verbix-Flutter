@@ -1,84 +1,83 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:speech_to_text/speech_recognition_result.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'dart:math';
-// Add new imports for OAuth authentication
-import 'package:googleapis_auth/auth_io.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:googleapis_auth/auth_io.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-// Vertex AI Service with OAuth2 authentication
 class VertexAIService {
   static final _projectId = dotenv.env['VERTEX_PROJECT_ID'] ?? '';
   static final _location = dotenv.env['VERTEX_LOCATION'] ?? 'us-central1';
-  static final _modelId = 'gemini-1.5-pro-002'; // FIXED: Updated to correct model name
+  static final _modelId = 'gemini-1.5-pro-002';
   static String? _accessToken;
   static DateTime? _tokenExpiry;
-  
+
   static String get _endpoint {
-    print("DEBUG: Constructing endpoint with project=$_projectId, location=$_location, model=$_modelId");
-    // For Gemini models, we need to use a different endpoint structure
-    final endpoint = 'https://$_location-aiplatform.googleapis.com/v1/projects/$_projectId/locations/$_location/publishers/google/models/$_modelId:generateContent';
-    print("DEBUG: Endpoint: $endpoint");
+    debugPrint(
+      "DEBUG: Constructing endpoint with project=$_projectId, location=$_location, model=$_modelId",
+    );
+    final endpoint =
+        'https://$_location-aiplatform.googleapis.com/v1/projects/$_projectId/locations/$_location/publishers/google/models/$_modelId:generateContent';
+    debugPrint("DEBUG: Endpoint: $endpoint");
     return endpoint;
   }
 
-  // New method to get service account credentials from a file
   static Future<ServiceAccountCredentials> _getCredentials() async {
     final directory = await getApplicationDocumentsDirectory();
     final credentialsPath = '${directory.path}/service-account.json';
     final file = File(credentialsPath);
-    
-    // Check if credentials file exists
+
     if (!await file.exists()) {
-      throw Exception('Service account credentials file not found at: $credentialsPath');
+      throw Exception(
+        'Service account credentials file not found at: $credentialsPath',
+      );
     }
-    
+
     final jsonString = await file.readAsString();
     final jsonMap = json.decode(jsonString);
     return ServiceAccountCredentials.fromJson(jsonMap);
   }
-  
-  // Get OAuth2 access token
+
   static Future<String> _getAccessToken() async {
-    // Check if we have a valid token already
-    if (_accessToken != null && _tokenExpiry != null && DateTime.now().isBefore(_tokenExpiry!)) {
-      print("DEBUG: Using cached access token");
+    if (_accessToken != null &&
+        _tokenExpiry != null &&
+        DateTime.now().isBefore(_tokenExpiry!)) {
+      debugPrint("DEBUG: Using cached access token");
       return _accessToken!;
     }
-    
+
     try {
-      print("DEBUG: Getting fresh access token");
+      debugPrint("DEBUG: Getting fresh access token");
       final credentials = await _getCredentials();
-      
-      // Define the scopes needed for Vertex AI
+
       final scopes = ['https://www.googleapis.com/auth/cloud-platform'];
-      
-      // Get the HTTP client with OAuth2 credentials
+
       final client = await clientViaServiceAccount(credentials, scopes);
-      
-      // Store the token and its expiry
+
       _accessToken = client.credentials.accessToken.data;
       _tokenExpiry = client.credentials.accessToken.expiry;
-      
-      print("DEBUG: Successfully obtained fresh access token, expires at: $_tokenExpiry");
+
+      debugPrint(
+        "DEBUG: Successfully obtained fresh access token, expires at: $_tokenExpiry",
+      );
       return _accessToken!;
     } catch (e) {
-      print("ERROR: Failed to get access token: $e");
+      debugPrint("ERROR: Failed to get access token: $e");
       throw Exception('Failed to authenticate with Vertex AI: $e');
     }
   }
-  
-  // Method to get authentication headers with token
+
   static Future<Map<String, String>> _getAuthHeaders() async {
     final token = await _getAccessToken();
     return {
@@ -89,16 +88,15 @@ class VertexAIService {
 
   static Future<String> generateSentence() async {
     try {
-      print("DEBUG: Starting generateSentence call");
-      
-      // Check if project ID is available
+      debugPrint("DEBUG: Starting generateSentence call");
+
       if (_projectId.isEmpty) {
-        print("ERROR: VERTEX_PROJECT_ID environment variable is empty");
+        debugPrint("ERROR: VERTEX_PROJECT_ID environment variable is empty");
       }
-      
-      // Enhanced prompt for generating test sentences with more variety and randomness
+
       final randomSeed = DateTime.now().millisecondsSinceEpoch;
-      final prompt = '''Generate a unique, simple sentence for dyslexia testing using common words. 
+      final prompt =
+          '''Generate a unique, simple sentence for dyslexia testing using common words. 
       The sentence should:
       - Be 8-10 words in length
       - Include at least one word with similar-looking letters (like b/d, p/q, or m/n)
@@ -118,78 +116,83 @@ class VertexAIService {
       
       Create a completely NEW sentence that follows the guidelines above.
       Return only the sentence with no additional text or explanations.''';
-      
-      print("DEBUG: Preparing API request to Vertex AI");
-      
-      // Get authentication headers with OAuth token
+
+      debugPrint("DEBUG: Preparing API request to Vertex AI");
+
       final headers = await _getAuthHeaders();
-      print("DEBUG: Got auth headers with token");
-      
-      // Gemini models use a different request format
+      debugPrint("DEBUG: Got auth headers with token");
+
       final requestBody = jsonEncode({
         "contents": [
           {
             "role": "user",
             "parts": [
-              {
-                "text": prompt
-              }
-            ]
-          }
+              {"text": prompt},
+            ],
+          },
         ],
         "generationConfig": {
-          "temperature": 0.8, // Increased temperature for more variety
+          "temperature": 0.8,
           "maxOutputTokens": 256,
           "topK": 40,
-          "topP": 0.95
-        }
+          "topP": 0.95,
+        },
       });
-      
-      print("DEBUG: Request body: ${requestBody.substring(0, min(100, requestBody.length))}...");
-      
-      print("DEBUG: Sending request to Vertex AI");
+
+      debugPrint(
+        "DEBUG: Request body: ${requestBody.substring(0, min(100, requestBody.length))}...",
+      );
+
+      debugPrint("DEBUG: Sending request to Vertex AI");
       final response = await http.post(
         Uri.parse(_endpoint),
         headers: headers,
         body: requestBody,
       );
 
-      print("DEBUG: Response status code: ${response.statusCode}");
-      print("DEBUG: Response headers: ${response.headers}");
-      print("DEBUG: Response body: ${response.body.substring(0, min(200, response.body.length))}...");
+      debugPrint("DEBUG: Response status code: ${response.statusCode}");
+      debugPrint("DEBUG: Response headers: ${response.headers}");
+      debugPrint(
+        "DEBUG: Response body: ${response.body.substring(0, min(200, response.body.length))}...",
+      );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-        print("DEBUG: Successfully decoded response JSON");
-        
-        // Extract text from Gemini response format
-        if (data.containsKey('candidates') && 
-            data['candidates'] is List && 
+        debugPrint("DEBUG: Successfully decoded response JSON");
+
+        if (data.containsKey('candidates') &&
+            data['candidates'] is List &&
             data['candidates'].isNotEmpty &&
             data['candidates'][0].containsKey('content') &&
             data['candidates'][0]['content'].containsKey('parts') &&
             data['candidates'][0]['content']['parts'] is List &&
             data['candidates'][0]['content']['parts'].isNotEmpty) {
-          
           final text = data['candidates'][0]['content']['parts'][0]['text'];
-          print("DEBUG: Successfully extracted text from response: $text");
+          debugPrint("DEBUG: Successfully extracted text from response: $text");
           return text.toString().trim();
         } else {
-          print("ERROR: Unexpected response format. Could not locate text in response.");
-          print("DEBUG: Full response: ${response.body}");
+          debugPrint(
+            "ERROR: Unexpected response format. Could not locate text in response.",
+          );
+          debugPrint("DEBUG: Full response: ${response.body}");
         }
       } else if (response.statusCode == 401) {
-        print("ERROR: Authentication failed. Service account may lack permissions or token expired.");
+        debugPrint(
+          "ERROR: Authentication failed. Service account may lack permissions or token expired.",
+        );
       } else if (response.statusCode == 403) {
-        print("ERROR: Permission denied. Check if service account has proper permissions.");
+        debugPrint(
+          "ERROR: Permission denied. Check if service account has proper permissions.",
+        );
       } else {
-        print("ERROR: Unexpected response code: ${response.statusCode}");
+        debugPrint("ERROR: Unexpected response code: ${response.statusCode}");
       }
-      
-      throw Exception("API call failed with status code: ${response.statusCode}");
+
+      throw Exception(
+        "API call failed with status code: ${response.statusCode}",
+      );
     } catch (e) {
-      print("ERROR in generateSentence: $e");
-      // Enhanced fallback sentences with more variety
+      debugPrint("ERROR in generateSentence: $e");
       final fallbackSentences = [
         'The boy quickly jumped over the puddle beside the dog.',
         'She read the book while her brother played outside.',
@@ -204,17 +207,21 @@ class VertexAIService {
         'Please bring your backpack to school tomorrow morning.',
         'The cat sat quietly watching the busy street.',
       ];
-      // Use current time to ensure different fallback each time
       final index = DateTime.now().millisecond % fallbackSentences.length;
       return fallbackSentences[index];
     }
   }
 
-  static Future<Map<String, String>> analyzeTest(String original, String written, String spoken) async {
+  static Future<Map<String, String>> analyzeTest(
+    String original,
+    String written,
+    String spoken,
+  ) async {
     try {
-      print("DEBUG: Starting analyzeTest call with original: '$original', written length: ${written.length}, spoken length: ${spoken.length}");
-      
-      // Enhanced prompt with more specific instructions for detailed pattern analysis and improved formatting
+      debugPrint(
+        "DEBUG: Starting analyzeTest call with original: '$original', written length: ${written.length}, spoken length: ${spoken.length}",
+      );
+
       final prompt = '''
       # Dyslexia Assessment Analysis
 
@@ -279,91 +286,110 @@ class VertexAIService {
       - [Primary area to focus practice efforts]
       - [Secondary area to focus practice efforts]
       ''';
-      
-      print("DEBUG: Preparing API request for analysis");
-      
-      // Get authentication headers with OAuth token
+
+      debugPrint("DEBUG: Preparing API request for analysis");
+
       final headers = await _getAuthHeaders();
-      print("DEBUG: Got auth headers for analysis request");
-      
-      // Update request format to match Gemini's requirements
+      debugPrint("DEBUG: Got auth headers for analysis request");
+
       final requestBody = jsonEncode({
         "contents": [
           {
             "role": "user",
             "parts": [
-              {
-                "text": prompt
-              }
-            ]
-          }
+              {"text": prompt},
+            ],
+          },
         ],
         "generationConfig": {
           "temperature": 0.2,
           "maxOutputTokens": 1024,
           "topK": 40,
-          "topP": 0.95
-        }
+          "topP": 0.95,
+        },
       });
-      
-      print("DEBUG: Sending analysis request to Vertex AI");
+
+      debugPrint("DEBUG: Sending analysis request to Vertex AI");
       final response = await http.post(
         Uri.parse(_endpoint),
         headers: headers,
         body: requestBody,
       );
-      
-      print("DEBUG: Analysis response status code: ${response.statusCode}");
+
+      debugPrint(
+        "DEBUG: Analysis response status code: ${response.statusCode}",
+      );
       if (response.statusCode != 200) {
-        print("DEBUG: Error response body: ${response.body}");
+        debugPrint("DEBUG: Error response body: ${response.body}");
       }
-      
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
-        print("DEBUG: Successfully decoded analysis response JSON");
-        
-        // Extract text from Gemini response format
-        if (data.containsKey('candidates') && 
-            data['candidates'] is List && 
+        debugPrint("DEBUG: Successfully decoded analysis response JSON");
+
+        if (data.containsKey('candidates') &&
+            data['candidates'] is List &&
             data['candidates'].isNotEmpty &&
             data['candidates'][0].containsKey('content') &&
             data['candidates'][0]['content'].containsKey('parts') &&
             data['candidates'][0]['content']['parts'] is List &&
             data['candidates'][0]['content']['parts'].isNotEmpty) {
-          
-          final responseText = data['candidates'][0]['content']['parts'][0]['text'];
-          print("DEBUG: Response content length: ${responseText.length}");
-          print("DEBUG: Response content preview: ${responseText.substring(0, min(100, responseText.length))}...");
-          
-          // Parse the formatted response with the new format
-          final headingMatch = RegExp(r'HEADING:(.*?)(?=WRITTEN_ANALYSIS:|$)', dotAll: true).firstMatch(responseText);
-          final writtenMatch = RegExp(r'WRITTEN_ANALYSIS:(.*?)(?=SPEECH_ANALYSIS:|$)', dotAll: true).firstMatch(responseText);
-          final speechMatch = RegExp(r'SPEECH_ANALYSIS:(.*?)(?=RECOMMENDATIONS:|$)', dotAll: true).firstMatch(responseText);
-          final recommendationsMatch = RegExp(r'RECOMMENDATIONS:(.*?)(?=$)', dotAll: true).firstMatch(responseText);
-          
-          print("DEBUG: Parsed heading? ${headingMatch != null}");
-          print("DEBUG: Parsed written analysis? ${writtenMatch != null}");
-          print("DEBUG: Parsed speech analysis? ${speechMatch != null}");
-          print("DEBUG: Parsed recommendations? ${recommendationsMatch != null}");
-          
+          final responseText =
+              data['candidates'][0]['content']['parts'][0]['text'];
+          debugPrint("DEBUG: Response content length: ${responseText.length}");
+          debugPrint(
+            "DEBUG: Response content preview: ${responseText.substring(0, min(100, responseText.length))}...",
+          );
+
+          final headingMatch = RegExp(
+            r'HEADING:(.*?)(?=WRITTEN_ANALYSIS:|$)',
+            dotAll: true,
+          ).firstMatch(responseText);
+          final writtenMatch = RegExp(
+            r'WRITTEN_ANALYSIS:(.*?)(?=SPEECH_ANALYSIS:|$)',
+            dotAll: true,
+          ).firstMatch(responseText);
+          final speechMatch = RegExp(
+            r'SPEECH_ANALYSIS:(.*?)(?=RECOMMENDATIONS:|$)',
+            dotAll: true,
+          ).firstMatch(responseText);
+          final recommendationsMatch = RegExp(
+            r'RECOMMENDATIONS:(.*?)(?=$)',
+            dotAll: true,
+          ).firstMatch(responseText);
+
+          debugPrint("DEBUG: Parsed heading? ${headingMatch != null}");
+          debugPrint("DEBUG: Parsed written analysis? ${writtenMatch != null}");
+          debugPrint("DEBUG: Parsed speech analysis? ${speechMatch != null}");
+          debugPrint(
+            "DEBUG: Parsed recommendations? ${recommendationsMatch != null}",
+          );
+
           return {
-            'heading': headingMatch?.group(1)?.trim() ?? 'Letter-Sound Patterns',
-            'writtenAnalysis': writtenMatch?.group(1)?.trim() ?? 'The written sample shows some potential indicators of dyslexia that would benefit from further assessment.',
-            'speechAnalysis': speechMatch?.group(1)?.trim() ?? 'The speech sample indicates phonological processing patterns that may be consistent with dyslexic tendencies.',
-            'recommendations': recommendationsMatch?.group(1)?.trim() ?? 'Practice with letter reversals, work on phonological awareness, and continue regular reading practice.',
+            'heading':
+                headingMatch?.group(1)?.trim() ?? 'Letter-Sound Patterns',
+            'writtenAnalysis':
+                writtenMatch?.group(1)?.trim() ??
+                'The written sample shows some potential indicators of dyslexia that would benefit from further assessment.',
+            'speechAnalysis':
+                speechMatch?.group(1)?.trim() ??
+                'The speech sample indicates phonological processing patterns that may be consistent with dyslexic tendencies.',
+            'recommendations':
+                recommendationsMatch?.group(1)?.trim() ??
+                'Practice with letter reversals, work on phonological awareness, and continue regular reading practice.',
           };
         } else {
-          print("ERROR: Unexpected analysis response format. Could not locate text in response.");
-          print("DEBUG: Full analysis response: ${response.body}");
+          debugPrint(
+            "ERROR: Unexpected analysis response format. Could not locate text in response.",
+          );
+          debugPrint("DEBUG: Full analysis response: ${response.body}");
           throw Exception("Could not parse analysis response");
         }
       }
-      
-      // Fallback if API call fails or returns unexpected format
+
       throw Exception('Error processing analysis via Vertex AI');
     } catch (e) {
-      print("ERROR in analyzeTest: $e");
-      // Improved fallback analysis in case API call fails
+      debugPrint("ERROR in analyzeTest: $e");
       return {
         'heading': 'Letter Pattern Analysis',
         'writtenAnalysis': '''
@@ -396,26 +422,27 @@ The spoken response reveals consistent patterns in phonological processing. Thes
   }
 }
 
-// Add a new function to ensure the service account file exists
 Future<void> ensureServiceAccountExists() async {
   try {
     final directory = await getApplicationDocumentsDirectory();
     final credentialsPath = '${directory.path}/service-account.json';
     final file = File(credentialsPath);
-    
+
     if (!await file.exists()) {
-      print("DEBUG: Service account file doesn't exist, copying from assets");
-      // Copy from assets
+      debugPrint(
+        "DEBUG: Service account file doesn't exist, copying from assets",
+      );
       final byteData = await rootBundle.load('assets/service-account.json');
       final buffer = byteData.buffer;
       await file.writeAsBytes(
-          buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
-      print("DEBUG: Service account file copied successfully");
+        buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
+      );
+      debugPrint("DEBUG: Service account file copied successfully");
     } else {
-      print("DEBUG: Service account file already exists");
+      debugPrint("DEBUG: Service account file already exists");
     }
   } catch (e) {
-    print("ERROR: Failed to setup service account file: $e");
+    debugPrint("ERROR: Failed to setup service account file: $e");
   }
 }
 
@@ -437,6 +464,7 @@ class _TestsPageState extends State<TestsPage> {
   }
 
   Future<void> _loadTests() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
@@ -447,30 +475,37 @@ class _TestsPageState extends State<TestsPage> {
         throw Exception('No user signed in');
       }
 
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('test_results')
-          .orderBy('timestamp', descending: true)
-          .get();
+      final querySnapshot =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('test_results')
+              .orderBy('timestamp', descending: true)
+              .get();
 
-      final tests = querySnapshot.docs.map((doc) {
-        final data = doc.data();
-        return {
-          'id': doc.id,
-          'heading': data['heading'] ?? 'Test Result',
-          'date': (data['timestamp'] as Timestamp).toDate(),
-          'writtenAnalysis': data['writtenAnalysis'] ?? '',
-          'speechAnalysis': data['speechAnalysis'] ?? '',
-          'recommendations': data['recommendations'] ?? '',
-        };
-      }).toList();
+      final tests =
+          querySnapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'id': doc.id,
+              'heading': data['heading'] ?? 'Test Result',
+              'date': (data['timestamp'] as Timestamp).toDate(),
+              'writtenAnalysis': data['writtenAnalysis'] ?? '',
+              'speechAnalysis': data['speechAnalysis'] ?? '',
+              'recommendations': data['recommendations'] ?? '',
+            };
+          }).toList();
 
+      if (!mounted) return;
+
+      if (!mounted) return;
       setState(() {
         _tests = tests;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading tests: ${e.toString()}')),
       );
@@ -495,19 +530,18 @@ class _TestsPageState extends State<TestsPage> {
         backgroundColor: Colors.white,
         elevation: 0,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _tests.isEmpty
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _tests.isEmpty
               ? _buildEmptyState()
               : _buildTestsList(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const NewTestPage(),
-            ),
-          ).then((_) => _loadTests()); // Refresh when returning
+            MaterialPageRoute(builder: (context) => const NewTestPage()),
+          ).then((_) => _loadTests());
         },
         backgroundColor: const Color.fromARGB(255, 99, 169, 92),
         child: const Icon(Icons.add, color: Colors.white),
@@ -538,10 +572,7 @@ class _TestsPageState extends State<TestsPage> {
           const SizedBox(height: 8),
           const Text(
             'Tap the + button to take your first test',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey),
           ),
         ],
       ),
@@ -554,12 +585,14 @@ class _TestsPageState extends State<TestsPage> {
       itemCount: _tests.length,
       itemBuilder: (context, index) {
         final test = _tests[index];
-        
-        // Create plain text previews from markdown content
-        final String writtenPreview = _stripMarkdown(test['writtenAnalysis']).trim();
-        final String speechPreview = _stripMarkdown(test['speechAnalysis']).trim();
-        final String recommendationsPreview = _stripMarkdown(test['recommendations']).trim();
-        
+
+        final String writtenPreview =
+            _stripMarkdown(test['writtenAnalysis']).trim();
+        final String speechPreview =
+            _stripMarkdown(test['speechAnalysis']).trim();
+        final String recommendationsPreview =
+            _stripMarkdown(test['recommendations']).trim();
+
         return GestureDetector(
           onTap: () {
             Navigator.push(
@@ -576,7 +609,7 @@ class _TestsPageState extends State<TestsPage> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
+                  color: Colors.grey.withValues(alpha: 0.1),
                   spreadRadius: 1,
                   blurRadius: 3,
                   offset: const Offset(0, 2),
@@ -661,9 +694,9 @@ class _TestsPageState extends State<TestsPage> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      
-                      // Add recommendations preview if available
-                      if (test['recommendations'] != null && test['recommendations'].isNotEmpty)
+
+                      if (test['recommendations'] != null &&
+                          test['recommendations'].isNotEmpty)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -708,10 +741,7 @@ class _TestsPageState extends State<TestsPage> {
                   ),
                   decoration: const BoxDecoration(
                     border: Border(
-                      top: BorderSide(
-                        color: Color(0xFFEEEEEE),
-                        width: 1,
-                      ),
+                      top: BorderSide(color: Color(0xFFEEEEEE), width: 1),
                     ),
                   ),
                   child: Row(
@@ -722,8 +752,9 @@ class _TestsPageState extends State<TestsPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  TestDetailPage(testId: test['id']),
+                              builder:
+                                  (context) =>
+                                      TestDetailPage(testId: test['id']),
                             ),
                           );
                         },
@@ -745,24 +776,26 @@ class _TestsPageState extends State<TestsPage> {
       },
     );
   }
-  
-  // Helper method to strip markdown for previews
+
   String _stripMarkdown(String markdown) {
-    if (markdown == null || markdown.isEmpty) {
+    if (markdown.isEmpty) {
       return '';
     }
-    
-    // Remove headers
+
     String plainText = markdown.replaceAll(RegExp(r'#{1,6}\s'), '');
-    
-    // Remove bullet points and numbered lists
-    plainText = plainText.replaceAll(RegExp(r'^\s*[-*+]\s', multiLine: true), '');
-    plainText = plainText.replaceAll(RegExp(r'^\s*\d+\.\s', multiLine: true), '');
-    
-    // Remove emphasis marks
+
+    plainText = plainText.replaceAll(
+      RegExp(r'^\s*[-*+]\s', multiLine: true),
+      '',
+    );
+    plainText = plainText.replaceAll(
+      RegExp(r'^\s*\d+\.\s', multiLine: true),
+      '',
+    );
+
     plainText = plainText.replaceAll(RegExp(r'\*\*|__'), '');
-    plainText = plainText.replaceAll(RegExp(r'\*|_'), '');
-    
+    plainText = plainText.replaceAll(RegExp(r'[*_]'), '');
+
     return plainText;
   }
 }
@@ -781,12 +814,10 @@ class _NewTestPageState extends State<NewTestPage> {
   String _speechText = '';
   bool _isRecording = false;
   bool _hasSubmitted = false;
-  
-  // Speech recognition
+
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _speechEnabled = false;
-  
-  // Image picker and text recognition
+
   final ImagePicker _picker = ImagePicker();
   final TextRecognizer _textRecognizer = TextRecognizer();
   File? _imageFile;
@@ -806,20 +837,19 @@ class _NewTestPageState extends State<NewTestPage> {
     super.dispose();
   }
 
-  // Initialize speech recognition
   Future<void> _initSpeech() async {
     _speechEnabled = await _speech.initialize();
+    if (!mounted) return;
     setState(() {});
   }
 
   Future<void> _setupAndGenerateTest() async {
     try {
-      // Ensure service account file is ready
       await ensureServiceAccountExists();
-      // Generate the test sentence
       await _generateTestSentence();
     } catch (e) {
-      print("ERROR in setup: $e");
+      debugPrint("ERROR in setup: $e");
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error setting up test: ${e.toString()}')),
       );
@@ -834,27 +864,29 @@ class _NewTestPageState extends State<NewTestPage> {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
-      print("DEBUG: Starting test sentence generation");
-      
-      // Check environment variables in main widget too
+      debugPrint("DEBUG: Starting test sentence generation");
+
       final apiKey = dotenv.env['VERTEX_API_KEY'];
       final projectId = dotenv.env['VERTEX_PROJECT_ID'];
-      print("DEBUG from widget: VERTEX_API_KEY exists? ${apiKey != null && apiKey.isNotEmpty}");
-      print("DEBUG from widget: VERTEX_PROJECT_ID exists? ${projectId != null && projectId.isNotEmpty}");
+      debugPrint(
+        "DEBUG from widget: VERTEX_API_KEY exists? ${apiKey != null && apiKey.isNotEmpty}",
+      );
+      debugPrint(
+        "DEBUG from widget: VERTEX_PROJECT_ID exists? ${projectId != null && projectId.isNotEmpty}",
+      );
 
-      // Get a sentence from Vertex AI with enhanced prompt
       final sentence = await VertexAIService.generateSentence();
-      print("DEBUG: Received sentence: '$sentence'");
-      
+      debugPrint("DEBUG: Received sentence: '$sentence'");
+
+      if (!mounted) return;
       setState(() {
         _testSentence = sentence;
         _isLoading = false;
       });
     } catch (e) {
-      print("ERROR in _generateTestSentence: $e");
-      // Fallback sentence if API fails
+      debugPrint("ERROR in _generateTestSentence: $e");
       setState(() {
         _testSentence = 'She seemed like an angel in her white dress.';
         _isLoading = false;
@@ -865,7 +897,6 @@ class _NewTestPageState extends State<NewTestPage> {
     }
   }
 
-  // Handle speech recognition
   void _startListening() {
     if (!_speechEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -873,11 +904,11 @@ class _NewTestPageState extends State<NewTestPage> {
       );
       return;
     }
-    
+
     setState(() {
       _isRecording = true;
     });
-    
+
     _speech.listen(
       onResult: _onSpeechResult,
       listenFor: const Duration(seconds: 10),
@@ -898,25 +929,28 @@ class _NewTestPageState extends State<NewTestPage> {
     });
   }
 
-  // Handle image picking and OCR
   Future<void> _takePicture() async {
     setState(() {
       _isProcessingImage = true;
     });
-    
+
     try {
       final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
       if (photo == null) {
+        if (!mounted) return;
         setState(() {
           _isProcessingImage = false;
         });
         return;
       }
-      
+
       _imageFile = File(photo.path);
       final inputImage = InputImage.fromFile(_imageFile!);
-      final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
-      
+      final RecognizedText recognizedText = await _textRecognizer.processImage(
+        inputImage,
+      );
+
+      if (!mounted) return;
       setState(() {
         _writtenTextController.text = recognizedText.text;
         _isProcessingImage = false;
@@ -943,52 +977,53 @@ class _NewTestPageState extends State<NewTestPage> {
         throw Exception('No user signed in');
       }
 
-      print("DEBUG: Starting test submission");
-      print("DEBUG: Original sentence: $_testSentence");
-      print("DEBUG: Written response length: ${_writtenTextController.text.length}");
-      print("DEBUG: Speech response length: ${_speechText.length}");
+      debugPrint("DEBUG: Starting test submission");
+      debugPrint("DEBUG: Original sentence: $_testSentence");
+      debugPrint(
+        "DEBUG: Written response length: ${_writtenTextController.text.length}",
+      );
+      debugPrint("DEBUG: Speech response length: ${_speechText.length}");
 
-      // Get analysis from Vertex AI with the enhanced prompts
       final analysis = await VertexAIService.analyzeTest(
         _testSentence,
         _writtenTextController.text,
         _speechText,
       );
-      
-      print("DEBUG: Received analysis with heading: ${analysis['heading']}");
 
-      // Save to Firestore with the new recommendations field
+      debugPrint(
+        "DEBUG: Received analysis with heading: ${analysis['heading']}",
+      );
+
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('test_results')
           .add({
-        'heading': analysis['heading'],
-        'writtenAnalysis': analysis['writtenAnalysis'],
-        'speechAnalysis': analysis['speechAnalysis'],
-        'recommendations': analysis['recommendations'], 
-        'originalSentence': _testSentence,
-        'writtenResponse': _writtenTextController.text,
-        'speechResponse': _speechText,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
+            'heading': analysis['heading'],
+            'writtenAnalysis': analysis['writtenAnalysis'],
+            'speechAnalysis': analysis['speechAnalysis'],
+            'recommendations': analysis['recommendations'],
+            'originalSentence': _testSentence,
+            'writtenResponse': _writtenTextController.text,
+            'speechResponse': _speechText,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
 
-      print("DEBUG: Successfully saved test results to Firestore");
+      debugPrint("DEBUG: Successfully saved test results to Firestore");
 
-      // Show success and navigate back
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Test results saved successfully'),
           backgroundColor: Colors.green,
         ),
       );
-      
-      // Return to tests page
+
       if (mounted) {
         Navigator.pop(context);
       }
     } catch (e) {
-      print("ERROR in _submitTest: $e");
+      debugPrint("ERROR in _submitTest: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving test: ${e.toString()}')),
       );
@@ -1013,245 +1048,246 @@ class _NewTestPageState extends State<NewTestPage> {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(
-          color: Color(0xFF324259),
-        ),
+        iconTheme: const IconThemeData(color: Color(0xFF324259)),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Test sentence card
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
-                          spreadRadius: 1,
-                          blurRadius: 3,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Read and Write This Sentence',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF324259),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F7FA),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _testSentence,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                color: Color(0xFF324259),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+
+                    const SizedBox(height: 24),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          'Read and Write This Sentence',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF324259),
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.camera_alt),
+                          onPressed: _isProcessingImage ? null : _takePicture,
+                          tooltip: 'Take a picture of handwriting',
                         ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5F7FA),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            _testSentence,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              color: Color(0xFF324259),
-                            ),
-                          ),
+                        const SizedBox(width: 16),
+                        IconButton(
+                          icon: Icon(_isRecording ? Icons.stop : Icons.mic),
+                          onPressed:
+                              _isRecording ? _stopListening : _startListening,
+                          tooltip:
+                              _isRecording
+                                  ? 'Stop Recording'
+                                  : 'Start Speaking',
                         ),
                       ],
                     ),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Image and speech input buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.camera_alt),
-                        onPressed: _isProcessingImage ? null : _takePicture,
-                        tooltip: 'Take a picture of handwriting',
-                      ),
-                      const SizedBox(width: 16),
-                      IconButton(
-                        icon: Icon(_isRecording ? Icons.stop : Icons.mic),
-                        onPressed: _isRecording ? _stopListening : _startListening,
-                        tooltip: _isRecording ? 'Stop Recording' : 'Start Speaking',
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Display submitted image
-                  if (_imageFile != null)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
-                            spreadRadius: 1,
-                            blurRadius: 3,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Submitted Image',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF324259),
+
+                    const SizedBox(height: 24),
+
+                    if (_imageFile != null)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withValues(alpha: 0.1),
+                              spreadRadius: 1,
+                              blurRadius: 3,
+                              offset: const Offset(0, 2),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          Image.file(_imageFile!),
-                        ],
-                      ),
-                    ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Display recognized text
-                  if (_writtenTextController.text.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
-                            spreadRadius: 1,
-                            blurRadius: 3,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Recognized Text',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF324259),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF5F7FA),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _writtenTextController.text,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Color(0xFF324259),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Display recognized speech text
-                  if (_speechText.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
-                            spreadRadius: 1,
-                            blurRadius: 3,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Recognized Speech Text',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF324259),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF5F7FA),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              _speechText,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Color(0xFF324259),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Submit button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: (_speechText.isNotEmpty &&
-                              _writtenTextController.text.isNotEmpty &&
-                              !_hasSubmitted)
-                          ? _submitTest
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1F5377),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          ],
                         ),
-                      ),
-                      child: _hasSubmitted
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              'Submit Test',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Submitted Image',
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF324259),
                               ),
                             ),
+                            const SizedBox(height: 12),
+                            Image.file(_imageFile!),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 24),
+
+                    if (_writtenTextController.text.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withValues(alpha: 0.1),
+                              spreadRadius: 1,
+                              blurRadius: 3,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Recognized Text',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF324259),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF5F7FA),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _writtenTextController.text,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Color(0xFF324259),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 24),
+
+                    if (_speechText.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withValues(alpha: 0.1),
+                              spreadRadius: 1,
+                              blurRadius: 3,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Recognized Speech Text',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF324259),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF5F7FA),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _speechText,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: Color(0xFF324259),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 32),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed:
+                            (_speechText.isNotEmpty &&
+                                    _writtenTextController.text.isNotEmpty &&
+                                    !_hasSubmitted)
+                                ? _submitTest
+                                : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1F5377),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child:
+                            _hasSubmitted
+                                ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
+                                : const Text(
+                                  'Submit Test',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
     );
   }
 }
@@ -1267,7 +1303,7 @@ class TestDetailPage extends StatefulWidget {
 class _TestDetailPageState extends State<TestDetailPage> {
   bool _isLoading = true;
   Map<String, dynamic> _testData = {};
-  
+
   @override
   void initState() {
     super.initState();
@@ -1285,17 +1321,19 @@ class _TestDetailPageState extends State<TestDetailPage> {
         throw Exception('No user signed in');
       }
 
-      final docSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('test_results')
-          .doc(widget.testId)
-          .get();
+      final docSnapshot =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('test_results')
+              .doc(widget.testId)
+              .get();
 
       if (!docSnapshot.exists) {
         throw Exception('Test not found');
       }
 
+      if (!mounted) return;
       setState(() {
         _testData = docSnapshot.data()!;
         _isLoading = false;
@@ -1322,323 +1360,189 @@ class _TestDetailPageState extends State<TestDetailPage> {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(
-          color: Color(0xFF324259),
-        ),
+        iconTheme: const IconThemeData(color: Color(0xFF324259)),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Test date and basic info
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
-                          spreadRadius: 1,
-                          blurRadius: 3,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Test Information',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF324259),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Taken on ${_testData['timestamp'].toDate().day}/${_testData['timestamp'].toDate().month}/${_testData['timestamp'].toDate().year}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Original sentence
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
-                          spreadRadius: 1,
-                          blurRadius: 3,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Original Sentence',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF324259),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _testData['originalSentence'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF324259),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // User's responses
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
-                          spreadRadius: 1,
-                          blurRadius: 3,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Your Responses',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF324259),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        // Written response
-                        const Text(
-                          'Written:',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF324259),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _testData['writtenResponse'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF324259),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        // Spoken response
-                        const Text(
-                          'Spoken:',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF324259),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _testData['speechResponse'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF324259),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Written analysis with Markdown
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
-                          spreadRadius: 1,
-                          blurRadius: 3,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Writing Analysis',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF324259),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        MarkdownBody(
-                          data: _testData['writtenAnalysis'] ?? '',
-                          styleSheet: MarkdownStyleSheet(
-                            h1: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF324259),
-                            ),
-                            h2: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1F5377),
-                            ),
-                            h3: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF324259),
-                            ),
-                            p: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF324259),
-                            ),
-                            listBullet: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF1F5377),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Speech analysis with Markdown
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
-                          spreadRadius: 1,
-                          blurRadius: 3,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Speech Analysis',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF324259),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        MarkdownBody(
-                          data: _testData['speechAnalysis'] ?? '',
-                          styleSheet: MarkdownStyleSheet(
-                            h1: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF324259),
-                            ),
-                            h2: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1F5377),
-                            ),
-                            h3: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF324259),
-                            ),
-                            p: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF324259),
-                            ),
-                            listBullet: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF1F5377),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Recommendations section with Markdown
-                  if (_testData['recommendations'] != null)
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1F5377).withOpacity(0.1),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFF1F5377).withOpacity(0.3),
-                          width: 1,
-                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Row(
-                            children: [
-                              Icon(
-                                Icons.lightbulb_outline,
-                                color: Color(0xFF1F5377),
-                                size: 20,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Recommendations',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1F5377),
-                                ),
-                              ),
-                            ],
+                          const Text(
+                            'Test Information',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF324259),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Taken on ${_testData['timestamp'].toDate().day}/${_testData['timestamp'].toDate().month}/${_testData['timestamp'].toDate().year}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Original Sentence',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF324259),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _testData['originalSentence'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF324259),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Your Responses',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF324259),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Written:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF324259),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _testData['writtenResponse'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF324259),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Spoken:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF324259),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _testData['speechResponse'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF324259),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Writing Analysis',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF324259),
+                            ),
                           ),
                           const SizedBox(height: 12),
                           MarkdownBody(
-                            data: _testData['recommendations'] ?? '',
+                            data: _testData['writtenAnalysis'] ?? '',
                             styleSheet: MarkdownStyleSheet(
                               h1: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1F5377),
+                                color: Color(0xFF324259),
                               ),
                               h2: const TextStyle(
                                 fontSize: 15,
@@ -1648,7 +1552,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                               h3: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1F5377),
+                                color: Color(0xFF324259),
                               ),
                               p: const TextStyle(
                                 fontSize: 14,
@@ -1658,9 +1562,63 @@ class _TestDetailPageState extends State<TestDetailPage> {
                                 fontSize: 14,
                                 color: Color(0xFF1F5377),
                               ),
-                              strong: const TextStyle(
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withValues(alpha: 0.1),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Speech Analysis',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF324259),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          MarkdownBody(
+                            data: _testData['speechAnalysis'] ?? '',
+                            styleSheet: MarkdownStyleSheet(
+                              h1: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF324259),
+                              ),
+                              h2: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1F5377),
+                              ),
+                              h3: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
+                                color: Color(0xFF324259),
+                              ),
+                              p: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF324259),
+                              ),
+                              listBullet: const TextStyle(
+                                fontSize: 14,
                                 color: Color(0xFF1F5377),
                               ),
                             ),
@@ -1668,9 +1626,82 @@ class _TestDetailPageState extends State<TestDetailPage> {
                         ],
                       ),
                     ),
-                ],
+                    const SizedBox(height: 24),
+
+                    if (_testData['recommendations'] != null)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1F5377).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(
+                              0xFF1F5377,
+                            ).withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(
+                                  Icons.lightbulb_outline,
+                                  color: Color(0xFF1F5377),
+                                  size: 20,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Recommendations',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1F5377),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            MarkdownBody(
+                              data: _testData['recommendations'] ?? '',
+                              styleSheet: MarkdownStyleSheet(
+                                h1: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1F5377),
+                                ),
+                                h2: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1F5377),
+                                ),
+                                h3: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1F5377),
+                                ),
+                                p: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF324259),
+                                ),
+                                listBullet: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF1F5377),
+                                ),
+                                strong: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1F5377),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
     );
   }
 }

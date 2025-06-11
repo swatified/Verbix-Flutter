@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:verbix/services/daily_scoring_service.dart';
 
 class LevelInfoWidget extends StatelessWidget {
-  const LevelInfoWidget({Key? key}) : super(key: key);
+  const LevelInfoWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -34,17 +34,16 @@ class LevelInfoWidget extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             
-            // Level descriptions
-            ...DifficultyLevel.values.map((level) {
+                        ...DifficultyLevel.values.map((level) {
               final levelInfo = DailyScoringService.getLevelDisplayInfo(level);
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: (levelInfo['color'] as Color).withOpacity(0.1),
+                  color: (levelInfo['color'] as Color).withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: (levelInfo['color'] as Color).withOpacity(0.3),
+                    color: (levelInfo['color'] as Color).withValues(alpha:0.3),
                   ),
                 ),
                 child: Row(
@@ -79,15 +78,14 @@ class LevelInfoWidget extends StatelessWidget {
                   ],
                 ),
               );
-            }).toList(),
+            }),
             
             const SizedBox(height: 16),
             
-            // Level progression rules
-            Container(
+                        Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: Colors.blue.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(

@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' show DateFormat;
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -53,7 +53,7 @@ class _DashboardPageState extends State<DashboardPage> {
         .snapshots()
         .listen((snapshot) {
           if (snapshot.exists) {
-            print('Real-time update received!');
+            debugPrint('Real-time update received!');
             setState(() {
               _dailyPractices = snapshot.data()?['daily_practices'] ?? 0;
             });
@@ -75,7 +75,7 @@ class _DashboardPageState extends State<DashboardPage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        print('ERROR: No user signed in');
+        debugPrint('ERROR: No user signed in');
         throw Exception('No user signed in');
       }
 
@@ -86,12 +86,14 @@ class _DashboardPageState extends State<DashboardPage> {
               .get();
 
       if (docSnapshot.exists) {
+        if (!mounted) return;
         setState(() {
           _userData = docSnapshot.data();
         });
       }
     } catch (e) {
-      print('FULL ERROR: $e');
+      debugPrint('FULL ERROR: $e');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading user data: ${e.toString()}')),
       );
@@ -114,7 +116,7 @@ class _DashboardPageState extends State<DashboardPage> {
       await _loadMonthlyData(user.uid);
       await _loadYearlyData(user.uid);
     } catch (e) {
-      print('Error loading statistics data: $e');
+      debugPrint('Error loading statistics data: $e');
     }
   }
 
@@ -141,10 +143,10 @@ class _DashboardPageState extends State<DashboardPage> {
         setState(() {
           _dailyPractices = 0;
         });
-        print('No historical daily practices data found. Initializing to 0.');
+        debugPrint('No historical daily practices data found. Initializing to 0.');
       }
     } catch (e) {
-      print('ERROR loading today\'s practices: $e');
+      debugPrint('ERROR loading today\'s practices: $e');
       setState(() {
         _dailyPractices = 0;
       });
@@ -182,7 +184,7 @@ class _DashboardPageState extends State<DashboardPage> {
           weekData.add({'date': date, 'label': dayName, 'value': 0});
         }
       } catch (e) {
-        print('Error loading data for $dateStr: $e');
+        debugPrint('Error loading data for $dateStr: $e');
         weekData.add({'date': date, 'label': dayName, 'value': 0});
       }
     }
@@ -225,7 +227,7 @@ class _DashboardPageState extends State<DashboardPage> {
           });
         }
       } catch (e) {
-        print('Error loading data for $dateStr: $e');
+        debugPrint('Error loading data for $dateStr: $e');
         monthData.add({
           'date': date,
           'label': DateFormat('MMM d').format(date),
@@ -274,13 +276,13 @@ class _DashboardPageState extends State<DashboardPage> {
         _yearlyData = yearData;
       });
     } catch (e) {
-      print('Error loading yearly data: $e');
+      debugPrint('Error loading yearly data: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    print('Building dashboard - isLoading: $_isLoading, userData: $_userData');
+    debugPrint('Building dashboard - isLoading: $_isLoading, userData: $_userData');
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
@@ -332,7 +334,7 @@ class _DashboardPageState extends State<DashboardPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha:0.2),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -394,7 +396,7 @@ class _DashboardPageState extends State<DashboardPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha:0.2),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -486,7 +488,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     const SizedBox(width: 8),
                     Text(
                       _monthlyData
-                          .fold(0, (sum, item) => sum + (item['value'] as int))
+                          .fold(0, (total, item) => total + (item['value'] as int))
                           .toString(),
                       style: const TextStyle(
                         fontSize: 20,
@@ -661,7 +663,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 dotData: FlDotData(show: false),
                 belowBarData: BarAreaData(
                   show: true,
-                  color: const Color(0xFF1F5377).withOpacity(0.2),
+                  color: const Color(0xFF1F5377).withValues(alpha:0.2),
                 ),
               ),
             ],
@@ -764,7 +766,7 @@ class _DashboardPageState extends State<DashboardPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha:0.2),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -883,7 +885,7 @@ class _DashboardPageState extends State<DashboardPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha:0.2),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -1043,7 +1045,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     const SizedBox(width: 8),
                     Text(
                       _monthlyData
-                          .fold(0, (sum, item) => sum + (item['value'] as int))
+                          .fold(0, (total, item) => total + (item['value'] as int))
                           .toString(),
                       style: const TextStyle(
                         fontSize: 20,

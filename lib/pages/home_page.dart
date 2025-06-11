@@ -76,11 +76,13 @@ class _HomePageState extends State<HomePage> {
               .get();
 
       if (docSnapshot.exists) {
+        if (!mounted) return;
         setState(() {
           _userData = docSnapshot.data();
         });
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading user data: ${e.toString()}')),
       );
@@ -103,6 +105,7 @@ class _HomePageState extends State<HomePage> {
 
       if (querySnapshot.docs.isNotEmpty) {
         final doc = querySnapshot.docs.first;
+        if (!mounted) return;
         setState(() {
           _practicesDoneToday = doc.data()['daily_practices'] ?? 0;
           _modulesCompletedToday = doc.data()['modules_completed'] ?? 0;
@@ -128,6 +131,7 @@ class _HomePageState extends State<HomePage> {
         await practice_service.CustomPracticeService.savePractices(
           newPractices,
         );
+        if (!mounted) return;
         setState(() {
           _dailyPractices = newPractices;
           _practicesDoneToday = _countCompletedPractices(newPractices);
@@ -144,7 +148,8 @@ class _HomePageState extends State<HomePage> {
       await _loadCompletedPractices();
       await _saveUserProgressData();
     } catch (e) {
-      print('ERROR loading practices: $e');
+      debugPrint('ERROR loading practices: $e');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading practices: ${e.toString()}')),
       );
@@ -159,7 +164,7 @@ class _HomePageState extends State<HomePage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        print('User is null - cannot save progress');
+        debugPrint('User is null - cannot save progress');
         return;
       }
 
@@ -180,7 +185,7 @@ class _HomePageState extends State<HomePage> {
         'last_updated': FieldValue.serverTimestamp(),
       };
 
-      print('Saving progress data: $progressData');
+      debugPrint('Saving progress data: $progressData');
 
       await FirebaseFirestore.instance
           .collection('users')
@@ -189,7 +194,7 @@ class _HomePageState extends State<HomePage> {
           .doc(dateStr)
           .set(progressData, SetOptions(merge: true));
 
-      print('Progress successfully saved to Firestore');
+      debugPrint('Progress successfully saved to Firestore');
 
       final doc =
           await FirebaseFirestore.instance
@@ -200,14 +205,15 @@ class _HomePageState extends State<HomePage> {
               .get();
 
       if (doc.exists) {
-        print('Verification read successful:');
-        print('   Saved data: ${doc.data()}');
+        debugPrint('Verification read successful:');
+        debugPrint('   Saved data: ${doc.data()}');
       } else {
-        print('Verification failed - document not found');
+        debugPrint('Verification failed - document not found');
       }
     } catch (e) {
-      print('ERROR saving progress: $e');
-      print('Stack trace: ${StackTrace.current}');
+      debugPrint('ERROR saving progress: $e');
+      debugPrint('Stack trace: ${StackTrace.current}');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving progress: ${e.toString()}')),
       );
@@ -230,25 +236,26 @@ class _HomePageState extends State<HomePage> {
               .doc(dateStr)
               .get();
 
-      print('🔍 Current Firestore data for today:');
+      debugPrint('🔍 Current Firestore data for today:');
       if (doc.exists) {
-        print(doc.data());
+        debugPrint(doc.data().toString());
       } else {
-        print('No document found for today');
+        debugPrint('No document found for today');
       }
     } catch (e) {
-      print('Error checking Firestore data: $e');
+      debugPrint('Error checking Firestore data: $e');
     }
   }
 
   Future<void> _loadPopularModules() async {
     try {
       final popularModules = await PracticeModuleService.getPopularModules();
+      if (!mounted) return;
       setState(() {
         _popularModules = popularModules;
       });
     } catch (e) {
-      print('Error loading popular modules: $e');
+      debugPrint('Error loading popular modules: $e');
     }
   }
 
@@ -277,9 +284,9 @@ class _HomePageState extends State<HomePage> {
             'timestamp': FieldValue.serverTimestamp(),
           });
 
-      print('Saved daily progress: $completed/$total for $dateStr');
+      debugPrint('Saved daily progress: $completed/$total for $dateStr');
     } catch (e) {
-      print('Error saving daily progress: $e');
+      debugPrint('Error saving daily progress: $e');
     }
   }
 
@@ -287,11 +294,12 @@ class _HomePageState extends State<HomePage> {
     try {
       final completedCount =
           await PracticeModuleService.getCompletedModulesToday();
+      if (!mounted) return;
       setState(() {
         _modulesCompletedToday = completedCount;
       });
     } catch (e) {
-      print('Error loading completed modules: $e');
+      debugPrint('Error loading completed modules: $e');
     }
   }
 
@@ -311,6 +319,7 @@ class _HomePageState extends State<HomePage> {
 
       if (querySnapshot.docs.isNotEmpty) {
         final doc = querySnapshot.docs.first;
+        if (!mounted) return;
         setState(() {
           _practicesCompletedToday = doc.data()['completedPractices'] ?? 0;
         });
@@ -318,10 +327,12 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _practicesCompletedToday = 0;
         });
-        print('No historical completed practices found. Initializing to 0.');
+        debugPrint(
+          'No historical completed practices found. Initializing to 0.',
+        );
       }
     } catch (e) {
-      print('Error loading completed practices: $e');
+      debugPrint('Error loading completed practices: $e');
       setState(() {
         _practicesCompletedToday = 0;
       });
@@ -385,7 +396,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.2),
+            color: Colors.grey.withValues(alpha: 0.2),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -459,7 +470,7 @@ class _HomePageState extends State<HomePage> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(8.0),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.1),
+                        color: Colors.blue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -485,7 +496,7 @@ class _HomePageState extends State<HomePage> {
                               : EdgeInsets.zero,
                       padding: const EdgeInsets.all(8.0),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
+                        color: Colors.green.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -556,6 +567,7 @@ class _HomePageState extends State<HomePage> {
                   await practice_service.CustomPracticeService.savePractices(
                     newPractices,
                   );
+                  if (!mounted) return;
                   setState(() {
                     _dailyPractices = newPractices;
                     _practicesDoneToday = _countCompletedPractices(
@@ -617,13 +629,13 @@ class _HomePageState extends State<HomePage> {
                             border: Border.all(
                               color:
                                   practice.completed
-                                      ? Colors.green.withOpacity(0.5)
+                                      ? Colors.green.withValues(alpha: 0.5)
                                       : const Color(0xFFE0E0E0),
                               width: 1,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.grey.withOpacity(0.1),
+                                color: Colors.grey.withValues(alpha: 0.1),
                                 spreadRadius: 1,
                                 blurRadius: 2,
                                 offset: const Offset(0, 1),
@@ -760,9 +772,11 @@ class _HomePageState extends State<HomePage> {
                                         decoration: BoxDecoration(
                                           color:
                                               module.type == ModuleType.written
-                                                  ? Colors.blue.withOpacity(0.2)
-                                                  : Colors.green.withOpacity(
-                                                    0.2,
+                                                  ? Colors.blue.withValues(
+                                                    alpha: 0.2,
+                                                  )
+                                                  : Colors.green.withValues(
+                                                    alpha: 0.2,
                                                   ),
                                           borderRadius: BorderRadius.circular(
                                             20,
@@ -871,20 +885,21 @@ class _HomePageState extends State<HomePage> {
 
       final score = await DailyScoringService.getTodayScore();
 
+      if (!mounted) return;
       setState(() {
         _currentLevel = level;
         _todayScore = score;
         _isLoadingLevel = false;
       });
 
-      print('Loaded level: ${level.toString().split('.').last}');
+      debugPrint('Loaded level: ${level.toString().split('.').last}');
       if (score != null) {
-        print(
+        debugPrint(
           'Today\'s score: ${score.correctAnswers}/${score.totalAttempts} (${(score.accuracy * 100).toStringAsFixed(1)}%)',
         );
       }
     } catch (e) {
-      print('Error loading level and score: $e');
+      debugPrint('Error loading level and score: $e');
       setState(() {
         _isLoadingLevel = false;
       });
@@ -900,7 +915,7 @@ class _HomePageState extends State<HomePage> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withValues(alpha: 0.2),
               spreadRadius: 1,
               blurRadius: 3,
               offset: const Offset(0, 2),
@@ -931,15 +946,15 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            (levelInfo['color'] as Color).withOpacity(0.1),
-            (levelInfo['color'] as Color).withOpacity(0.05),
+            (levelInfo['color'] as Color).withValues(alpha: 0.1),
+            (levelInfo['color'] as Color).withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: (levelInfo['color'] as Color).withOpacity(0.3),
+          color: (levelInfo['color'] as Color).withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -983,7 +998,7 @@ class _HomePageState extends State<HomePage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -1040,7 +1055,7 @@ class _HomePageState extends State<HomePage> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.2),
+                        color: Colors.green.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -1072,7 +1087,7 @@ class _HomePageState extends State<HomePage> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.2),
+                        color: Colors.orange.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Row(
@@ -1103,7 +1118,7 @@ class _HomePageState extends State<HomePage> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -1154,7 +1169,7 @@ class _HomePageState extends State<HomePage> {
                         color: Colors.white,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.grey.withOpacity(0.1),
+                            color: Colors.grey.withValues(alpha: 0.1),
                             spreadRadius: 1,
                             blurRadius: 3,
                             offset: const Offset(0, 2),
