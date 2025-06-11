@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UserTypeSelectionScreen extends StatefulWidget {
   const UserTypeSelectionScreen({super.key});
@@ -18,11 +19,15 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please sign in first')));
-      Navigator.of(context).pushReplacementNamed('/login');
+      Navigator.of(context).pushReplacementNamed('/auth');
       return;
     }
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_type', 'child');
+      await prefs.setString('user_id', user.uid);
+
       final userDoc =
           await FirebaseFirestore.instance
               .collection('users')
@@ -49,11 +54,15 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please sign in first')));
-      Navigator.of(context).pushReplacementNamed('/login');
+      Navigator.of(context).pushReplacementNamed('/auth');
       return;
     }
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_type', 'parent');
+      await prefs.setString('user_id', user.uid);
+
       final parentDoc =
           await FirebaseFirestore.instance
               .collection('parents')

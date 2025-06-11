@@ -11,6 +11,7 @@ import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/daily_scoring_service.dart';
 import 'auth_screen.dart';
@@ -544,6 +545,9 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
 
   void _logout() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('user_type');
+      await prefs.remove('user_id');
       await FirebaseAuth.instance.signOut();
       if (!mounted) return;
       
