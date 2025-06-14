@@ -20,7 +20,7 @@ class VertexAIService {
   static final _projectId = dotenv.env['VERTEX_PROJECT_ID'] ?? '';
   static final _location = dotenv.env['VERTEX_LOCATION'] ?? 'us-central1';
   
-   static final _tunedModelId = dotenv.env['VERTEX_TUNED_MODEL_ID'] ?? 'gemini-1.5-pro-002';
+   static final _tunedModelId = dotenv.env['TUNED_MODEL_ID'] ?? 'gemini-1.5-pro-002';
   
   static String? _accessToken;
   static DateTime? _tokenExpiry;
