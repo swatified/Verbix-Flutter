@@ -191,7 +191,7 @@ verbix/
    VERTEX_LOCATION=us-central1  # or your preferred region
    VERTEX_CREDENTIALS_PATH=assets/vertex-credentials.json
    VERTEX_API_KEY=your_vertex_api_key
-   CUSTOM_MODEL_ID=your_tuned_gemini_model_id
+   TUNED_MODEL_ID=your_tuned_gemini_model_id
    ```
 
 4. Firebase Setup:
