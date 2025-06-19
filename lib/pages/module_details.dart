@@ -57,11 +57,11 @@ class ModuleDetailScreenState extends State<ModuleDetailScreen> {
       'butterfly',
     ],
     'speech_recognition': [
-   'The cat sat on the mat',
-   'Big dogs run in the sun',
-   'We like to ride our bikes',
-   'Mom made me a warm meal',
-   'Books help us learn new things'
+      'The cat sat on the soft mat',
+      'Big dogs run in the green park',
+      'We like to play games together',
+      'Books help us learn new things',
+      'I am brave and I am smart'
     ],
     'phonetic_awareness': [
       'Snowflake',
