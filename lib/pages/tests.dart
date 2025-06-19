@@ -175,7 +175,7 @@ class VertexAIService {
         ],
         "generationConfig": {
           "temperature": 0.8,
-          "maxOutputTokens": 256,
+          "maxOutputTokens": 8192,
           "topK": 40,
           "topP": 0.95,
         },
@@ -574,7 +574,27 @@ class _TestsPageState extends State<TestsPage> {
       ),
       body:
           _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/gifs/lexi_confused.gif',
+                      width: 180,
+                      height: 180,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Loading...',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Color(0xFF324259),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              )
               : _tests.isEmpty
               ? _buildEmptyState()
               : _buildTestsList(),
@@ -598,15 +618,15 @@ class _TestsPageState extends State<TestsPage> {
         children: [
           Image.asset(
             'assets/images/no_tests.webp',
-            width: 150,
-            height: 150,
+            width: 180,
+            height: 180,
             fit: BoxFit.contain,
           ),
           const SizedBox(height: 24),
           const Text(
             'No tests completed yet',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Color(0xFF324259),
             ),
@@ -1095,7 +1115,27 @@ class _NewTestPageState extends State<NewTestPage> {
       ),
       body:
           _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/gifs/lexi_confused.gif',
+                      width: 180,
+                      height: 180,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Loading...',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Color(0xFF324259),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              )
               : SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -1407,7 +1447,27 @@ class _TestDetailPageState extends State<TestDetailPage> {
       ),
       body:
           _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/gifs/lexi_confused.gif',
+                      width: 150,
+                      height: 150,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Loading...',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Color(0xFF324259),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              )
               : SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(

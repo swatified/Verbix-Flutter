@@ -922,15 +922,25 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: Transform.translate(
-            offset: const Offset(60, 0),
-            child: Lottie.asset(
-              'assets/gifs/loader-anim.json',
-              width: 600,
-              height: 600,
-            ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/gifs/lexi_confused.gif',
+                width: 200,
+                height: 200,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Loading...',
+                style: TextStyle(
+                  fontSize: 24,
+                  color: Color(0xFF324259),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -1150,15 +1160,25 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(
         child:
             _isLoading
-                ? Align(
-                  alignment: Alignment.centerRight,
-                  child: Transform.translate(
-                    offset: const Offset(60, 0),
-                    child: Lottie.asset(
-                      'assets/gifs/loader-anim.json',
-                      width: 600,
-                      height: 600,
-                    ),
+                ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset(
+                        'assets/gifs/lexi_confused.gif',
+                        width: 200,
+                        height: 200,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Loading...',
+                        style: TextStyle(
+                          fontSize: 24,
+                          color: Color(0xFF324259),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 )
                 : Column(
