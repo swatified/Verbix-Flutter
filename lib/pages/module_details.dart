@@ -57,11 +57,11 @@ class ModuleDetailScreenState extends State<ModuleDetailScreen> {
       'butterfly',
     ],
     'speech_recognition': [
-      'She sells seashells by the seashore',
-      'The big black bug bit the big black bear',
-      'Unique New York, unique New York',
-      'Peter Piper picked a peck of pickled peppers',
-      'Three free throws for three points',
+   'The cat sat on the mat',
+   'Big dogs run in the sun',
+   'We like to ride our bikes',
+   'Mom made me a warm meal',
+   'Books help us learn new things'
     ],
     'phonetic_awareness': [
       'Snowflake',
@@ -427,7 +427,7 @@ bool _validateReadingComprehensionAnswerStrict(String exerciseContent, String us
     return cleanAnswer == 'red';
   } 
   else if (exerciseContent.contains('Sara went to the store')) {
-        return cleanAnswer == 'milk and bread' || cleanAnswer == 'bread and milk';
+        return cleanAnswer == 'milk' || cleanAnswer == 'bread';
   } 
   else if (exerciseContent.contains('The sky is blue')) {
     return cleanAnswer == 'green';
