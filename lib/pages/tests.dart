@@ -19,7 +19,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 class VertexAIService {
   static final _projectId = dotenv.env['VERTEX_PROJECT_ID'] ?? '';
   static final _location = dotenv.env['VERTEX_LOCATION'] ?? 'us-central1';
-  static final _modelId = 'gemini-1.5-pro-002';
+  static final _modelId = 'gemini-2.5-flash';
   static String? _accessToken;
   static DateTime? _tokenExpiry;
 
@@ -37,6 +37,18 @@ class VertexAIService {
     final directory = await getApplicationDocumentsDirectory();
     final credentialsPath = '${directory.path}/service-account.json';
     final file = File(credentialsPath);
+    try {
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final json = jsonDecode(content);
+        print("Service account project_id: ${json['project_id']}");
+        print("Service account client_email: ${json['client_email']}");
+      } else {
+        print("Service account file doesn't exist!");
+      }
+    } catch (e) {
+      print("Error reading service account: $e");
+    }
 
     if (!await file.exists()) {
       throw Exception(
@@ -48,6 +60,36 @@ class VertexAIService {
     final jsonMap = json.decode(jsonString);
     return ServiceAccountCredentials.fromJson(jsonMap);
   }
+
+  static Future<void> forceRefreshServiceAccount() async {
+  try {
+    final directory = await getApplicationDocumentsDirectory();
+    final credentialsPath = '${directory.path}/service-account.json';
+    final file = File(credentialsPath);
+    
+    // Delete the cached file
+    if (await file.exists()) {
+      await file.delete();
+      print("DEBUG: Deleted cached service account file");
+    }
+    
+    // Copy fresh from assets
+    final byteData = await rootBundle.load('assets/service-account.json');
+    final buffer = byteData.buffer;
+    await file.writeAsBytes(
+      buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
+    );
+    print("DEBUG: Copied fresh service account file");
+    
+    // Verify the new file
+    final content = await file.readAsString();
+    final json = jsonDecode(content);
+    print("DEBUG: New service account project_id: ${json['project_id']}");
+    
+  } catch (e) {
+    print("ERROR: Failed to refresh service account: $e");
+  }
+}
 
   static Future<String> _getAccessToken() async {
     if (_accessToken != null &&
@@ -303,7 +345,7 @@ class VertexAIService {
         ],
         "generationConfig": {
           "temperature": 0.2,
-          "maxOutputTokens": 1024,
+          "maxOutputTokens": 8192,
           "topK": 40,
           "topP": 0.95,
         },
@@ -845,6 +887,7 @@ class _NewTestPageState extends State<NewTestPage> {
 
   Future<void> _setupAndGenerateTest() async {
     try {
+      await VertexAIService.forceRefreshServiceAccount();
       await ensureServiceAccountExists();
       await _generateTestSentence();
     } catch (e) {

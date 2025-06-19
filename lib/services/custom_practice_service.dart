@@ -132,7 +132,7 @@ class ImageOption {
 class CustomPracticeService {
   static final _projectId = dotenv.env['VERTEX_PROJECT_ID'] ?? '';
   static final _location = dotenv.env['VERTEX_LOCATION'] ?? 'us-central1';
-  static final _modelId = 'gemini-1.5-pro-002';
+  static final _modelId = 'gemini-2.5-flash';
   static String? _accessToken;
   static DateTime? _tokenExpiry;
   
@@ -311,7 +311,7 @@ class CustomPracticeService {
         ],
         "generationConfig": {
           "temperature": 0.7,
-          "maxOutputTokens": 1024,
+          "maxOutputTokens": 8192,
           "topK": 40,
           "topP": 0.95
         }
