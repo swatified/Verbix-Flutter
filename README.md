@@ -12,7 +12,7 @@
 
 <br/>
 
-![image](https://github.com/user-attachments/assets/79f3d5d3-2e0d-46da-aef5-293c8244bc76)
+![mockup](https://github.com/user-attachments/assets/5727de7a-f60a-4ba7-887c-352a00b201b7)
 <br/><br/>
 
 ## Key Features 🌟
@@ -51,7 +51,7 @@
 
 ## App Flow
 
-![image](https://github.com/user-attachments/assets/601fcb33-ca7e-4d12-bb32-56b6c22d7cbd)
+![process_flow](https://github.com/user-attachments/assets/30237e72-19bf-4eb7-a778-7e85a5f5069c)
 
 **Process Flow at a Glance:**
 - **Dual Authentication**: Separate flows for children and parents
@@ -191,7 +191,7 @@ verbix/
    VERTEX_LOCATION=us-central1  # or your preferred region
    VERTEX_CREDENTIALS_PATH=assets/vertex-credentials.json
    VERTEX_API_KEY=your_vertex_api_key
-   CUSTOM_MODEL_ID=your_tuned_gemini_model_id
+   TUNED_MODEL_ID=your_tuned_gemini_model_id
    ```
 
 4. Firebase Setup:
