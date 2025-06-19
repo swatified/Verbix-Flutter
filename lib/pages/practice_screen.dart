@@ -66,19 +66,20 @@ class _PracticeScreenState extends State<PracticeScreen> {
   
   @override
   void initState() {
-    super.initState();
-    _isCompleted = widget.practice.completed;
-    
-        _itemStatus = List.generate(widget.practice.content.length, (_) => false);
-    
-        for (int i = 0; i < widget.practice.content.length; i++) {
-      _textControllers.add(TextEditingController());
-    }
-    
-        if (widget.practice.type == PracticeType.phonetic) {
-      _initSpeech();
-    }
+  super.initState();
+  _isCompleted = widget.practice.completed;
+  
+  _itemStatus = List.generate(widget.practice.content.length, (_) => false);
+  
+  for (int i = 0; i < widget.practice.content.length; i++) {
+    _textControllers.add(TextEditingController());
   }
+  
+  // Initialize speech for phonetic exercises
+  if (widget.practice.type == PracticeType.phonetic) {
+    _initSpeech();
+  }
+}
 
     Future<void> _recordAttemptWithWord(bool isCorrect) async {
     try {
@@ -141,19 +142,23 @@ class _PracticeScreenState extends State<PracticeScreen> {
   void _onSpeechResult(SpeechRecognitionResult result) {
   setState(() {
     _speechText = result.recognizedWords.toLowerCase();
-    
-        if (widget.practice.type == PracticeType.phonetic) {
+
+    if (widget.practice.type == PracticeType.phonetic) {
       final targetWord = widget.practice.content[_currentIndex].toLowerCase();
       bool isCorrect = _speechText.contains(targetWord);
       
       if (isCorrect) {
         _itemStatus[_currentIndex] = true;
-                _recordAttemptWithWord(true);
-                _showFeedbackPopup(FeedbackState.correct);
+        _recordAttemptWithWord(true);
+        _showFeedbackPopup(FeedbackState.correct);
       } else if (_speechText.isNotEmpty) {
-                _recordAttemptWithWord(false);
-                _showFeedbackPopup(FeedbackState.wrong);
+        _recordAttemptWithWord(false);
+        _showFeedbackPopup(FeedbackState.wrong);
       }
+      
+      // Reset speech state after processing
+      _isListening = false;
+      _speech.stop();
     }
   });
 }
@@ -463,12 +468,23 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     Navigator.of(context).pop();
                     setState(() {
                       _showingFeedback = false;
-                    });
-                    
-                                        if (state == FeedbackState.correct && _itemStatus[_currentIndex]) {
-                      _nextItem();
-                    }
-                  },
+      // Reset speech state when closing feedback
+      if (widget.practice.type == PracticeType.phonetic) {
+        _isListening = false;
+        _speechText = '';
+      }
+    });
+    
+    // Ensure speech is stopped
+    if (_speech.isListening) {
+      _speech.stop();
+    }
+    
+    // If correct answer and this item is completed, move to next
+    if (state == FeedbackState.correct && _itemStatus[_currentIndex]) {
+      _nextItem();
+    }
+  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: headerColor,
                     padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
@@ -507,11 +523,17 @@ class _PracticeScreenState extends State<PracticeScreen> {
         _speechText = '';
         _recognizedText = '';
         points.clear();
-      });
-    } else {
-      _completePractice();
+        // Reset speech state for the next item
+      _isListening = false;
+    });
+    // Ensure speech is stopped
+    if (_speech.isListening) {
+      _speech.stop();
     }
+  } else {
+    _completePractice();
   }
+}
   
   void _previousItem() {
     if (_currentIndex > 0) {
