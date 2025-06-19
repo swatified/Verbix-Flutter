@@ -71,31 +71,32 @@ class DailyScoringService {
     return "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
   }
 
-    static Future<DifficultyLevel> getCurrentUserLevel() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return DifficultyLevel.easy;
+static Future<DifficultyLevel> getCurrentUserLevel() async {
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return DifficultyLevel.medium;
 
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
 
-      if (userDoc.exists && userDoc.data()!.containsKey('level')) {
-        final levelString = userDoc.data()!['level'] as String;
-        return DifficultyLevel.values.firstWhere(
-          (e) => e.toString().split('.').last == levelString,
-          orElse: () => DifficultyLevel.easy,
-        );
-      }
-
-            await _setUserLevel(DifficultyLevel.easy);
-      return DifficultyLevel.easy;
-    } catch (e) {
-      debugPrint('Error getting user level: $e');
-      return DifficultyLevel.easy;
+    if (userDoc.exists && userDoc.data()!.containsKey('level')) {
+      final levelString = userDoc.data()!['level'] as String;
+      return DifficultyLevel.values.firstWhere(
+        (e) => e.toString().split('.').last == levelString,
+        orElse: () => DifficultyLevel.medium,
+      );
     }
+
+    // Set medium as default for new users
+    await _setUserLevel(DifficultyLevel.medium);
+    return DifficultyLevel.medium;
+  } catch (e) {
+    debugPrint('Error getting user level: $e');
+    return DifficultyLevel.medium;
   }
+}
 
     static Future<void> _setUserLevel(DifficultyLevel level) async {
     try {
