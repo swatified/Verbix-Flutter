@@ -76,7 +76,8 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         'age': age,
         'avatarIndex': _selectedAvatarIndex,
         'email': user.email,
-        'level': 'easy',         'levelUpdatedAt': FieldValue.serverTimestamp(),
+        'level': 'medium',
+        'levelUpdatedAt': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
       });
       

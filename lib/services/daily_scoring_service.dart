@@ -89,8 +89,15 @@ static Future<DifficultyLevel> getCurrentUserLevel() async {
       );
     }
 
-    // Set medium as default for new users
-    await _setUserLevel(DifficultyLevel.medium);
+    // Set medium as default for new users - use merge to ensure document exists
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .set({
+      'level': DifficultyLevel.medium.toString().split('.').last,
+      'levelUpdatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true)); // This ensures the document is created if it doesn't exist
+
     return DifficultyLevel.medium;
   } catch (e) {
     debugPrint('Error getting user level: $e');
