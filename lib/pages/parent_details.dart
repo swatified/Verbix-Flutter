@@ -118,8 +118,23 @@ class _ParentDetailsScreenState extends State<ParentDetailsScreen> {
                     mainAxisAlignment: MainAxisAlignment.center, // centers vertically
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 100),
-                      Image.asset('assets/images/lexi_rest.webp', height: 130),
+                      const SizedBox(height: 110),
+                      Container(
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0xFF87CEEB).withOpacity(0.6), // sky blue
+                              spreadRadius: 18,
+                              blurRadius: 16,
+                              offset: Offset(0, 0), // even shadow all around
+                            ),
+                          ],
+                          shape: BoxShape.circle,
+                        ),
+                        child: ClipOval(
+                          child: Image.asset('assets/images/lexi_rest.webp', height: 130),
+                        ),
+                      ),
                       const SizedBox(height: 30),
                       const Text(
                         'Parent Account Setup',
