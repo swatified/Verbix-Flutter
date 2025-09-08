@@ -91,24 +91,34 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Image.asset('assets/images/lexi_confused.webp', height: 180),
-              const SizedBox(height: 50),
-              _buildSelectionButton(
-                icon: Icons.face,
-                label: 'Login as a Child',
-                onPressed: _handleChildLogin,
-                color: const Color(0xFF324259),
-              ),
-              const SizedBox(height: 20),
-              _buildSelectionButton(
-                icon: Icons.supervisor_account,
-                label: 'Login as a Parent',
-                onPressed: _handleParentLogin,
-                color: const Color(0xFF5D8AA8),
-              ),
-            ],
+              Image.asset('assets/images/lexi_confused.webp', height: 240),
+              const SizedBox(height: 30),
+              Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      _buildSelectionButton(
+        icon: Icons.face,
+        label: 'Login as a Child',
+        onPressed: _handleChildLogin,
+        color: const Color(0xFF324259),
+      ),
+    ],
+  ),
+  const SizedBox(height: 12),
+  Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      _buildSelectionButton(
+        icon: Icons.supervisor_account,
+        label: 'Login as a Parent',
+        onPressed: _handleParentLogin,
+        color: const Color(0xFF5D8AA8),
+      ),
+    ],
+  ),
+],
           ),
         ),
       ),
@@ -120,8 +130,11 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
     required String label,
     required VoidCallback onPressed,
     required Color color,
+    double? width,
   }) {
-    return ElevatedButton.icon(
+    return SizedBox(
+    width: 250,
+    child: ElevatedButton.icon(
       onPressed: onPressed,
       icon: Icon(icon, color: Colors.white),
       label: Text(
@@ -131,8 +144,10 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
-    );
-  }
+    ),
+  );
+}
+
 }
