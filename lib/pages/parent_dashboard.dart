@@ -585,24 +585,27 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
           _isLoading
               ? const Center(child: CircularProgressIndicator())
               : SafeArea(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildGreetingCard(),
-                      const SizedBox(height: 16),
-                      _buildLevelCard(),
-                      const SizedBox(height: 16),
-                      _buildRecentTroublesCard(),
-                      const SizedBox(height: 16),
-                      _buildPatternBreakdownCard(),
-                      const SizedBox(height: 16),
-                      _buildProgressDashboardCard(),
-                      const SizedBox(height: 24),
-                    ],
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildGreetingCard(),
+                          const SizedBox(height: 6),
+                          _buildLevelCard(),
+                          const SizedBox(height: 14),
+                          _buildRecentTroublesCard(),
+                          const SizedBox(height: 14),
+                          _buildPatternBreakdownCard(),
+                          const SizedBox(height: 16),
+                          _buildProgressDashboardCard(),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
     );
   }
 
@@ -615,7 +618,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -623,7 +626,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Row(
           children: [
             ClipRRect(

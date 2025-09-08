@@ -123,7 +123,7 @@ class _ParentDetailsScreenState extends State<ParentDetailsScreen> {
                         decoration: BoxDecoration(
                           boxShadow: [
                             BoxShadow(
-                              color: Color(0xFF87CEEB).withOpacity(0.6), // sky blue
+                              color: Color(0xFF87CEEB).withValues(alpha: 0.6), // sky blue
                               spreadRadius: 18,
                               blurRadius: 16,
                               offset: Offset(0, 0), // even shadow all around
