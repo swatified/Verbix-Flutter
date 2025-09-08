@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:verbix/widgets/custom_button.dart';
 
 class UserTypeSelectionScreen extends StatefulWidget {
   const UserTypeSelectionScreen({super.key});
@@ -87,39 +88,76 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Image.asset('assets/images/lexi_confused.webp', height: 240),
-              const SizedBox(height: 30),
-              Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      _buildSelectionButton(
-        icon: Icons.face,
-        label: 'Login as a Child',
-        onPressed: _handleChildLogin,
-        color: const Color(0xFF324259),
-      ),
-    ],
-  ),
-  const SizedBox(height: 12),
-  Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      _buildSelectionButton(
-        icon: Icons.supervisor_account,
-        label: 'Login as a Parent',
-        onPressed: _handleParentLogin,
-        color: const Color(0xFF5D8AA8),
-      ),
-    ],
-  ),
-],
-          ),
+        child: Stack(
+          children: [
+            // Top-right cloud (rotated -20 degrees)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0), // <-- Add margin here
+                child: Transform.rotate(
+                  angle: -0.09, // negative for counter-clockwise
+                  child: Image.asset(
+                    'assets/images/cloud.webp',
+                    width: 150,
+                    height: 150,
+                  ),
+                ),
+              ),
+            ),
+            // Bottom-left cloud (rotated +15 degrees)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0), // <-- Add margin here
+                child: Transform.rotate(
+                  angle: 0.1, // positive for clockwise
+                  child: Image.asset(
+                    'assets/images/cloud.webp',
+                    width: 140,
+                    height: 140,
+                  ),
+                ),
+              ),
+            ),
+            // Main content
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Image.asset('assets/images/lexi_confused.webp', height: 240),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CustomButton(
+                        icon: Icons.face,
+                        label: 'Login as a Child',
+                        onPressed: _handleChildLogin,
+                        color: const Color(0xFF324259),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CustomButton(
+                        icon: Icons.supervisor_account,
+                        label: 'Login as a Parent',
+                        onPressed: _handleParentLogin,
+                        color: const Color(0xFF5D8AA8),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -133,21 +171,21 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
     double? width,
   }) {
     return SizedBox(
-    width: 250,
-    child: ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, color: Colors.white),
-      label: Text(
-        label,
-        style: const TextStyle(fontSize: 18, color: Colors.white),
+      width: 250,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, color: Colors.white),
+        label: Text(
+          label,
+          style: const TextStyle(fontSize: 18, color: Colors.white),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
       ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-    ),
-  );
-}
-
+    );
+  }
 }

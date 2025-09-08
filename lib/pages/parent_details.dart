@@ -115,9 +115,10 @@ class _ParentDetailsScreenState extends State<ParentDetailsScreen> {
                 : SingleChildScrollView(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisAlignment: MainAxisAlignment.center, // centers vertically
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 100),
                       Image.asset('assets/images/lexi_rest.webp', height: 130),
                       const SizedBox(height: 30),
                       const Text(
@@ -152,21 +153,29 @@ class _ParentDetailsScreenState extends State<ParentDetailsScreen> {
                           ),
                         ),
 
-                      TextField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Your Name',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.person),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        child: TextField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            labelText: 'Your Name',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(16)), // <-- Rounded corners
+                            ),
+                            prefixIcon: Icon(Icons.person),
+                          ),
+                          textCapitalization: TextCapitalization.words,
                         ),
-                        textCapitalization: TextCapitalization.words,
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 20),
 
-                      ElevatedButton(
-                        onPressed: _isLoading ? null : _saveParentDetails,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF5D8AA8),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _saveParentDetails,
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 60),
+                            backgroundColor: const Color(0xFF5D8AA8),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
                         child:
@@ -181,6 +190,7 @@ class _ParentDetailsScreenState extends State<ParentDetailsScreen> {
                                     color: Colors.white,
                                   ),
                                 ),
+                      ),
                       ),
                     ],
                   ),
