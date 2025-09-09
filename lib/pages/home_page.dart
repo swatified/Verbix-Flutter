@@ -46,15 +46,15 @@ class _HomePageState extends State<HomePage> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadCompletedPractices();
-      _saveUserProgressData();
+      // Only call _saveUserProgressData after a practice/module is completed
     });
   }
 
   @override
   void dispose() {
-    _saveUserProgressData();
-    _searchController.dispose();
-    super.dispose();
+  // Only call _saveUserProgressData after a practice/module is completed
+  _searchController.dispose();
+  super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -114,11 +114,11 @@ class _HomePageState extends State<HomePage> {
         setState(() {
           _practicesDoneToday = 0;
           _modulesCompletedToday = 0;
-          _practicesCompletedToday = 0;
+          //_practicesCompletedToday = 0;
         });
       }
 
-      _saveUserProgressData();
+  // Only call _saveUserProgressData after a practice/module is completed
 
       final practices =
           await practice_service.CustomPracticeService.fetchPractices();
@@ -311,7 +311,7 @@ class _HomePageState extends State<HomePage> {
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
-              .collection('userStats')
+              .collection('progress')
               .orderBy(FieldPath.documentId, descending: true)
               .limit(1)
               .get();
@@ -320,21 +320,21 @@ class _HomePageState extends State<HomePage> {
         final doc = querySnapshot.docs.first;
         if (!mounted) return;
         setState(() {
-          _practicesCompletedToday = doc.data()['completedPractices'] ?? 0;
+          _practicesCompletedToday = doc.data()['practice_modules'] ?? 0;
         });
-      } else {
+      } /*else {
         setState(() {
           _practicesCompletedToday = 0;
         });
         debugPrint(
           'No historical completed practices found. Initializing to 0.',
         );
-      }
+      }*/
     } catch (e) {
       debugPrint('Error loading completed practices: $e');
-      setState(() {
+      /*setState(() {
         _practicesCompletedToday = 0;
-      });
+      });*/
     }
   }
 
@@ -477,7 +477,7 @@ class _HomePageState extends State<HomePage> {
                           Icon(Icons.star, color: Colors.amber[700], size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            'You completed $_modulesCompletedToday ${_modulesCompletedToday == 1 ? 'module' : 'modules'} today!',
+                            'You completed $_practicesDoneToday ${_practicesDoneToday == 1 ? 'module' : 'modules'} today!',
                             style: const TextStyle(
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF324259),
@@ -507,7 +507,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'You completed $_practicesCompletedToday ${_practicesCompletedToday == 1 ? 'practice' : 'practices'} today!',
+                            'You completed $_modulesCompletedToday ${_modulesCompletedToday == 1 ? 'module' : 'modules'} today!',
                             style: const TextStyle(
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF324259),
@@ -617,7 +617,10 @@ class _HomePageState extends State<HomePage> {
                                   (context) =>
                                       PracticeScreen(practice: practice),
                             ),
-                          ).then((_) => _loadPracticeData());
+                          ).then((_) {
+                            _loadPracticeData();
+                            _saveUserProgressData();
+                          });
                         },
                         child: Container(
                           width: 120,
@@ -742,9 +745,12 @@ class _HomePageState extends State<HomePage> {
                                             completed,
                                           );
                                         },
-                                      ),
+                                  ),
                                 ),
-                              );
+                              ).then((_) {
+                                _loadModulesCompletedToday();
+                                _saveUserProgressData();
+                              });
                             },
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
