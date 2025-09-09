@@ -547,7 +547,7 @@ class _HomePageState extends State<HomePage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Your daily practices',
+              ' Your daily practices',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -621,7 +621,7 @@ class _HomePageState extends State<HomePage> {
                         },
                         child: Container(
                           width: 120,
-                          margin: const EdgeInsets.only(right: 12),
+                          margin: const EdgeInsets.only(left:5, right: 5),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
@@ -698,17 +698,19 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: 18),
         const Text(
-          'Popular exercise modules',
+          '  Popular exercise modules',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Color(0xFF324259),
+            fontStyle: FontStyle.italic,
           ),
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 170,
+          height: 160,
           child:
               _popularModules.isEmpty
                   ? const Center(child: Text('No modules available'))
@@ -719,7 +721,7 @@ class _HomePageState extends State<HomePage> {
                       final module = _popularModules[index];
                       return Container(
                         width: MediaQuery.of(context).size.width * 0.70,
-                        margin: const EdgeInsets.only(right: 16),
+                        margin: const EdgeInsets.only(right: 8),
                         child: Card(
                           elevation: 2,
                           color: const Color.fromARGB(255, 233, 240, 252),
@@ -746,7 +748,7 @@ class _HomePageState extends State<HomePage> {
                             },
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
-                              padding: const EdgeInsets.all(12.0),
+                              padding: const EdgeInsets.all(14.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -758,15 +760,16 @@ class _HomePageState extends State<HomePage> {
                                         child: Text(
                                           module.title,
                                           style: const TextStyle(
-                                            fontSize: 16,
+                                            fontSize: 15,
                                             fontWeight: FontWeight.bold,
+                                            color: Color.fromARGB(255, 51, 66, 87),
                                           ),
                                         ),
                                       ),
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
+                                          horizontal: 8,
+                                          vertical: 3,
                                         ),
                                         decoration: BoxDecoration(
                                           color:
@@ -778,7 +781,7 @@ class _HomePageState extends State<HomePage> {
                                                     alpha: 0.2,
                                                   ),
                                           borderRadius: BorderRadius.circular(
-                                            20,
+                                            12,
                                           ),
                                         ),
                                         child: Text(
@@ -810,12 +813,27 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   const Spacer(),
                                   Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
+                                      LinearProgressIndicator(
+                                        value: module.progressPercentage,
+                                        backgroundColor: const Color.fromARGB(
+                                          255,
+                                          205,
+                                          205,
+                                          206,
+                                        ),
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          module.progressPercentage == 1.0
+                                              ? const Color.fromARGB(255, 84, 156, 86)
+                                              : Colors.blue,
+                                        ),
+                                        minHeight: 5,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      const SizedBox(height: 8),
                                       Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
                                             'Progress: ${module.completedExercises}/${module.totalExercises}',
@@ -833,30 +851,6 @@ class _HomePageState extends State<HomePage> {
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 6),
-                                      LinearProgressIndicator(
-                                        value: module.progressPercentage,
-                                        backgroundColor: const Color.fromARGB(
-                                          255,
-                                          205,
-                                          205,
-                                          206,
-                                        ),
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              module.progressPercentage == 1.0
-                                                  ? const Color.fromARGB(
-                                                    255,
-                                                    84,
-                                                    156,
-                                                    86,
-                                                  )
-                                                  : Colors.blue,
-                                            ),
-                                        minHeight: 5,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      const SizedBox(height: 8),
                                     ],
                                   ),
                                 ],
@@ -1288,19 +1282,23 @@ class _HomePageState extends State<HomePage> {
                     ),
                     Expanded(
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildMascot(),
-                            const SizedBox(height: 24),
-                            _buildLevelDisplay(),
-                            const SizedBox(height: 24),
-                            _buildDailyPractices(),
-                            const SizedBox(height: 24),
-                            _buildPopularModules(),
-                            const SizedBox(height: 24),
-                          ],
+                        padding: const EdgeInsets.only(top: 16, bottom: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 22.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 16),
+                              _buildMascot(),
+                              const SizedBox(height: 20),
+                              _buildLevelDisplay(),
+                              const SizedBox(height: 24),
+                              _buildDailyPractices(),
+                              const SizedBox(height: 24),
+                              _buildPopularModules(),
+                              const SizedBox(height: 24),
+                            ],
+                          ),
                         ),
                       ),
                     ),
