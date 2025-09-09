@@ -106,7 +106,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 40),
               const Text(
                 'Tell Us About Yourself',
                 style: TextStyle(
@@ -209,13 +209,12 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                 ),
                 keyboardType: TextInputType.number,
               ),
-              const SizedBox(height: 24),
-              
-                            ElevatedButton(
+              const SizedBox(height: 20),
+              ElevatedButton(
                 onPressed: _isLoading ? null : _saveUserDetails,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF324259),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
                 ),
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)

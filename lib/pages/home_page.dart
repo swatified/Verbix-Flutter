@@ -925,11 +925,14 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset(
-                'assets/gifs/lexi_confused.gif',
-                width: 200,
-                height: 200,
-              ),
+              ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset(
+                        'assets/gifs/lexi_confused.gif',
+                        width: 200,
+                        height: 200,
+                      ),
+                    ),
               const SizedBox(height: 12),
               const Text(
                 'Loading...',
@@ -1163,11 +1166,14 @@ class _HomePageState extends State<HomePage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Image.asset(
+                      ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset(
                         'assets/gifs/lexi_confused.gif',
                         width: 200,
                         height: 200,
                       ),
+                    ),
                       const SizedBox(height: 16),
                       const Text(
                         'Loading...',

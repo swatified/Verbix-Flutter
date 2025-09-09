@@ -571,17 +571,20 @@ class _TestsPageState extends State<TestsPage> {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-      ),
+  ),
       body:
           _isLoading
               ? Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      'assets/gifs/lexi_confused.gif',
-                      width: 180,
-                      height: 180,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset(
+                        'assets/gifs/lexi_confused.gif',
+                        width: 180,
+                        height: 180,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     const Text(
@@ -622,7 +625,7 @@ class _TestsPageState extends State<TestsPage> {
             height: 180,
             fit: BoxFit.contain,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           const Text(
             'No tests completed yet',
             style: TextStyle(
@@ -643,7 +646,7 @@ class _TestsPageState extends State<TestsPage> {
 
   Widget _buildTestsList() {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       itemCount: _tests.length,
       itemBuilder: (context, index) {
         final test = _tests[index];
@@ -1119,10 +1122,13 @@ class _NewTestPageState extends State<NewTestPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      'assets/gifs/lexi_confused.gif',
-                      width: 180,
-                      height: 180,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset(
+                        'assets/gifs/lexi_confused.gif',
+                        width: 180,
+                        height: 180,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     const Text(
@@ -1185,7 +1191,7 @@ class _NewTestPageState extends State<NewTestPage> {
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
 
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1208,7 +1214,7 @@ class _NewTestPageState extends State<NewTestPage> {
                       ],
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     if (_imageFile != null)
                       Container(
@@ -1242,7 +1248,7 @@ class _NewTestPageState extends State<NewTestPage> {
                         ),
                       ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     if (_writtenTextController.text.isNotEmpty)
                       Container(
@@ -1289,7 +1295,7 @@ class _NewTestPageState extends State<NewTestPage> {
                         ),
                       ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     if (_speechText.isNotEmpty)
                       Container(
@@ -1336,7 +1342,7 @@ class _NewTestPageState extends State<NewTestPage> {
                         ),
                       ),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 22),
 
                     SizedBox(
                       width: double.infinity,
@@ -1351,7 +1357,7 @@ class _NewTestPageState extends State<NewTestPage> {
                           backgroundColor: const Color(0xFF1F5377),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                         child:
@@ -1368,6 +1374,7 @@ class _NewTestPageState extends State<NewTestPage> {
                                 ),
                       ),
                     ),
+                    const SizedBox(height: 32),
                   ],
                 ),
               ),
@@ -1445,29 +1452,35 @@ class _TestDetailPageState extends State<TestDetailPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF324259)),
       ),
-      body:
-          _isLoading
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: _isLoading
               ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      'assets/gifs/lexi_confused.gif',
-                      width: 150,
-                      height: 150,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Loading...',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Color(0xFF324259),
-                        fontWeight: FontWeight.w500,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Image.asset(
+                          'assets/gifs/lexi_confused.gif',
+                          width: 150,
+                          height: 150,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              )
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Loading...',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Color(0xFF324259),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
               : SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -1509,7 +1522,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -1547,7 +1560,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -1611,7 +1624,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -1670,7 +1683,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 18),
 
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -1729,7 +1742,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
                     if (_testData['recommendations'] != null)
                       Container(
@@ -1765,7 +1778,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 30),
                             MarkdownBody(
                               data: _testData['recommendations'] ?? '',
                               styleSheet: MarkdownStyleSheet(
@@ -1802,9 +1815,11 @@ class _TestDetailPageState extends State<TestDetailPage> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 26),
                   ],
                 ),
               ),
+    ),
     );
   }
 }

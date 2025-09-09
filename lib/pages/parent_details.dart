@@ -124,7 +124,7 @@ class _ParentDetailsScreenState extends State<ParentDetailsScreen> {
                           boxShadow: [
                             BoxShadow(
                               color: Color(0xFF87CEEB).withValues(alpha: 0.5), // sky blue
-                              spreadRadius: 24,
+                              spreadRadius: 20,
                               blurRadius: 16,
                               offset: Offset(0, 0), // even shadow all around
                             ),
@@ -175,7 +175,7 @@ class _ParentDetailsScreenState extends State<ParentDetailsScreen> {
                           decoration: const InputDecoration(
                             labelText: 'Your Name',
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(Radius.circular(16)), // <-- Rounded corners
+                              borderRadius: BorderRadius.all(Radius.circular(16)),
                             ),
                             prefixIcon: Icon(Icons.person),
                           ),
