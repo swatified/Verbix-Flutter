@@ -41,13 +41,13 @@ class VertexAIService {
       if (await file.exists()) {
         final content = await file.readAsString();
         final json = jsonDecode(content);
-        print("Service account project_id: ${json['project_id']}");
-        print("Service account client_email: ${json['client_email']}");
+          debugPrint("Service account project_id: ${json['project_id']}");
+          debugPrint("Service account client_email: ${json['client_email']}");
       } else {
-        print("Service account file doesn't exist!");
+          debugPrint("Service account file doesn't exist!");
       }
     } catch (e) {
-      print("Error reading service account: $e");
+        debugPrint("Error reading service account: $e");
     }
 
     if (!await file.exists()) {
@@ -70,7 +70,7 @@ class VertexAIService {
     // Delete the cached file
     if (await file.exists()) {
       await file.delete();
-      print("DEBUG: Deleted cached service account file");
+        debugPrint("DEBUG: Deleted cached service account file");
     }
     
     // Copy fresh from assets
@@ -79,15 +79,15 @@ class VertexAIService {
     await file.writeAsBytes(
       buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
     );
-    print("DEBUG: Copied fresh service account file");
+      debugPrint("DEBUG: Copied fresh service account file");
     
     // Verify the new file
     final content = await file.readAsString();
     final json = jsonDecode(content);
-    print("DEBUG: New service account project_id: ${json['project_id']}");
+      debugPrint("DEBUG: New service account project_id: ${json['project_id']}");
     
   } catch (e) {
-    print("ERROR: Failed to refresh service account: $e");
+      debugPrint("ERROR: Failed to refresh service account: $e");
   }
 }
 

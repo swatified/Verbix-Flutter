@@ -168,7 +168,6 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
     required String label,
     required VoidCallback onPressed,
     required Color color,
-    double? width,
   }) {
     return SizedBox(
       width: 250,

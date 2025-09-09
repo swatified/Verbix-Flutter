@@ -118,13 +118,13 @@ class _ParentDetailsScreenState extends State<ParentDetailsScreen> {
                     mainAxisAlignment: MainAxisAlignment.center, // centers vertically
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 110),
+                      const SizedBox(height: 140),
                       Container(
                         decoration: BoxDecoration(
                           boxShadow: [
                             BoxShadow(
-                              color: Color(0xFF87CEEB).withValues(alpha: 0.6), // sky blue
-                              spreadRadius: 18,
+                              color: Color(0xFF87CEEB).withValues(alpha: 0.5), // sky blue
+                              spreadRadius: 24,
                               blurRadius: 16,
                               offset: Offset(0, 0), // even shadow all around
                             ),

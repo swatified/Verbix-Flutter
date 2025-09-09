@@ -102,7 +102,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.symmetric(horizontal: 44, vertical: 30),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -148,14 +148,14 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                         });
                       },
                       child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(15),
                           border: Border.all(
                             color: _selectedAvatarIndex == index
                                 ? const Color(0xFF324259)
                                 : Colors.transparent,
-                            width: 3,
+                            width: 3.3,
                           ),
                         ),
                         child: ClipRRect(
@@ -178,7 +178,9 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                 controller: _firstNameController,
                 decoration: const InputDecoration(
                   labelText: 'First Name',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(16)), // <-- Rounded corners
+                            ),
                   prefixIcon: Icon(Icons.person),
                 ),
                 textCapitalization: TextCapitalization.words,
@@ -188,7 +190,9 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                 controller: _lastNameController,
                 decoration: const InputDecoration(
                   labelText: 'Last Name',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(16)), // <-- Rounded corners
+                            ),
                   prefixIcon: Icon(Icons.person),
                 ),
                 textCapitalization: TextCapitalization.words,
@@ -198,12 +202,14 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                 controller: _ageController,
                 decoration: const InputDecoration(
                   labelText: 'Age',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(16)), // <-- Rounded corners
+                            ),
                   prefixIcon: Icon(Icons.calendar_today),
                 ),
                 keyboardType: TextInputType.number,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
               
                             ElevatedButton(
                 onPressed: _isLoading ? null : _saveUserDetails,
