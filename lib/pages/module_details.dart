@@ -600,23 +600,35 @@ bool _validateReadingComprehensionAnswerStrict(String exerciseContent, String us
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                                             currentExercise > 0
-                          ? ElevatedButton(
-                              onPressed: _previousExercise,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.grey[300],
-                                foregroundColor: Colors.black,
+                          ? Padding(
+                              padding: const EdgeInsets.only(left: 26.0, bottom: 12.0), // Same margin as Next/Complete Module
+                              child: SizedBox(
+                                width: 160, // Same width as Next/Complete Module
+                                child: ElevatedButton(
+                                  onPressed: _previousExercise,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.grey[300],
+                                    foregroundColor: Colors.black,
+                                  ),
+                                  child: const Text('Previous'),
+                                ),
                               ),
-                              child: const Text('Previous'),
                             )
                           : const SizedBox(width: 88),                       
-                                            ElevatedButton(
-                        onPressed: isCorrect ? _nextExercise : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          disabledBackgroundColor: Colors.grey,
+                                            Padding(
+                          padding: const EdgeInsets.only(right: 22.0, bottom: 12.0), // Add right and bottom margin
+                          child: SizedBox(
+                            width: 160, // Set desired width
+                            child: ElevatedButton(
+                              onPressed: isCorrect ? _nextExercise : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                disabledBackgroundColor: Colors.grey,
+                              ),
+                              child: Text(isLastExercise ? 'Complete Module' : 'Next'),
+                            ),
+                          ),
                         ),
-                        child: Text(isLastExercise ? 'Complete Module' : 'Next'),
-                      ),
                     ],
                   ),
                   
@@ -806,17 +818,22 @@ bool _validateReadingComprehensionAnswerStrict(String exerciseContent, String us
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-                SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: _takePhoto,
-            icon: const Icon(Icons.camera_alt),
-            label: const Text('Take Photo'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-          ),
-        ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 340,
+                      child: ElevatedButton.icon(
+                        onPressed: _takePhoto,
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text('Take Photo'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
         const SizedBox(height: 16),
         
                 const Spacer(flex: 4),
