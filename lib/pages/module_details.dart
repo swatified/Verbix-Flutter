@@ -726,35 +726,41 @@ bool _validateReadingComprehensionAnswerStrict(String exerciseContent, String us
                 Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton(
-              onPressed: _clearDrawing,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
+            SizedBox(
+              width: 140, // Set desired width for Clear button
+              child: ElevatedButton(
+                onPressed: _clearDrawing,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
+                child: const Text('Clear'),
               ),
-              child: const Text('Clear'),
             ),
             const SizedBox(width: 16),
-            ElevatedButton(
-              onPressed: _processDrawing,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
+            SizedBox(
+              width: 210, // Set desired width for Check Answer button
+              child: ElevatedButton(
+                onPressed: _processDrawing,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
+                child: const Text('Check Answer'),
               ),
-              child: const Text('Check Answer'),
             ),
           ],
         ),
         
-        const SizedBox(height: 10),
+        const SizedBox(height: 20),
         
                 if (hasChecked)
           Container(
