@@ -889,21 +889,26 @@ class _PracticeScreenState extends State<PracticeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-                ElevatedButton.icon(
-          onPressed: _takePhoto,
-          icon: const Icon(Icons.camera_alt,color: Colors.white, size:16),
-          label: const Text('Take Photo',
-            style: TextStyle(fontSize: 14, color: Colors.white),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1F5377),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),             minimumSize: const Size(80, 28),             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-        ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4.0),
+                  child: ElevatedButton.icon(
+                    onPressed: _takePhoto,
+                    icon: const Icon(Icons.camera_alt,color: Colors.white, size:16),
+                    label: const Text('Take Photo',
+                      style: TextStyle(fontSize: 14, color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1F5377),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      minimumSize: const Size(80, 28),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
         
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
         
                 if (_imageFile != null)
           Container(
@@ -922,7 +927,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
             ),
           ),
         
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         
                 if (_recognizedText.isNotEmpty)
           Container(
@@ -1217,15 +1222,20 @@ class _PracticeScreenState extends State<PracticeScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        ElevatedButton.icon(
-          onPressed: _isListening ? _stopListening : _startListening,
-          icon: Icon(_isListening ? Icons.stop : Icons.mic),
-          label: Text(_isListening ? 'Stop' : 'Start Speaking'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _isListening ? Colors.red : const Color(0xFF1F5377),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            ElevatedButton.icon(
+              onPressed: _isListening ? _stopListening : _startListening,
+              icon: Icon(_isListening ? Icons.stop : Icons.mic),
+              label: Text(_isListening ? 'Stop' : 'Start Speaking'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isListening ? Colors.red : const Color(0xFF1F5377),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         if (_speechText.isNotEmpty)
@@ -1460,19 +1470,22 @@ class _PracticeScreenState extends State<PracticeScreen> {
           
           const SizedBox(height: 8),
           
-                    ElevatedButton.icon(
-            onPressed: () => _captureImage(ImageSource.camera),
-            icon: const Icon(Icons.camera_alt, size: 16),
-            label: const Text('Take Photo'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1F5377),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              minimumSize: const Size(80, 28),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: ElevatedButton.icon(
+                        onPressed: () => _captureImage(ImageSource.camera),
+                        icon: const Icon(Icons.camera_alt, size: 16),
+                        label: const Text('Take Photo'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1F5377),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          minimumSize: const Size(80, 28),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
           
           const SizedBox(height: 8),
           
