@@ -67,7 +67,7 @@ class PracticeModulesScreenState extends State<PracticeModulesScreen> {
           isLoading
               ? const Center(child: CircularProgressIndicator())
               : ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 26),
                 itemCount: modules.length,
                 itemBuilder: (context, index) {
                   final module = modules[index];
@@ -107,7 +107,7 @@ class ModuleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 20),
-      elevation: 2,
+      elevation: 1.4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
