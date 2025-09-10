@@ -90,18 +90,21 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Top-right cloud (rotated -20 degrees)
             Positioned(
               top: 0,
               right: 0,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0), // <-- Add margin here
+              child: Positioned(
+                top: -100,
+                right: -20,
                 child: Transform.rotate(
-                  angle: -0.09, // negative for counter-clockwise
-                  child: Image.asset(
-                    'assets/images/cloud.webp',
-                    width: 150,
-                    height: 150,
+                  angle: -0.09,
+                  child: Opacity(
+                      opacity: 0.5, // Decreased opacity
+                      child: Image.asset(
+                        'assets/images/cloud.webp',
+                        width: 300,
+                        height: 280,
+                      ),
                   ),
                 ),
               ),
@@ -110,14 +113,18 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
             Positioned(
               bottom: 0,
               left: 0,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0), // <-- Add margin here
+              child: Positioned(
+                bottom: -110,
+                left: -30,
                 child: Transform.rotate(
-                  angle: 0.1, // positive for clockwise
-                  child: Image.asset(
-                    'assets/images/cloud.webp',
-                    width: 140,
-                    height: 140,
+                  angle: 0.68, // positive for clockwise
+                  child: Opacity(
+                      opacity: 0.5, // Decreased opacity
+                      child: Image.asset(
+                        'assets/images/cloud.webp',
+                        width: 270,
+                        height: 270,
+                      ),
                   ),
                 ),
               ),
