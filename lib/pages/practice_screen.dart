@@ -1121,11 +1121,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 
                                 if (_itemStatus[_currentIndex] && (_recognizedText.isNotEmpty || widget.practice.type != PracticeType.letterWriting))
                   Container(
-                    margin: const EdgeInsets.only(top: 10),
-                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(top: 12),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.green.withValues(alpha:0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.green),
                     ),
                     child: const Row(
@@ -1149,32 +1149,44 @@ class _PracticeScreenState extends State<PracticeScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                                         if (_currentIndex > 0)
-                      ElevatedButton(
-                        onPressed: _previousItem,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[300],
-                          foregroundColor: Colors.black,
-                        ),
-                        child: const Text('Previous'),
-                      )
-                    else
-                      const SizedBox(width: 40),                     
-                                        ElevatedButton(
-                      onPressed: _itemStatus[_currentIndex]
-                          ? (_currentIndex < widget.practice.content.length - 1
-                              ? _nextItem
-                              : _completePractice)
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1F5377),
-                        disabledBackgroundColor: Colors.grey,
-                      ),
-                      child: Text(
-                        _currentIndex < widget.practice.content.length - 1
-                            ? 'Next'
-                            : 'Finish',
-                      ),
-                    ),
+                                          Padding(
+                                            padding: const EdgeInsets.only(left: 22.0, bottom: 32.0), // Same margin as Next/Finish
+                                            child: SizedBox(
+                                              width: 160, // Same width as Next/Finish
+                                              child: ElevatedButton(
+                                                onPressed: _previousItem,
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.grey[300],
+                                                  foregroundColor: const Color.fromARGB(148, 0, 0, 0),
+                                                ),
+                                                child: const Text('Previous'),
+                                              ),
+                                            ),
+                                          )
+                                        else
+                                          const SizedBox(width: 40),                     
+                                        Padding(
+                                          padding: const EdgeInsets.only(right: 20.0, bottom: 32.0), // Add margin right and bottom
+                                          child: SizedBox(
+                                            width: 160,
+                                            child: ElevatedButton(
+                                              onPressed: _itemStatus[_currentIndex]
+                                                  ? (_currentIndex < widget.practice.content.length - 1
+                                                      ? _nextItem
+                                                      : _completePractice)
+                                                  : null,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFF1F5377),
+                                                foregroundColor: Colors.white,
+                                              ),
+                                              child: Text(
+                                                _currentIndex < widget.practice.content.length - 1
+                                                    ? 'Next'
+                                                    : 'Finish',
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                   ],
                 ),
               ],
@@ -1329,8 +1341,10 @@ class _PracticeScreenState extends State<PracticeScreen> {
                   style: TextStyle(fontSize: 12, color: Colors.white),                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),                   minimumSize: const Size(70, 28),                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  minimumSize: const Size(70, 28),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
@@ -1341,8 +1355,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
                   style: TextStyle(fontSize: 12, color: Colors.white),                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1F5377),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),                   minimumSize: const Size(80, 28),                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),                   minimumSize: const Size(80, 28),                   shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
@@ -1351,37 +1365,40 @@ class _PracticeScreenState extends State<PracticeScreen> {
           
           const SizedBox(height: 4),           
                     Container(
-            height: MediaQuery.of(context).size.height * 0.06,
+            height: MediaQuery.of(context).size.height * 0.08,
             width: double.infinity,
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: _recognizedText.isEmpty
                   ? Colors.grey.withValues(alpha:0.1)
                   : (_itemStatus[_currentIndex] ? Colors.green.withValues(alpha:0.1) : Colors.red.withValues(alpha:0.1)),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: _recognizedText.isEmpty
                     ? Colors.grey
                     : (_itemStatus[_currentIndex] ? Colors.green : Colors.red),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Recognized:',
+            child: Padding(
+              padding: const EdgeInsets.only(left: 10.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 3),
+                  const Text(
+                    'Recognized:',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 1),
+                const SizedBox(height: 2),
                 Text(
                                     _recognizedText.isEmpty 
                       ? 'Draw and click "Analyze"' 
                       : _recognizedText,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 18,
                     color: _recognizedText.isEmpty
                         ? Colors.grey
                         : (_itemStatus[_currentIndex] ? Colors.green : Colors.red),
@@ -1389,6 +1406,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                   maxLines: 1,                   overflow: TextOverflow.ellipsis,
                 ),
               ],
+            ),
             ),
           ),
         ],
