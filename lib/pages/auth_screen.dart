@@ -193,12 +193,12 @@ class _AuthScreenState extends State<AuthScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 24.0),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: 46),
                 Image.asset('assets/images/lexi_rest.webp', height: 130),
                 const SizedBox(height: 20),
                 Text(
@@ -214,7 +214,9 @@ class _AuthScreenState extends State<AuthScreen> {
                   controller: _emailController,
                   decoration: const InputDecoration(
                     labelText: 'Email',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(18)),
+                            ),
                     prefixIcon: Icon(Icons.email),
                   ),
                   keyboardType: TextInputType.emailAddress,
@@ -224,17 +226,19 @@ class _AuthScreenState extends State<AuthScreen> {
                   controller: _passwordController,
                   decoration: const InputDecoration(
                     labelText: 'Password',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(18)),
+                            ),
                     prefixIcon: Icon(Icons.lock),
                   ),
                   obscureText: true,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 22),
                 ElevatedButton(
                   onPressed: _isLoading ? null : _submitForm,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF324259),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
                   ),
                   child:
                       _isLoading
