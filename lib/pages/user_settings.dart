@@ -353,7 +353,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                 decoration: const InputDecoration(
                                   labelText: 'First Name',
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.all(Radius.circular(18)),
+                                    borderRadius: BorderRadius.all(Radius.circular(14)),
                                   ),
                                   prefixIcon: Icon(Icons.person),
                                 ),
@@ -365,7 +365,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                 decoration: const InputDecoration(
                                   labelText: 'Last Name',
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.all(Radius.circular(18)),
+                                    borderRadius: BorderRadius.all(Radius.circular(14)),
                                   ),
                                   prefixIcon: Icon(Icons.person),
                                 ),
@@ -377,7 +377,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                 decoration: const InputDecoration(
                                   labelText: 'Age',
                                   border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.all(Radius.circular(18)),
+                                    borderRadius: BorderRadius.all(Radius.circular(14)),
                                   ),
                                   prefixIcon: Icon(Icons.calendar_today),
                                 ),
@@ -568,9 +568,12 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                           child: SizedBox(
                             width: 180,
                             height: 180,
-                            child: Image.asset(
-                              'assets/images/lexi_floating.webp',
-                              fit: BoxFit.contain,
+                            child: Opacity(
+                              opacity: 0.85,
+                              child: Image.asset(
+                                'assets/images/lexi_floating.webp',
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
                         ),

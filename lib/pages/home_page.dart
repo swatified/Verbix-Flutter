@@ -522,7 +522,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'You completed $_modulesCompletedToday ${_modulesCompletedToday == 1 ? 'module' : 'modules'} today!',
+                            'You completed $_modulesCompletedToday ${_modulesCompletedToday == 1 ? 'practice' : 'practices'} today!',
                             style: const TextStyle(
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF324259),

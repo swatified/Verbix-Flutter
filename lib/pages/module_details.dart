@@ -828,7 +828,7 @@ bool _validateReadingComprehensionAnswerStrict(String exerciseContent, String us
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     SizedBox(
-                      width: 340,
+                      width: 380,
                       child: ElevatedButton.icon(
                         onPressed: _takePhoto,
                         icon: const Icon(Icons.camera_alt),
@@ -840,9 +840,7 @@ bool _validateReadingComprehensionAnswerStrict(String exerciseContent, String us
                     ),
                   ],
                 ),
-        const SizedBox(height: 16),
-        
-                const Spacer(flex: 4),
+        const SizedBox(height: 18),
         
                 if (hasChecked)
           Container(
@@ -982,7 +980,7 @@ bool _validateReadingComprehensionAnswerStrict(String exerciseContent, String us
               ],
             ),
           ),
-        const Spacer(flex: 1),
+  // Spacer removed for cleaner layout
       ],
     );
   }
