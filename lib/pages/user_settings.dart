@@ -352,7 +352,9 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                 controller: _firstNameController,
                                 decoration: const InputDecoration(
                                   labelText: 'First Name',
-                                  border: OutlineInputBorder(),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(Radius.circular(18)),
+                                  ),
                                   prefixIcon: Icon(Icons.person),
                                 ),
                                 textCapitalization: TextCapitalization.words,
@@ -362,7 +364,9 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                 controller: _lastNameController,
                                 decoration: const InputDecoration(
                                   labelText: 'Last Name',
-                                  border: OutlineInputBorder(),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(Radius.circular(18)),
+                                  ),
                                   prefixIcon: Icon(Icons.person),
                                 ),
                                 textCapitalization: TextCapitalization.words,
@@ -372,7 +376,9 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                 controller: _ageController,
                                 decoration: const InputDecoration(
                                   labelText: 'Age',
-                                  border: OutlineInputBorder(),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.all(Radius.circular(18)),
+                                  ),
                                   prefixIcon: Icon(Icons.calendar_today),
                                 ),
                                 keyboardType: TextInputType.number,
@@ -506,7 +512,7 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                             backgroundColor: const Color(0xFF1F5377),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(18),
                             ),
                           ),
                           child: _isLoading
@@ -519,57 +525,54 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                                   ),
                                 ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
                         
-                        Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            Positioned(
-                              left: 0,
-                              bottom: 110,
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  try {
-                                    if (!mounted) return;
-                                    Navigator.of(context).pushAndRemoveUntil(
-                                      MaterialPageRoute(
-                                        builder: (context) => const AuthScreen(),
-                                      ),
-                                      (route) => false,
-                                    );
-                                  } catch (e) {
-                                      if (!mounted) return;
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Error signing out: ${e.toString()}')),
-                                      );
-                                    }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color.fromARGB(213, 186, 65, 57),
-                                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 68),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              try {
+                                if (!mounted) return;
+                                Navigator.of(context).pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (context) => const AuthScreen(),
                                   ),
-                                ),
-                                child: const Text(
-                                  'Sign Out',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                                  (route) => false,
+                                );
+                              } catch (e) {
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error signing out: ${e.toString()}')),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color.fromARGB(213, 186, 65, 57),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
                               ),
                             ),
-                            
-                            SizedBox(
-                              width: 180,
-                              height: 180,
-                              child: Image.asset(
-                                'assets/images/lexi_floating.webp',
-                                fit: BoxFit.contain,
+                            child: const Text(
+                              'Sign Out',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
                               ),
                             ),
-                          ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: SizedBox(
+                            width: 180,
+                            height: 180,
+                            child: Image.asset(
+                              'assets/images/lexi_floating.webp',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 24),
                       ],

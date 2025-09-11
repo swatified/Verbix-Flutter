@@ -102,20 +102,35 @@ class _HomePageState extends State<HomePage> {
               .limit(1)
               .get();
 
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
       if (querySnapshot.docs.isNotEmpty) {
         final doc = querySnapshot.docs.first;
+        final docDate = doc.data()['date'] ?? '';
         if (!mounted) return;
-        setState(() {
-          _practicesDoneToday = doc.data()['daily_practices'] ?? 0;
-          _modulesCompletedToday = doc.data()['modules_completed'] ?? 0;
-          _practicesCompletedToday = doc.data()['practice_modules'] ?? 0;
-        });
+        if (docDate != todayStr) {
+          // Not today's progress, reset counters
+          setState(() {
+            _practicesDoneToday = 0;
+            _modulesCompletedToday = 0;
+            _practicesCompletedToday = 0;
+          });
+          // Save new progress document for today
+          await _saveUserProgressData();
+        } else {
+          setState(() {
+            _practicesDoneToday = doc.data()['daily_practices'] ?? 0;
+            _modulesCompletedToday = doc.data()['modules_completed'] ?? 0;
+            _practicesCompletedToday = doc.data()['practice_modules'] ?? 0;
+          });
+        }
       } else {
         setState(() {
           _practicesDoneToday = 0;
           _modulesCompletedToday = 0;
           //_practicesCompletedToday = 0;
         });
+        // Save new progress document for today
+        await _saveUserProgressData();
       }
 
   // Only call _saveUserProgressData after a practice/module is completed
