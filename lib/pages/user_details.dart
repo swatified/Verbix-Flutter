@@ -50,12 +50,12 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         int? age;
     try {
       age = int.parse(_ageController.text.trim());
-      if (age <= 0 || age > 120) {
-        throw FormatException('Invalid age range');
+      if (age < 3 || age > 16) {
+        throw FormatException('Age must be between 3 and 16');
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid age')),
+        const SnackBar(content: Text('Child age must be a number between 3 and 16')),
       );
       return;
     }
