@@ -13,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:verbix/services/daily_scoring_service.dart';
+import 'dart:async';
 
 
 class DrawingArea {
@@ -46,6 +47,13 @@ class _PracticeScreenState extends State<PracticeScreen> {
   bool _isProcessingDrawing = false;
   String _recognizedText = '';
   bool _showingFeedback = false;
+  
+  // Cooldown tracking
+  int _wrongAttempts = 0;
+  bool _isInCooldown = false;
+  DateTime? _cooldownEndTime;
+  Timer? _cooldownTimer;
+  StateSetter? _dialogSetState;
   
     final AudioService _audioService = AudioService();
   
@@ -104,6 +112,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
       controller.dispose();
     }
     textRecognizer.close();
+    _cooldownTimer?.cancel();
+    _dialogSetState = null;
     super.dispose();
   }
   
@@ -113,6 +123,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
   
     void _startListening() {
+    if (_isInCooldown) return;
+    
     if (!_speechEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Speech recognition not available')),
@@ -164,6 +176,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
 }
   
   Future<void> _checkWrittenResponse() async {
+  if (_isInCooldown) return;
+  
   final response = _textControllers[_currentIndex].text.trim().toLowerCase();
   final target = widget.practice.content[_currentIndex].toLowerCase();
   
@@ -205,6 +219,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
 }
   
   Future<void> _processDrawing() async {
+  if (_isInCooldown) return;
+  
   if (points.isEmpty) {
     _showFeedbackPopup(FeedbackState.noText);
     return;
@@ -357,11 +373,26 @@ class _PracticeScreenState extends State<PracticeScreen> {
 }
   
     void _showFeedbackPopup(FeedbackState state) {
-        if (_showingFeedback) return;
+        if (_showingFeedback || _isInCooldown) return;
     
     setState(() {
       _showingFeedback = true;
     });
+    
+    // Track wrong attempts
+    if (state == FeedbackState.wrong || state == FeedbackState.noText) {
+      _wrongAttempts++;
+      if (_wrongAttempts >= 5) {
+        setState(() {
+          _showingFeedback = false;
+        });
+        _showCooldownDialog();
+        return;
+      }
+    } else if (state == FeedbackState.correct) {
+      // Reset wrong attempts counter on correct answer
+      _wrongAttempts = 0;
+    }
     
     String gifAsset;
     String heading;
@@ -507,6 +538,137 @@ class _PracticeScreenState extends State<PracticeScreen> {
         );
       },
     );
+  }
+  
+  void _showCooldownDialog() {
+    setState(() {
+      _isInCooldown = true;
+      _cooldownEndTime = DateTime.now().add(const Duration(minutes: 1));
+    });
+    
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (DateTime.now().isAfter(_cooldownEndTime!)) {
+        setState(() {
+          _isInCooldown = false;
+          _wrongAttempts = 0;
+        });
+        timer.cancel();
+        _dialogSetState = null;
+        Navigator.of(context).pop();
+      } else {
+        if (mounted) setState(() {});
+        if (_dialogSetState != null) _dialogSetState!(() {});
+      }
+    });
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async => false, // Prevent back button
+          child: Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            child: StatefulBuilder(
+              builder: (BuildContext context, StateSetter setDialogState) {
+                _dialogSetState = setDialogState; // Store the dialog's setState
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withValues(alpha: 0.3),
+                        spreadRadius: 2,
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        height: 240,
+                        width: 240,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.asset(
+                            'assets/gifs/cooldown.gif',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 0),
+                      
+                      const Text(
+                        'Cooldown Time!',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF324259),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      
+                      const Text(
+                        'You\'ve made too many wrong attempts.\nTake a break and try again in:',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF324259),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange),
+                        ),
+                        child: Text(
+                          _getCountdownText(),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
+  String _getCountdownText() {
+    if (_cooldownEndTime == null) return '1:00';
+    
+    final remaining = _cooldownEndTime!.difference(DateTime.now());
+    final seconds = remaining.inSeconds;
+    
+    if (seconds <= 0) return '0:00';
+    
+    final minutes = seconds ~/ 60;
+    final remainingSeconds = seconds % 60;
+    
+    return '$minutes:${remainingSeconds.toString().padLeft(2, '0')}';
   } 
     
   void _clearDrawing() {
@@ -709,6 +871,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
   
     Future<void> _takePhoto() async {
+  if (_isInCooldown) return;
+  
   setState(() {
     _isProcessingDrawing = true;
     _recognizedText = '';
@@ -1159,10 +1323,10 @@ class _PracticeScreenState extends State<PracticeScreen> {
                                             child: SizedBox(
                                               width: 160, // Same width as Next/Finish
                                               child: ElevatedButton(
-                                                onPressed: _previousItem,
+                                                onPressed: _isInCooldown ? null : _previousItem,
                                                 style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.grey[300],
-                                                  foregroundColor: const Color.fromARGB(148, 0, 0, 0),
+                                                  backgroundColor: _isInCooldown ? Colors.grey : Colors.grey[300],
+                                                  foregroundColor: _isInCooldown ? Colors.white : const Color.fromARGB(148, 0, 0, 0),
                                                 ),
                                                 child: const Text('Previous'),
                                               ),
@@ -1175,13 +1339,13 @@ class _PracticeScreenState extends State<PracticeScreen> {
                                           child: SizedBox(
                                             width: 160,
                                             child: ElevatedButton(
-                                              onPressed: _itemStatus[_currentIndex]
+                                              onPressed: _isInCooldown ? null : (_itemStatus[_currentIndex]
                                                   ? (_currentIndex < widget.practice.content.length - 1
                                                       ? _nextItem
                                                       : _completePractice)
-                                                  : null,
+                                                  : null),
                                               style: ElevatedButton.styleFrom(
-                                                backgroundColor: const Color(0xFF1F5377),
+                                                backgroundColor: _isInCooldown ? Colors.grey : const Color(0xFF1F5377),
                                                 foregroundColor: Colors.white,
                                               ),
                                               child: Text(
@@ -1226,11 +1390,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             ElevatedButton.icon(
-              onPressed: _isListening ? _stopListening : _startListening,
+              onPressed: _isInCooldown ? null : (_isListening ? _stopListening : _startListening),
               icon: Icon(_isListening ? Icons.stop : Icons.mic),
               label: Text(_isListening ? 'Stop' : 'Start Speaking'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isListening ? Colors.red : const Color(0xFF1F5377),
+                backgroundColor: _isInCooldown ? Colors.grey : (_isListening ? Colors.red : const Color(0xFF1F5377)),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
@@ -1297,7 +1461,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
             ),
             child: RepaintBoundary(
               child: GestureDetector(
-                onPanDown: (details) {
+                onPanDown: _isInCooldown ? null : (details) {
                   setState(() {
                     points.add(
                       DrawingArea(
@@ -1311,7 +1475,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     );
                   });
                 },
-                onPanUpdate: (details) {
+                onPanUpdate: _isInCooldown ? null : (details) {
                   setState(() {
                     points.add(
                       DrawingArea(
@@ -1325,15 +1489,32 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     );
                   });
                 },
-                onPanEnd: (details) {
+                onPanEnd: _isInCooldown ? null : (details) {
                   setState(() {
                     points.add(null);
                   });
                 },
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),                   child: CustomPaint(
-                    painter: MyCustomPainter(points: points),
-                    size: Size.infinite,
+                  borderRadius: BorderRadius.circular(8),                   child: Stack(
+                    children: [
+                      CustomPaint(
+                        painter: MyCustomPainter(points: points),
+                        size: Size.infinite,
+                      ),
+                      if (_isInCooldown)
+                        Container(
+                          color: Colors.grey.withValues(alpha: 0.3),
+                          child: const Center(
+                            child: Text(
+                              'Drawing disabled during cooldown',
+                              style: TextStyle(
+                                color: Colors.black54,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -1345,12 +1526,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ElevatedButton.icon(
-                onPressed: _clearDrawing,
+                onPressed: _isInCooldown ? null : _clearDrawing,
                 icon: const Icon(Icons.clear, size: 14, color: Colors.white),                 label: const Text(
                   'Clear', 
                   style: TextStyle(fontSize: 12, color: Colors.white),                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: _isInCooldown ? Colors.grey : Colors.red,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   minimumSize: const Size(70, 28),
                   shape: RoundedRectangleBorder(
@@ -1359,12 +1540,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 ),
               ),
               const SizedBox(width: 12),               ElevatedButton.icon(
-                onPressed: _processDrawing,
+                onPressed: _isInCooldown ? null : _processDrawing,
                 icon: const Icon(Icons.check, size: 14, color: Colors.white),                 label: const Text(
                   'Analyze', 
                   style: TextStyle(fontSize: 12, color: Colors.white),                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1F5377),
+                  backgroundColor: _isInCooldown ? Colors.grey : const Color(0xFF1F5377),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),                   minimumSize: const Size(80, 28),                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -1473,11 +1654,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 8.0),
                       child: ElevatedButton.icon(
-                        onPressed: () => _captureImage(ImageSource.camera),
+                        onPressed: _isInCooldown ? null : () => _captureImage(ImageSource.camera),
                         icon: const Icon(Icons.camera_alt, size: 16),
                         label: const Text('Take Photo'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1F5377),
+                          backgroundColor: _isInCooldown ? Colors.grey : const Color(0xFF1F5377),
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           minimumSize: const Size(80, 28),
                           shape: RoundedRectangleBorder(
@@ -1551,6 +1732,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
   
     Future<void> _captureImage(ImageSource source) async {
+    if (_isInCooldown) return;
+    
     try {
       setState(() {
         _isProcessingDrawing = true;       });
@@ -1593,27 +1776,28 @@ class _PracticeScreenState extends State<PracticeScreen> {
       children: [
         TextField(
           controller: _textControllers[_currentIndex],
+          enabled: !_isInCooldown,
           decoration: InputDecoration(
-            hintText: 'Type your answer here...',
+            hintText: _isInCooldown ? 'Cooldown active...' : 'Type your answer here...',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
             ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: _isInCooldown ? Colors.grey.withValues(alpha: 0.1) : Colors.white,
           ),
           style: const TextStyle(fontSize: 18),
           maxLines: widget.practice.type == PracticeType.sentenceWriting ? 3 : 1,
           onChanged: (value) {
-                        if (widget.practice.type == PracticeType.sentenceWriting) {
+                        if (!_isInCooldown && widget.practice.type == PracticeType.sentenceWriting) {
               _checkWrittenResponse();
             }
           },
         ),
         const SizedBox(height: 16),
         ElevatedButton(
-          onPressed: _checkWrittenResponse,
+          onPressed: _isInCooldown ? null : _checkWrittenResponse,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1F5377),
+            backgroundColor: _isInCooldown ? Colors.grey : const Color(0xFF1F5377),
           ),
           child: const Text('Check Answer'),
         ),
