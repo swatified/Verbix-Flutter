@@ -23,6 +23,10 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
   List<Map<String, dynamic>> _monthlyData = [];
   List<Map<String, dynamic>> _yearlyData = [];
   
+  // Demo screentime settings
+  double _dailyTimeLimit = 2.0; // Default 2 hours
+  bool _screenTimeEnabled = true;
+  
   @override
   void initState() {
     super.initState();
@@ -217,6 +221,8 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
                 children: [
                   _buildStatisticsSummary(),
                   const SizedBox(height: 12),
+                  _buildScreenTimeSettings(),
+                  const SizedBox(height: 12),
                   _buildWeeklyChart(),
                   const SizedBox(height: 12),
                   _buildMonthlyChart(),
@@ -320,6 +326,182 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildScreenTimeSettings() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.access_time,
+                color: const Color(0xFF1F5377),
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Screen Time Controls',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF324259),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange, width: 1),
+                ),
+                child: const Text(
+                  'BETA',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Enable/Disable Toggle
+          Row(
+            children: [
+              const Text(
+                'Enable Screen Time Limits',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF324259),
+                ),
+              ),
+              const Spacer(),
+              Switch(
+                value: _screenTimeEnabled,
+                onChanged: (value) {
+                  setState(() {
+                    _screenTimeEnabled = value;
+                  });
+                },
+                activeColor: const Color(0xFF1F5377),
+              ),
+            ],
+          ),
+          
+          if (_screenTimeEnabled) ...[
+            const SizedBox(height: 16),
+            
+            // Time Limit Slider
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Daily Time Limit: ${_dailyTimeLimit.toInt()} hour${_dailyTimeLimit.toInt() == 1 ? '' : 's'} per day',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF324259),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: const Color(0xFF1F5377),
+                    inactiveTrackColor: const Color(0xFF1F5377).withValues(alpha: 0.3),
+                    thumbColor: const Color(0xFF1F5377),
+                    overlayColor: const Color(0xFF1F5377).withValues(alpha: 0.2),
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                  ),
+                  child: Slider(
+                    value: _dailyTimeLimit,
+                    min: 0.5,
+                    max: 8.0,
+                    divisions: 15,
+                    onChanged: (value) {
+                      setState(() {
+                        _dailyTimeLimit = value;
+                      });
+                    },
+                  ),
+                ),
+                
+                // Time markers
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '30 min',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    Text(
+                      '8 hours',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Info message
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.blue[700],
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Screen time limits help promote healthy usage habits. Your child will receive gentle reminders when approaching the limit.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
