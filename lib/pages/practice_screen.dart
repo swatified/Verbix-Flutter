@@ -577,7 +577,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
               builder: (BuildContext context, StateSetter setDialogState) {
                 _dialogSetState = setDialogState; // Store the dialog's setState
                 return Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(40),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
@@ -594,20 +594,20 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        height: 240,
-                        width: 240,
+                        height: 200,
+                        width: 200,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: Image.asset(
-                            'assets/gifs/cooldown.gif',
+                            'assets/images/lexi_wince.webp',
                             fit: BoxFit.cover,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 0),
+                      const SizedBox(height: 6),
                       
                       const Text(
                         'Cooldown Time!',
@@ -628,12 +628,12 @@ class _PracticeScreenState extends State<PracticeScreen> {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 26),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                         decoration: BoxDecoration(
                           color: Colors.orange.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Colors.orange),
                         ),
                         child: Text(
@@ -645,7 +645,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 4),
                     ],
                   ),
                 );
