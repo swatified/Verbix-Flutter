@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:lottie/lottie.dart';
 import 'package:verbix/services/custom_practice_service.dart'
     as practice_service;
 import 'package:verbix/services/daily_scoring_service.dart';
@@ -47,15 +46,15 @@ class _HomePageState extends State<HomePage> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadCompletedPractices();
-      _saveUserProgressData();
+      // Only call _saveUserProgressData after a practice/module is completed
     });
   }
 
   @override
   void dispose() {
-    _saveUserProgressData();
-    _searchController.dispose();
-    super.dispose();
+  // Only call _saveUserProgressData after a practice/module is completed
+  _searchController.dispose();
+  super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -103,23 +102,38 @@ class _HomePageState extends State<HomePage> {
               .limit(1)
               .get();
 
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
       if (querySnapshot.docs.isNotEmpty) {
         final doc = querySnapshot.docs.first;
+        final docDate = doc.data()['date'] ?? '';
         if (!mounted) return;
-        setState(() {
-          _practicesDoneToday = doc.data()['daily_practices'] ?? 0;
-          _modulesCompletedToday = doc.data()['modules_completed'] ?? 0;
-          _practicesCompletedToday = doc.data()['practice_modules'] ?? 0;
-        });
+        if (docDate != todayStr) {
+          // Not today's progress, reset counters
+          setState(() {
+            _practicesDoneToday = 0;
+            _modulesCompletedToday = 0;
+            _practicesCompletedToday = 0;
+          });
+          // Save new progress document for today
+          await _saveUserProgressData();
+        } else {
+          setState(() {
+            _practicesDoneToday = doc.data()['daily_practices'] ?? 0;
+            _modulesCompletedToday = doc.data()['modules_completed'] ?? 0;
+            _practicesCompletedToday = doc.data()['practice_modules'] ?? 0;
+          });
+        }
       } else {
         setState(() {
           _practicesDoneToday = 0;
           _modulesCompletedToday = 0;
-          _practicesCompletedToday = 0;
+          //_practicesCompletedToday = 0;
         });
+        // Save new progress document for today
+        await _saveUserProgressData();
       }
 
-      _saveUserProgressData();
+  // Only call _saveUserProgressData after a practice/module is completed
 
       final practices =
           await practice_service.CustomPracticeService.fetchPractices();
@@ -312,7 +326,7 @@ class _HomePageState extends State<HomePage> {
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
-              .collection('userStats')
+              .collection('progress')
               .orderBy(FieldPath.documentId, descending: true)
               .limit(1)
               .get();
@@ -321,21 +335,21 @@ class _HomePageState extends State<HomePage> {
         final doc = querySnapshot.docs.first;
         if (!mounted) return;
         setState(() {
-          _practicesCompletedToday = doc.data()['completedPractices'] ?? 0;
+          _practicesCompletedToday = doc.data()['practice_modules'] ?? 0;
         });
-      } else {
+      } /*else {
         setState(() {
           _practicesCompletedToday = 0;
         });
         debugPrint(
           'No historical completed practices found. Initializing to 0.',
         );
-      }
+      }*/
     } catch (e) {
       debugPrint('Error loading completed practices: $e');
-      setState(() {
+      /*setState(() {
         _practicesCompletedToday = 0;
-      });
+      });*/
     }
   }
 
@@ -478,7 +492,7 @@ class _HomePageState extends State<HomePage> {
                           Icon(Icons.star, color: Colors.amber[700], size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            'You completed $_modulesCompletedToday ${_modulesCompletedToday == 1 ? 'module' : 'modules'} today!',
+                            'You completed $_practicesDoneToday ${_practicesDoneToday == 1 ? 'module' : 'modules'} today!',
                             style: const TextStyle(
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF324259),
@@ -508,7 +522,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'You completed $_practicesCompletedToday ${_practicesCompletedToday == 1 ? 'practice' : 'practices'} today!',
+                            'You completed $_modulesCompletedToday ${_modulesCompletedToday == 1 ? 'practice' : 'practices'} today!',
                             style: const TextStyle(
                               fontWeight: FontWeight.w500,
                               color: Color(0xFF324259),
@@ -548,7 +562,7 @@ class _HomePageState extends State<HomePage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Your daily practices',
+              ' Your daily practices',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -618,11 +632,14 @@ class _HomePageState extends State<HomePage> {
                                   (context) =>
                                       PracticeScreen(practice: practice),
                             ),
-                          ).then((_) => _loadPracticeData());
+                          ).then((_) {
+                            _loadPracticeData();
+                            _saveUserProgressData();
+                          });
                         },
                         child: Container(
                           width: 120,
-                          margin: const EdgeInsets.only(right: 12),
+                          margin: const EdgeInsets.only(left:5, right: 5),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
@@ -699,17 +716,19 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: 18),
         const Text(
-          'Popular exercise modules',
+          '  Popular exercise modules',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
             color: Color(0xFF324259),
+            fontStyle: FontStyle.italic,
           ),
         ),
         const SizedBox(height: 12),
         SizedBox(
-          height: 170,
+          height: 160,
           child:
               _popularModules.isEmpty
                   ? const Center(child: Text('No modules available'))
@@ -720,7 +739,7 @@ class _HomePageState extends State<HomePage> {
                       final module = _popularModules[index];
                       return Container(
                         width: MediaQuery.of(context).size.width * 0.70,
-                        margin: const EdgeInsets.only(right: 16),
+                        margin: const EdgeInsets.only(right: 8),
                         child: Card(
                           elevation: 2,
                           color: const Color.fromARGB(255, 233, 240, 252),
@@ -741,13 +760,16 @@ class _HomePageState extends State<HomePage> {
                                             completed,
                                           );
                                         },
-                                      ),
+                                  ),
                                 ),
-                              );
+                              ).then((_) {
+                                _loadModulesCompletedToday();
+                                _saveUserProgressData();
+                              });
                             },
                             borderRadius: BorderRadius.circular(12),
                             child: Padding(
-                              padding: const EdgeInsets.all(12.0),
+                              padding: const EdgeInsets.all(14.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -759,15 +781,16 @@ class _HomePageState extends State<HomePage> {
                                         child: Text(
                                           module.title,
                                           style: const TextStyle(
-                                            fontSize: 16,
+                                            fontSize: 15,
                                             fontWeight: FontWeight.bold,
+                                            color: Color.fromARGB(255, 51, 66, 87),
                                           ),
                                         ),
                                       ),
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
+                                          horizontal: 8,
+                                          vertical: 3,
                                         ),
                                         decoration: BoxDecoration(
                                           color:
@@ -779,7 +802,7 @@ class _HomePageState extends State<HomePage> {
                                                     alpha: 0.2,
                                                   ),
                                           borderRadius: BorderRadius.circular(
-                                            20,
+                                            12,
                                           ),
                                         ),
                                         child: Text(
@@ -811,12 +834,27 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   const Spacer(),
                                   Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
+                                      LinearProgressIndicator(
+                                        value: module.progressPercentage,
+                                        backgroundColor: const Color.fromARGB(
+                                          255,
+                                          205,
+                                          205,
+                                          206,
+                                        ),
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          module.progressPercentage == 1.0
+                                              ? const Color.fromARGB(255, 84, 156, 86)
+                                              : Colors.blue,
+                                        ),
+                                        minHeight: 5,
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      const SizedBox(height: 8),
                                       Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
                                             'Progress: ${module.completedExercises}/${module.totalExercises}',
@@ -834,30 +872,6 @@ class _HomePageState extends State<HomePage> {
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 6),
-                                      LinearProgressIndicator(
-                                        value: module.progressPercentage,
-                                        backgroundColor: const Color.fromARGB(
-                                          255,
-                                          205,
-                                          205,
-                                          206,
-                                        ),
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              module.progressPercentage == 1.0
-                                                  ? const Color.fromARGB(
-                                                    255,
-                                                    84,
-                                                    156,
-                                                    86,
-                                                  )
-                                                  : Colors.blue,
-                                            ),
-                                        minHeight: 5,
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      const SizedBox(height: 8),
                                     ],
                                   ),
                                 ],
@@ -922,15 +936,28 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: Transform.translate(
-            offset: const Offset(60, 0),
-            child: Lottie.asset(
-              'assets/gifs/loader-anim.json',
-              width: 600,
-              height: 600,
-            ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset(
+                        'assets/gifs/lexi_confused.gif',
+                        width: 200,
+                        height: 200,
+                      ),
+                    ),
+              const SizedBox(height: 12),
+              const Text(
+                'Loading...',
+                style: TextStyle(
+                  fontSize: 24,
+                  color: Color(0xFF324259),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -1150,15 +1177,28 @@ class _HomePageState extends State<HomePage> {
       body: SafeArea(
         child:
             _isLoading
-                ? Align(
-                  alignment: Alignment.centerRight,
-                  child: Transform.translate(
-                    offset: const Offset(60, 0),
-                    child: Lottie.asset(
-                      'assets/gifs/loader-anim.json',
-                      width: 600,
-                      height: 600,
+                ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset(
+                        'assets/gifs/lexi_confused.gif',
+                        width: 200,
+                        height: 200,
+                      ),
                     ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Loading...',
+                        style: TextStyle(
+                          fontSize: 24,
+                          color: Color(0xFF324259),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 )
                 : Column(
@@ -1263,19 +1303,23 @@ class _HomePageState extends State<HomePage> {
                     ),
                     Expanded(
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildMascot(),
-                            const SizedBox(height: 24),
-                            _buildLevelDisplay(),
-                            const SizedBox(height: 24),
-                            _buildDailyPractices(),
-                            const SizedBox(height: 24),
-                            _buildPopularModules(),
-                            const SizedBox(height: 24),
-                          ],
+                        padding: const EdgeInsets.only(top: 16, bottom: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 22.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 16),
+                              _buildMascot(),
+                              const SizedBox(height: 20),
+                              _buildLevelDisplay(),
+                              const SizedBox(height: 24),
+                              _buildDailyPractices(),
+                              const SizedBox(height: 24),
+                              _buildPopularModules(),
+                              const SizedBox(height: 24),
+                            ],
+                          ),
                         ),
                       ),
                     ),

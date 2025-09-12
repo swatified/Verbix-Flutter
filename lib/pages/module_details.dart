@@ -57,11 +57,11 @@ class ModuleDetailScreenState extends State<ModuleDetailScreen> {
       'butterfly',
     ],
     'speech_recognition': [
-      'She sells seashells by the seashore',
-      'The big black bug bit the big black bear',
-      'Unique New York, unique New York',
-      'Peter Piper picked a peck of pickled peppers',
-      'Three free throws for three points',
+      'The cat sat on the soft mat',
+      'Big dogs run in the green park',
+      'We like to play games together',
+      'Books help us learn new things',
+      'I am brave and I am smart'
     ],
     'phonetic_awareness': [
       'Snowflake',
@@ -427,7 +427,7 @@ bool _validateReadingComprehensionAnswerStrict(String exerciseContent, String us
     return cleanAnswer == 'red';
   } 
   else if (exerciseContent.contains('Sara went to the store')) {
-        return cleanAnswer == 'milk and bread' || cleanAnswer == 'bread and milk';
+        return cleanAnswer == 'milk' || cleanAnswer == 'bread';
   } 
   else if (exerciseContent.contains('The sky is blue')) {
     return cleanAnswer == 'green';
@@ -600,23 +600,35 @@ bool _validateReadingComprehensionAnswerStrict(String exerciseContent, String us
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                                             currentExercise > 0
-                          ? ElevatedButton(
-                              onPressed: _previousExercise,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.grey[300],
-                                foregroundColor: Colors.black,
+                          ? Padding(
+                              padding: const EdgeInsets.only(left: 26.0, bottom: 12.0), // Same margin as Next/Complete Module
+                              child: SizedBox(
+                                width: 160, // Same width as Next/Complete Module
+                                child: ElevatedButton(
+                                  onPressed: _previousExercise,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.grey[300],
+                                    foregroundColor: Colors.black,
+                                  ),
+                                  child: const Text('Previous'),
+                                ),
                               ),
-                              child: const Text('Previous'),
                             )
                           : const SizedBox(width: 88),                       
-                                            ElevatedButton(
-                        onPressed: isCorrect ? _nextExercise : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          disabledBackgroundColor: Colors.grey,
+                                            Padding(
+                          padding: const EdgeInsets.only(right: 22.0, bottom: 12.0), // Add right and bottom margin
+                          child: SizedBox(
+                            width: 160, // Set desired width
+                            child: ElevatedButton(
+                              onPressed: isCorrect ? _nextExercise : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                disabledBackgroundColor: Colors.grey,
+                              ),
+                              child: Text(isLastExercise ? 'Complete Module' : 'Next'),
+                            ),
+                          ),
                         ),
-                        child: Text(isLastExercise ? 'Complete Module' : 'Next'),
-                      ),
                     ],
                   ),
                   
@@ -714,35 +726,41 @@ bool _validateReadingComprehensionAnswerStrict(String exerciseContent, String us
                 Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton(
-              onPressed: _clearDrawing,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
+            SizedBox(
+              width: 140, // Set desired width for Clear button
+              child: ElevatedButton(
+                onPressed: _clearDrawing,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
+                child: const Text('Clear'),
               ),
-              child: const Text('Clear'),
             ),
             const SizedBox(width: 16),
-            ElevatedButton(
-              onPressed: _processDrawing,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
+            SizedBox(
+              width: 210, // Set desired width for Check Answer button
+              child: ElevatedButton(
+                onPressed: _processDrawing,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
+                child: const Text('Check Answer'),
               ),
-              child: const Text('Check Answer'),
             ),
           ],
         ),
         
-        const SizedBox(height: 10),
+        const SizedBox(height: 20),
         
                 if (hasChecked)
           Container(
@@ -806,20 +824,23 @@ bool _validateReadingComprehensionAnswerStrict(String exerciseContent, String us
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-                SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: _takePhoto,
-            icon: const Icon(Icons.camera_alt),
-            label: const Text('Take Photo'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-                const Spacer(flex: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 380,
+                      child: ElevatedButton.icon(
+                        onPressed: _takePhoto,
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text('Take Photo'),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+        const SizedBox(height: 18),
         
                 if (hasChecked)
           Container(
@@ -959,7 +980,7 @@ bool _validateReadingComprehensionAnswerStrict(String exerciseContent, String us
               ],
             ),
           ),
-        const Spacer(flex: 1),
+  // Spacer removed for cleaner layout
       ],
     );
   }

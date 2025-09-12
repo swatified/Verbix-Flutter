@@ -50,12 +50,12 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         int? age;
     try {
       age = int.parse(_ageController.text.trim());
-      if (age <= 0 || age > 120) {
-        throw FormatException('Invalid age range');
+      if (age < 3 || age > 16) {
+        throw FormatException('Age must be between 3 and 16');
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid age')),
+        const SnackBar(content: Text('Child age must be a number between 3 and 16')),
       );
       return;
     }
@@ -76,7 +76,8 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         'age': age,
         'avatarIndex': _selectedAvatarIndex,
         'email': user.email,
-        'level': 'easy',         'levelUpdatedAt': FieldValue.serverTimestamp(),
+        'level': 'medium',
+        'levelUpdatedAt': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
       });
       
@@ -101,11 +102,11 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.symmetric(horizontal: 44, vertical: 30),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 40),
               const Text(
                 'Tell Us About Yourself',
                 style: TextStyle(
@@ -147,14 +148,14 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                         });
                       },
                       child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(15),
                           border: Border.all(
                             color: _selectedAvatarIndex == index
                                 ? const Color(0xFF324259)
                                 : Colors.transparent,
-                            width: 3,
+                            width: 3.3,
                           ),
                         ),
                         child: ClipRRect(
@@ -177,7 +178,9 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                 controller: _firstNameController,
                 decoration: const InputDecoration(
                   labelText: 'First Name',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(16)), // <-- Rounded corners
+                            ),
                   prefixIcon: Icon(Icons.person),
                 ),
                 textCapitalization: TextCapitalization.words,
@@ -187,7 +190,9 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                 controller: _lastNameController,
                 decoration: const InputDecoration(
                   labelText: 'Last Name',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(16)), // <-- Rounded corners
+                            ),
                   prefixIcon: Icon(Icons.person),
                 ),
                 textCapitalization: TextCapitalization.words,
@@ -197,18 +202,19 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                 controller: _ageController,
                 decoration: const InputDecoration(
                   labelText: 'Age',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(16)), // <-- Rounded corners
+                            ),
                   prefixIcon: Icon(Icons.calendar_today),
                 ),
                 keyboardType: TextInputType.number,
               ),
-              const SizedBox(height: 32),
-              
-                            ElevatedButton(
+              const SizedBox(height: 20),
+              ElevatedButton(
                 onPressed: _isLoading ? null : _saveUserDetails,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF324259),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
                 ),
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)

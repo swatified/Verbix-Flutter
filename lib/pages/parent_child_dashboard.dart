@@ -211,18 +211,18 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildStatisticsSummary(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 12),
                   _buildWeeklyChart(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 12),
                   _buildMonthlyChart(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 14),
                   _buildYearlyContributionChart(),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 26),
                 ],
               ),
             ),
@@ -241,7 +241,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha:0.2),
+            color: Colors.grey.withValues(alpha:0.1),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),

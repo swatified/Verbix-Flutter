@@ -107,6 +107,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     return MaterialApp(
       title: 'Verbix',
       theme: ThemeData(
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(250, 48), // Default width & height
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            textStyle: const TextStyle(fontSize: 18, color: Colors.white),
+          ),
+        ),
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF324259)),
         useMaterial3: true,
       ),

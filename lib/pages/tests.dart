@@ -19,8 +19,8 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 class VertexAIService {
   static final _projectId = dotenv.env['VERTEX_PROJECT_ID'] ?? '';
   static final _location = dotenv.env['VERTEX_LOCATION'] ?? 'us-central1';
-  
-   static final _tunedModelId = dotenv.env['TUNED_MODEL_ID'] ?? 'gemini-1.5-pro-002';
+
+  static final _modelId = 'gemini-2.5-flash';
   
   static String? _accessToken;
   static DateTime? _tokenExpiry;
@@ -43,7 +43,21 @@ class VertexAIService {
     final directory = await getApplicationDocumentsDirectory();
     final credentialsPath = '${directory.path}/service-account.json';
     final file = File(credentialsPath);
-    
+
+    try {
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final json = jsonDecode(content);
+          debugPrint("Service account project_id: ${json['project_id']}");
+          debugPrint("Service account client_email: ${json['client_email']}");
+      } else {
+          debugPrint("Service account file doesn't exist!");
+      }
+    } catch (e) {
+        debugPrint("Error reading service account: $e");
+    }
+
+
     if (!await file.exists()) {
       throw Exception('Service account credentials file not found at: $credentialsPath');
     }
@@ -53,6 +67,35 @@ class VertexAIService {
     return ServiceAccountCredentials.fromJson(jsonMap);
   }
 
+  static Future<void> forceRefreshServiceAccount() async {
+  try {
+    final directory = await getApplicationDocumentsDirectory();
+    final credentialsPath = '${directory.path}/service-account.json';
+    final file = File(credentialsPath);
+    
+    // Delete the cached file
+    if (await file.exists()) {
+      await file.delete();
+        debugPrint("DEBUG: Deleted cached service account file");
+    }
+    
+    // Copy fresh from assets
+    final byteData = await rootBundle.load('assets/service-account.json');
+    final buffer = byteData.buffer;
+    await file.writeAsBytes(
+      buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
+    );
+      debugPrint("DEBUG: Copied fresh service account file");
+    
+    // Verify the new file
+    final content = await file.readAsString();
+    final json = jsonDecode(content);
+      debugPrint("DEBUG: New service account project_id: ${json['project_id']}");
+    
+  } catch (e) {
+      debugPrint("ERROR: Failed to refresh service account: $e");
+  }
+}
 
   static Future<String> _getAccessToken() async {
     if (_accessToken != null && _tokenExpiry != null && DateTime.now().isBefore(_tokenExpiry!)) {
@@ -138,7 +181,7 @@ class VertexAIService {
         ],
         "generationConfig": {
           "temperature": 0.8,
-          "maxOutputTokens": 256,
+          "maxOutputTokens": 8192,
           "topK": 40,
           "topP": 0.95
         }
@@ -299,7 +342,7 @@ class VertexAIService {
         ],
         "generationConfig": {
           "temperature": 0.2,
-          "maxOutputTokens": 1024,
+          "maxOutputTokens": 8192,
           "topK": 40,
           "topP": 0.95
         }
@@ -500,10 +543,33 @@ class _TestsPageState extends State<TestsPage> {
         ),
         backgroundColor: Colors.white,
         elevation: 0,
-      ),
+  ),
       body:
           _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset(
+                        'assets/gifs/lexi_confused.gif',
+                        width: 180,
+                        height: 180,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Loading...',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Color(0xFF324259),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              )
               : _tests.isEmpty
               ? _buildEmptyState()
               : _buildTestsList(),
@@ -527,15 +593,15 @@ class _TestsPageState extends State<TestsPage> {
         children: [
           Image.asset(
             'assets/images/no_tests.webp',
-            width: 150,
-            height: 150,
+            width: 180,
+            height: 180,
             fit: BoxFit.contain,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           const Text(
             'No tests completed yet',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Color(0xFF324259),
             ),
@@ -552,7 +618,7 @@ class _TestsPageState extends State<TestsPage> {
 
   Widget _buildTestsList() {
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       itemCount: _tests.length,
       itemBuilder: (context, index) {
         final test = _tests[index];
@@ -816,6 +882,7 @@ class _NewTestPageState extends State<NewTestPage> {
 
   Future<void> _setupAndGenerateTest() async {
     try {
+      await VertexAIService.forceRefreshServiceAccount();
       await ensureServiceAccountExists();
       await _generateTestSentence();
     } catch (e) {
@@ -1023,7 +1090,30 @@ class _NewTestPageState extends State<NewTestPage> {
       ),
       body:
           _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset(
+                        'assets/gifs/lexi_confused.gif',
+                        width: 180,
+                        height: 180,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Loading...',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Color(0xFF324259),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              )
               : SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -1073,7 +1163,7 @@ class _NewTestPageState extends State<NewTestPage> {
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
 
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1096,7 +1186,7 @@ class _NewTestPageState extends State<NewTestPage> {
                       ],
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     if (_imageFile != null)
                       Container(
@@ -1130,7 +1220,7 @@ class _NewTestPageState extends State<NewTestPage> {
                         ),
                       ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     if (_writtenTextController.text.isNotEmpty)
                       Container(
@@ -1177,7 +1267,7 @@ class _NewTestPageState extends State<NewTestPage> {
                         ),
                       ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     if (_speechText.isNotEmpty)
                       Container(
@@ -1224,7 +1314,7 @@ class _NewTestPageState extends State<NewTestPage> {
                         ),
                       ),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 22),
 
                     SizedBox(
                       width: double.infinity,
@@ -1239,7 +1329,7 @@ class _NewTestPageState extends State<NewTestPage> {
                           backgroundColor: const Color(0xFF1F5377),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                         child:
@@ -1256,6 +1346,7 @@ class _NewTestPageState extends State<NewTestPage> {
                                 ),
                       ),
                     ),
+                    const SizedBox(height: 32),
                   ],
                 ),
               ),
@@ -1333,9 +1424,35 @@ class _TestDetailPageState extends State<TestDetailPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF324259)),
       ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: _isLoading
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: Image.asset(
+                          'assets/gifs/lexi_confused.gif',
+                          width: 150,
+                          height: 150,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Loading...',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Color(0xFF324259),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
               : SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -1377,7 +1494,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -1415,7 +1532,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -1479,7 +1596,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -1538,7 +1655,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 18),
 
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -1597,7 +1714,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
 
                     if (_testData['recommendations'] != null)
                       Container(
@@ -1633,7 +1750,7 @@ class _TestDetailPageState extends State<TestDetailPage> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 30),
                             MarkdownBody(
                               data: _testData['recommendations'] ?? '',
                               styleSheet: MarkdownStyleSheet(
@@ -1670,9 +1787,11 @@ class _TestDetailPageState extends State<TestDetailPage> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 26),
                   ],
                 ),
               ),
+    ),
     );
   }
 }

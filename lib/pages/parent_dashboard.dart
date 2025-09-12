@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../services/daily_scoring_service.dart';
 import 'auth_screen.dart';
@@ -21,7 +22,7 @@ import 'wrong_word_details.dart';
 class GeminiPatternService {
   static final _projectId = dotenv.env['VERTEX_PROJECT_ID'] ?? '';
   static final _location = dotenv.env['VERTEX_LOCATION'] ?? 'us-central1';
-  static final _modelId = 'gemini-1.5-pro-002';
+  static final _modelId = 'gemini-2.5-flash';
   static String? _accessToken;
   static DateTime? _tokenExpiry;
 
@@ -191,7 +192,7 @@ Generate the dyslexia pattern analysis now:
         ],
         "generationConfig": {
           "temperature": 0.3,
-          "maxOutputTokens": 200,
+          "maxOutputTokens": 8192,
           "topK": 40,
           "topP": 0.95,
         },
@@ -584,24 +585,27 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
           _isLoading
               ? const Center(child: CircularProgressIndicator())
               : SafeArea(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildGreetingCard(),
-                      const SizedBox(height: 16),
-                      _buildLevelCard(),
-                      const SizedBox(height: 16),
-                      _buildRecentTroublesCard(),
-                      const SizedBox(height: 16),
-                      _buildPatternBreakdownCard(),
-                      const SizedBox(height: 16),
-                      _buildProgressDashboardCard(),
-                      const SizedBox(height: 24),
-                    ],
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildGreetingCard(),
+                          const SizedBox(height: 6),
+                          _buildLevelCard(),
+                          const SizedBox(height: 14),
+                          _buildRecentTroublesCard(),
+                          const SizedBox(height: 14),
+                          _buildPatternBreakdownCard(),
+                          const SizedBox(height: 16),
+                          _buildProgressDashboardCard(),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
     );
   }
 
@@ -614,7 +618,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2),
+            color: Colors.grey.withValues(alpha: 0.1),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
@@ -622,7 +626,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Row(
           children: [
             ClipRRect(
@@ -837,54 +841,63 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
   }
 
   Widget _buildPatternBreakdownCard() {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      elevation: 0,
-      color: const Color.fromARGB(182, 239, 239, 214), 
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: const Color.fromARGB(100, 166, 155, 99),
-          width: 1,
-        ),
+  return Card(
+    margin: const EdgeInsets.symmetric(horizontal: 16),
+    elevation: 0,
+    color: const Color.fromARGB(182, 239, 239, 214), 
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(
+        color: const Color.fromARGB(100, 166, 155, 99),
+        width: 1,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(
-                  Icons.psychology,
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.psychology,
+                color: Color(0xFF455A64),
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'AI Pattern Analysis:',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                   color: Color(0xFF455A64),
-                  size: 24,
                 ),
-                const SizedBox(width: 8),
-                const Text(
-                  'AI Pattern Analysis:',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF455A64),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _patternBreakdown,
-              style: const TextStyle(
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Replace Text widget with MarkdownBody for bold formatting
+          MarkdownBody(
+            data: _patternBreakdown,
+            styleSheet: MarkdownStyleSheet(
+              p: const TextStyle(
                 fontSize: 16,
                 color: Color(0xFF455A64),
                 height: 1.5,
               ),
+              strong: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF455A64),
+                height: 1.5,
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildProgressDashboardCard() {
     return Card(
