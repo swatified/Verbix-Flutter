@@ -167,23 +167,23 @@ class _ScreenTimeEnforcerState extends State<ScreenTimeEnforcer>
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               
               // Subtitle
               Text(
                 'You\'ve used ${ScreenTimeService.formatTime(_currentUsage)} of your ${ScreenTimeService.formatTime(dailyLimit)} daily limit.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 17,
                   color: Colors.white70,
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 28),
               
               // Progress indicator
               Container(
-                width: double.infinity,
-                height: 20,
+                width: 340,
+                height: 16,
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
@@ -199,7 +199,7 @@ class _ScreenTimeEnforcerState extends State<ScreenTimeEnforcer>
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               
               Text(
                 '${(progressValue * 100).round()}% of daily limit used',
@@ -209,11 +209,12 @@ class _ScreenTimeEnforcerState extends State<ScreenTimeEnforcer>
                   color: Colors.white60,
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 44),
               
               // Suggestions
               Container(
                 padding: const EdgeInsets.all(24),
+                margin: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(16),
@@ -242,11 +243,12 @@ class _ScreenTimeEnforcerState extends State<ScreenTimeEnforcer>
                   ],
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 20),
               
               // Time until reset
               Container(
                 padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.symmetric(horizontal: 6),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -271,6 +273,7 @@ class _ScreenTimeEnforcerState extends State<ScreenTimeEnforcer>
                   ],
                 ),
               ),
+              const SizedBox(height: 32),
             ],
           ),
         ),
