@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:verbix/services/screen_time_service.dart';
 
 class ParentChildDashboardScreen extends StatefulWidget {
   final String childId;
@@ -23,8 +24,8 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
   List<Map<String, dynamic>> _monthlyData = [];
   List<Map<String, dynamic>> _yearlyData = [];
   
-  // Demo screentime settings
-  double _dailyTimeLimit = 2.0; // Default 2 hours
+  // Screen time settings
+  int _dailyTimeLimitMinutes = 120; // Default 2 hours (120 minutes)
   bool _screenTimeEnabled = true;
   
   @override
@@ -54,6 +55,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         _loadWeeklyData(),
         _loadMonthlyData(),
         _loadYearlyData(),
+        _loadScreenTimeSettings(),
       ]);
       
       setState(() {
@@ -64,6 +66,19 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadScreenTimeSettings() async {
+    try {
+      final enabled = await ScreenTimeService.isScreenTimeEnabled(widget.childId);
+      final limitMinutes = await ScreenTimeService.getDailyTimeLimit(widget.childId);
+      setState(() {
+        _screenTimeEnabled = enabled;
+        _dailyTimeLimitMinutes = limitMinutes; // Store directly in minutes
+      });
+    } catch (e) {
+      debugPrint('Error loading screen time settings: $e');
     }
   }
 
@@ -399,10 +414,28 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
               const Spacer(),
               Switch(
                 value: _screenTimeEnabled,
-                onChanged: (value) {
+                onChanged: (value) async {
                   setState(() {
                     _screenTimeEnabled = value;
                   });
+                  
+                  // Save to service
+                  await ScreenTimeService.setScreenTimeEnabled(widget.childId, value);
+                  
+                  // Show confirmation
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          value 
+                            ? 'Screen time limits enabled' 
+                            : 'Screen time limits disabled'
+                        ),
+                        backgroundColor: const Color(0xFF1F5377),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
                 },
                 activeColor: const Color(0xFF1F5377),
               ),
@@ -417,7 +450,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Daily Time Limit: ${_dailyTimeLimit.toInt()} hour${_dailyTimeLimit.toInt() == 1 ? '' : 's'} per day',
+                  'Daily Time Limit: ${_formatTimeLimit(_dailyTimeLimitMinutes)} per day',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -435,14 +468,30 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
                     overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
                   ),
                   child: Slider(
-                    value: _dailyTimeLimit,
-                    min: 0.5,
-                    max: 8.0,
-                    divisions: 15,
+                    value: _dailyTimeLimitMinutes.toDouble(),
+                    min: 10.0, // 10 minutes minimum
+                    max: 240.0, // 4 hours maximum (240 minutes)
+                    divisions: 23, // (240-10)/10 = 23 divisions for 10-minute increments
                     onChanged: (value) {
                       setState(() {
-                        _dailyTimeLimit = value;
+                        _dailyTimeLimitMinutes = value.round();
                       });
+                    },
+                    onChangeEnd: (value) async {
+                      // Save when user finishes adjusting
+                      await ScreenTimeService.setDailyTimeLimit(widget.childId, value.round());
+                      
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Daily limit set to ${_formatTimeLimit(value.round())}'
+                            ),
+                            backgroundColor: const Color(0xFF1F5377),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
                     },
                   ),
                 ),
@@ -452,14 +501,14 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '30 min',
+                      '10 min',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
                       ),
                     ),
                     Text(
-                      '8 hours',
+                      '4 hours',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -947,5 +996,19 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         ),
       ],
     );
+  }
+
+  /// Format time limit in minutes to readable string
+  String _formatTimeLimit(int minutes) {
+    if (minutes < 60) {
+      return '$minutes minutes';
+    } else if (minutes % 60 == 0) {
+      final hours = minutes ~/ 60;
+      return '$hours hour${hours == 1 ? '' : 's'}';
+    } else {
+      final hours = minutes ~/ 60;
+      final remainingMinutes = minutes % 60;
+      return '$hours hour${hours == 1 ? '' : 's'} $remainingMinutes minutes';
+    }
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:io' as io;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:verbix/services/audio_service.dart';
 import 'package:verbix/services/firebase_service.dart';
+import 'package:verbix/widgets/screen_time_enforcer.dart';
 
 import 'firebase_options.dart';
 import 'pages/auth_screen.dart';
@@ -125,7 +127,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       routes: {
         '/': (context) => const SplashScreen(),
         '/auth': (context) => const AuthScreen(),
-        '/main': (context) => const MainScaffold(),
+        '/main': (context) {
+          final user = FirebaseAuth.instance.currentUser;
+          if (user != null) {
+            return ScreenTimeEnforcer(
+              userId: user.uid,
+              child: const MainScaffold(),
+            );
+          }
+          return const MainScaffold();
+        },
         '/user_details': (context) => const UserDetailsScreen(),
         '/user_type_selection': (context) => const UserTypeSelectionScreen(),
         '/parent_dashboard': (context) => const ParentDashboardScreen(),
