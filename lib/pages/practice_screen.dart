@@ -1158,7 +1158,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
           elevation: 0,
           backgroundColor: Colors.transparent,
           child: Container(
-            padding: const EdgeInsets.all(20),
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -1182,30 +1183,30 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     fit: BoxFit.contain,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 4),
                 
                 // Warning title
                 const Text(
                   'Wait!',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 26,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF324259),
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 
                 // Warning message
                 const Text(
                   'Your progress won\'t be saved if you leave now. Are you sure you want to go back?',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     color: Color(0xFF324259),
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 28),
                 
                 // Action buttons
                 Row(
@@ -1238,7 +1239,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                       child: ElevatedButton(
                         onPressed: () => Navigator.of(context).pop(true),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
+                          backgroundColor: const Color.fromARGB(210, 228, 40, 27),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -1256,6 +1257,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 18),
               ],
             ),
           ),
