@@ -90,42 +90,35 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
       body: SafeArea(
         child: Stack(
           children: [
+            // Top-right cloud (rotated slightly)
             Positioned(
-              top: 0,
-              right: 0,
-              child: Positioned(
-                top: -100,
-                right: -20,
-                child: Transform.rotate(
-                  angle: -0.09,
-                  child: Opacity(
-                      opacity: 0.5, // Decreased opacity
-                      child: Image.asset(
-                        'assets/images/cloud.webp',
-                        width: 300,
-                        height: 280,
-                      ),
-                  ),
+              top: -100,
+              right: -20,
+              child: Transform.rotate(
+                angle: -0.09,
+                child: Opacity(
+                    opacity: 0.5, // Decreased opacity
+                    child: Image.asset(
+                      'assets/images/cloud.webp',
+                      width: 300,
+                      height: 280,
+                    ),
                 ),
               ),
             ),
             // Bottom-left cloud (rotated +15 degrees)
             Positioned(
-              bottom: 0,
-              left: 0,
-              child: Positioned(
-                bottom: -110,
-                left: -30,
-                child: Transform.rotate(
-                  angle: 0.68, // positive for clockwise
-                  child: Opacity(
-                      opacity: 0.5, // Decreased opacity
-                      child: Image.asset(
-                        'assets/images/cloud.webp',
-                        width: 270,
-                        height: 270,
-                      ),
-                  ),
+              bottom: -110,
+              left: -30,
+              child: Transform.rotate(
+                angle: 0.68, // positive for clockwise
+                child: Opacity(
+                    opacity: 0.5, // Decreased opacity
+                    child: Image.asset(
+                      'assets/images/cloud.webp',
+                      width: 270,
+                      height: 270,
+                    ),
                 ),
               ),
             ),
@@ -165,31 +158,6 @@ class _UserTypeSelectionScreenState extends State<UserTypeSelectionScreen> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSelectionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    required Color color,
-  }) {
-    return SizedBox(
-      width: 250,
-      child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon, color: Colors.white),
-        label: Text(
-          label,
-          style: const TextStyle(fontSize: 18, color: Colors.white),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
     );
