@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:verbix/services/screen_time_service.dart';
 
 class ParentChildDashboardScreen extends StatefulWidget {
   final String childId;
@@ -22,6 +23,10 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
     List<Map<String, dynamic>> _weeklyData = [];
   List<Map<String, dynamic>> _monthlyData = [];
   List<Map<String, dynamic>> _yearlyData = [];
+  
+  // Screen time settings
+  int _dailyTimeLimitMinutes = 120; // Default 2 hours (120 minutes)
+  bool _screenTimeEnabled = true;
   
   @override
   void initState() {
@@ -50,6 +55,7 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         _loadWeeklyData(),
         _loadMonthlyData(),
         _loadYearlyData(),
+        _loadScreenTimeSettings(),
       ]);
       
       setState(() {
@@ -60,6 +66,19 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadScreenTimeSettings() async {
+    try {
+      final enabled = await ScreenTimeService.isScreenTimeEnabled(widget.childId);
+      final limitMinutes = await ScreenTimeService.getDailyTimeLimit(widget.childId);
+      setState(() {
+        _screenTimeEnabled = enabled;
+        _dailyTimeLimitMinutes = limitMinutes; // Store directly in minutes
+      });
+    } catch (e) {
+      debugPrint('Error loading screen time settings: $e');
     }
   }
 
@@ -217,6 +236,8 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
                 children: [
                   _buildStatisticsSummary(),
                   const SizedBox(height: 12),
+                  _buildScreenTimeSettings(),
+                  const SizedBox(height: 12),
                   _buildWeeklyChart(),
                   const SizedBox(height: 12),
                   _buildMonthlyChart(),
@@ -320,6 +341,216 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildScreenTimeSettings() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.access_time,
+                color: const Color(0xFF1F5377),
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Screen Time Controls',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF324259),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange, width: 1),
+                ),
+                child: const Text(
+                  'BETA',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Enable/Disable Toggle
+          Row(
+            children: [
+              const Text(
+                'Enable Screen Time Limits',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF324259),
+                ),
+              ),
+              const Spacer(),
+              Switch(
+                value: _screenTimeEnabled,
+                onChanged: (value) async {
+                  setState(() {
+                    _screenTimeEnabled = value;
+                  });
+                  
+                  // Save to service
+                  await ScreenTimeService.setScreenTimeEnabled(widget.childId, value);
+                  
+                  // Show confirmation
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          value 
+                            ? 'Screen time limits enabled' 
+                            : 'Screen time limits disabled'
+                        ),
+                        backgroundColor: const Color(0xFF1F5377),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+                activeColor: const Color(0xFF1F5377),
+              ),
+            ],
+          ),
+          
+          if (_screenTimeEnabled) ...[
+            const SizedBox(height: 16),
+            
+            // Time Limit Slider
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Daily Time Limit: ${_formatTimeLimit(_dailyTimeLimitMinutes)} per day',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF324259),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: const Color(0xFF1F5377),
+                    inactiveTrackColor: const Color(0xFF1F5377).withValues(alpha: 0.3),
+                    thumbColor: const Color(0xFF1F5377),
+                    overlayColor: const Color(0xFF1F5377).withValues(alpha: 0.2),
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                  ),
+                  child: Slider(
+                    value: _dailyTimeLimitMinutes.toDouble(),
+                    min: 10.0, // 10 minutes minimum
+                    max: 240.0, // 4 hours maximum (240 minutes)
+                    divisions: 23, // (240-10)/10 = 23 divisions for 10-minute increments
+                    onChanged: (value) {
+                      setState(() {
+                        _dailyTimeLimitMinutes = value.round();
+                      });
+                    },
+                    onChangeEnd: (value) async {
+                      // Save when user finishes adjusting
+                      await ScreenTimeService.setDailyTimeLimit(widget.childId, value.round());
+                      
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Daily limit set to ${_formatTimeLimit(value.round())}'
+                            ),
+                            backgroundColor: const Color(0xFF1F5377),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ),
+                
+                // Time markers
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '10 min',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    Text(
+                      '4 hours',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Info message
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: Colors.blue[700],
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Screen time limits help promote healthy usage habits. Your child will receive gentle reminders when approaching the limit.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -765,5 +996,19 @@ class _ParentChildDashboardScreenState extends State<ParentChildDashboardScreen>
         ),
       ],
     );
+  }
+
+  /// Format time limit in minutes to readable string
+  String _formatTimeLimit(int minutes) {
+    if (minutes < 60) {
+      return '$minutes minutes';
+    } else if (minutes % 60 == 0) {
+      final hours = minutes ~/ 60;
+      return '$hours hour${hours == 1 ? '' : 's'}';
+    } else {
+      final hours = minutes ~/ 60;
+      final remainingMinutes = minutes % 60;
+      return '$hours hour${hours == 1 ? '' : 's'} $remainingMinutes minutes';
+    }
   }
 }
